@@ -32,8 +32,9 @@ export default function PaginatedViewport() {
   const isNavigatingRef = useRef(false);
 
   const { settings } = docState;
-  const { pageFormat, orientation, margins, header, footer, pageGap } =
+  const { pageFormat, orientation, margins, header, footer, pageGap = 24 } =
     settings;
+  const { showPageBackgrounds = true } = settings;
 
   // Calculate page dimensions
   const { heightPx } = (() => {
@@ -160,7 +161,7 @@ export default function PaginatedViewport() {
           </div>
 
           {/* Visual page backgrounds */}
-          {settings.showPageBackgrounds &&
+          {showPageBackgrounds &&
             pagePositions.map((page) => (
               <PageBackground
                 key={page.pageNumber}
