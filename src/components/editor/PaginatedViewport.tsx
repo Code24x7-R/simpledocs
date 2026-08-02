@@ -30,6 +30,7 @@ export default function PaginatedViewport() {
     setTotalPages,
   } = useDocStore();
   const containerRef = useRef<HTMLDivElement>(null);
+  const isNavigatingRef = useRef(false);
 
   const { settings } = docState;
   const { pageFormat, orientation, margins, header, footer, pageGap } =
@@ -83,7 +84,7 @@ export default function PaginatedViewport() {
 
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isNavigatingRef.current) return;
 
     const scrollTop = containerRef.current.scrollTop;
     const pageIndex = Math.floor(scrollTop / (heightPx + pageGap)) + 1;
@@ -99,11 +100,19 @@ export default function PaginatedViewport() {
     if (!containerRef.current) return;
 
     const targetScroll = (currentPage - 1) * (heightPx + pageGap);
-    if (Math.abs(containerRef.current.scrollTop - targetScroll) > 1) {
+    const currentScroll = containerRef.current.scrollTop;
+
+    // Only scroll if not already at target (prevents fighting with user scroll)
+    if (Math.abs(currentScroll - targetScroll) > 5) {
+      isNavigatingRef.current = true;
       containerRef.current.scrollTo({
         top: targetScroll,
         behavior: 'smooth',
       });
+      // Reset navigation flag after scroll completes
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 400);
     }
   }, [currentPage, heightPx, pageGap]);
 

@@ -221,24 +221,26 @@ export const useDocStore = create<DocStore>((set, get) => {
     setSearchReplaceOpen: (open) => set({ searchReplaceOpen: open }),
     setCurrentPage: (page) => {
       const { totalPages } = get();
-      set({ currentPage: Math.max(1, Math.min(page, totalPages)) });
+      if (isNaN(page)) return;
+      set({ currentPage: Math.max(1, Math.min(Math.floor(page), totalPages)) });
     },
     setTotalPages: (pages) => set({ totalPages: Math.max(1, pages) }),
     goToNextPage: () => {
       const { currentPage, totalPages } = get();
-      if (currentPage < totalPages) {
+      if (!isNaN(currentPage) && currentPage < totalPages) {
         set({ currentPage: currentPage + 1 });
       }
     },
     goToPrevPage: () => {
       const { currentPage } = get();
-      if (currentPage > 1) {
+      if (!isNaN(currentPage) && currentPage > 1) {
         set({ currentPage: currentPage - 1 });
       }
     },
     goToPage: (page) => {
       const { totalPages } = get();
-      set({ currentPage: Math.max(1, Math.min(page, totalPages)) });
+      if (isNaN(page)) return;
+      set({ currentPage: Math.max(1, Math.min(Math.floor(page), totalPages)) });
     },
   };
 });

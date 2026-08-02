@@ -28,10 +28,12 @@ export default function PageNavigation() {
   }
 
   const handlePageSubmit = () => {
-    const page = parseInt(pageInput, 10);
-    if (!isNaN(page)) {
+    const trimmed = pageInput.trim();
+    const page = parseInt(trimmed, 10);
+    if (trimmed && !isNaN(page) && page >= 1) {
       goToPage(page);
     } else {
+      // Reset to current page on invalid input
       setPageInput(String(currentPage));
     }
     setIsEditing(false);
@@ -63,8 +65,14 @@ export default function PageNavigation() {
         {isEditing ? (
           <input
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={pageInput}
-            onChange={(e) => setPageInput(e.target.value)}
+            onChange={(e) => {
+              // Only allow numeric input
+              const val = e.target.value.replace(/[^0-9]/g, '');
+              setPageInput(val);
+            }}
             onBlur={handlePageSubmit}
             onKeyDown={handleKeyDown}
             className="w-10 text-center border border-gray-300 rounded px-1 py-0.5"
