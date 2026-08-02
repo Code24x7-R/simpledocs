@@ -23,6 +23,17 @@
   min-height: 100%;
 }
 
+/* Search match highlight - yellow background for selection */
+.tiptap ::selection {
+  background-color: #fef08a;
+  color: inherit;
+}
+
+.tiptap ::-moz-selection {
+  background-color: #fef08a;
+  color: inherit;
+}
+
 .tiptap p {
   margin: 0 0 0.5em 0;
 }
