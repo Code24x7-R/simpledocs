@@ -10,6 +10,7 @@ import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import SearchReplaceModal from './components/layout/SearchReplaceModal';
 import PaginatedViewport from './components/editor/PaginatedViewport';
+import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
   const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen } = useDocStore();
@@ -37,6 +38,7 @@ export default function App() {
     <div className="h-screen flex flex-col overflow-hidden">
       <Navbar />
       <Toolbar />
+      <PageNavigation />
       <PaginatedViewport />
       <PageSetupModal />
       <TableGridModal />

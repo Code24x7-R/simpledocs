@@ -2,7 +2,6 @@ import { useRef, useCallback, useEffect } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import DocumentEditor from './DocumentEditor';
 import PageBackground from './PageBackground';
-import PageNavigation from './PageNavigation';
 import { calculateAvailableHeight } from '../../utils/pageOverflow';
 import { mmToPx } from '../../utils/unitConversion';
 
@@ -137,13 +136,11 @@ export default function PaginatedViewport() {
 
   return (
     <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
-      {/* Page Navigation Controls */}
-      <PageNavigation />
-
       {/* Scrollable Viewport */}
       <div
         ref={handleRef}
-        className="flex-1 overflow-y-auto relative min-h-0"
+        tabIndex={0}
+        className="flex-1 overflow-y-auto relative min-h-0 outline-none"
         onScroll={handleScroll}
       >
         {/* Content area with zoom transform */}
