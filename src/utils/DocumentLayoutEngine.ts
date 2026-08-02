@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 /**
- * DocumentLayoutEngine
+ * DocumentLayoutEngine — Line-Based WYSIWYG Pagination
  *
- * A deterministic WYSIWYG pagination engine that processes a document AST,
- * geometry, and typography defaults to produce calculated page layouts.
+ * A deterministic pagination engine that treats each page as a fixed grid
+ * of lines. The key insight: given a page height, margins, header/footer,
+ * and line height, the number of lines per page is FIXED.
  *
- * Two-phase rendering:
- *   Phase 1 — Line Wrapping: break paragraph text into line boxes
- *   Phase 2 — Page Allocation: sequentially place lines onto pages
+ * Algorithm:
+ *   1. Compute usable height: H_page - margins - header - footer
+ *   2. Compute line height: fontSize × lineSpacing (e.g., 12pt × 1.5 = 18pt)
+ *   3. Lines per page = floor(usableHeight / lineHeight)
+ *   4. Each paragraph produces wrapped text lines + 1 blank line
+ *   5. When accumulated lines exceed linesPerPage, overflow goes to next page
  *
- * Supports hard page breaks, widow/orphan suppression, and keep-with-next.
+ * Page breaks force a hard flush — all subsequent content starts at the
+ * top of the next page.
  */
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -75,6 +80,7 @@ export interface RenderedBlock {
 export interface PageOutput {
   pageIndex: number;
   usableHeight: number;
+  linesPerPage: number;
   renderedBlocks: RenderedBlock[];
 }
 
@@ -105,7 +111,7 @@ function toPt(value: number, unit: MeasurementUnit): number {
     case 'in':
       return value * IN_TO_PT;
     case 'px':
-      return value * 0.75; // CSS px → pt at 96dpi
+      return value * 0.75;
     default:
       return value;
   }
@@ -117,24 +123,23 @@ export class DocumentLayoutEngine {
   private config: DocumentConfig;
   private geom: PageGeometry;
   private typo: TypographyDefaults;
-  private defaultRules: PaginationRules;
   private measureText: MeasureTextFn;
 
   /** Usable content height per page in pt */
   private usableHeight: number;
 
+  /** Fixed line height in pt (derived from typography defaults) */
+  private lineHeight: number;
+
+  /** Maximum lines per page (fixed grid) */
+  private linesPerPage: number;
+
   constructor(config: DocumentConfig) {
     this.config = config;
     this.geom = { ...config.pageGeometry };
     this.typo = { ...config.typographyDefaults };
-    this.defaultRules = {
-      orphans: 2,
-      widows: 2,
-      keepWithNext: false,
-      ...config.paginationRules,
-    };
 
-    // Convert geometry to pt for internal calculations
+    // Convert geometry to pt
     this.geom.width = toPt(this.geom.width, this.geom.unit);
     this.geom.height = toPt(this.geom.height, this.geom.unit);
     this.geom.headerHeight = toPt(this.geom.headerHeight, this.geom.unit);
@@ -146,8 +151,7 @@ export class DocumentLayoutEngine {
       right: toPt(this.geom.margins.right, this.geom.unit),
     };
 
-    // Compute usable height per spec:
-    // H_usable = Height_page - Margin_top - Margin_bottom - Header - Footer
+    // Usable height per spec
     this.usableHeight =
       this.geom.height -
       this.geom.margins.top -
@@ -155,60 +159,52 @@ export class DocumentLayoutEngine {
       this.geom.headerHeight -
       this.geom.footerHeight;
 
-    // Default measurement function (monospace approximation)
+    // Fixed line height: fontSize × lineSpacingMultiplier (no padding for grid model)
+    const fontSize = this.typo.fontSize;
+    const lineSpacing = this.typo.lineHeightMultiplier;
+    this.lineHeight = fontSize * lineSpacing;
+
+    // Lines per page = floor(usableHeight / lineHeight)
+    this.linesPerPage = Math.max(1, Math.floor(this.usableHeight / this.lineHeight));
+
+    // Default measurement function
     this.measureText =
       config.measureText ||
       ((text, _style) => {
-        const charWidth =
-          this.typo.fixedCharacterWidth ?? this.typo.fontSize * 0.5;
+        const charWidth = this.typo.fixedCharacterWidth ?? this.typo.fontSize * 0.5;
         return text.length * charWidth;
       });
   }
 
-  // ── Phase 1: Line Wrapping ──────────────────────────────────────────────
+  // ── Line Wrapping ───────────────────────────────────────────────────────
 
   /**
-   * Wrap a paragraph's text into lines that fit within the content width.
-   * Supports fixed-width (character count) and proportional (measureText) fonts.
+   * Wrap paragraph text into lines that fit within the content width.
+   * Returns an array of line boxes (each line is one grid row).
    */
-  private wrapParagraph(
-    node: ASTNode,
-    contentWidth: number
-  ): LineBox[] {
+  private wrapParagraph(node: ASTNode, contentWidth: number): LineBox[] {
     const fontSize = node.styleOverrides?.fontSize ?? this.typo.fontSize;
     const fontType = node.styleOverrides?.fontType ?? this.typo.fontType;
     const lineHeightMult =
       node.styleOverrides?.lineHeightMultiplier ?? this.typo.lineHeightMultiplier;
-    const paddingTop = node.styleOverrides?.paddingTop ?? 0;
-    const paddingBottom = node.styleOverrides?.paddingBottom ?? 0;
 
-    // Line height per spec:
-    // Height_line = (Font Size × Line Spacing Multiplier) + Padding_top + Padding_bottom
-    const lineHeight =
-      fontSize * lineHeightMult + toPt(paddingTop, 'pt') + toPt(paddingBottom, 'pt');
+    // Line height: use the grid line height (consistent across all lines)
+    // but allow per-paragraph override if explicitly set
+    const lineHeight = fontSize * lineHeightMult;
 
     const fontFamily = this.typo.fontFamily;
     const fontStyle = { fontFamily, fontSize };
-
     const text = node.text ?? '';
     const lines: LineBox[] = [];
 
     if (text.length === 0) {
-      // Empty paragraph still occupies one line of height
-      lines.push({
-        lineIndex: 0,
-        text: '',
-        width: 0,
-        height: lineHeight,
-        baselineY: lineHeight,
-      });
+      // Empty paragraph = one blank line
+      lines.push({ lineIndex: 0, text: '', width: 0, height: lineHeight, baselineY: lineHeight });
       return lines;
     }
 
     if (fontType === 'fixed') {
-      // Fixed-width: characters per line = floor(contentWidth / charWidth)
-      const charWidth =
-        this.typo.fixedCharacterWidth ?? fontSize * 0.5;
+      const charWidth = this.typo.fixedCharacterWidth ?? fontSize * 0.5;
       const charsPerLine = Math.max(1, Math.floor(contentWidth / charWidth));
 
       let lineIndex = 0;
@@ -224,7 +220,7 @@ export class DocumentLayoutEngine {
         lineIndex++;
       }
     } else {
-      // Proportional: word-wrapping using measureText
+      // Proportional word-wrapping
       const words = text.split(' ');
       let currentLine = '';
       let lineIndex = 0;
@@ -236,7 +232,6 @@ export class DocumentLayoutEngine {
         if (candidateWidth <= contentWidth) {
           currentLine = candidate;
         } else {
-          // Flush current line
           if (currentLine.length > 0) {
             lines.push({
               lineIndex,
@@ -249,18 +244,14 @@ export class DocumentLayoutEngine {
           }
           currentLine = word;
 
-          // Handle single words longer than content width (force-break)
+          // Handle words longer than content width (force-break)
           while (this.measureText(currentLine, fontStyle) > contentWidth) {
-            // Binary search for the longest substring that fits
             let low = 1;
             let high = currentLine.length;
             let splitAt = 1;
             while (low <= high) {
               const mid = Math.floor((low + high) / 2);
-              if (
-                this.measureText(currentLine.slice(0, mid), fontStyle) <=
-                contentWidth
-              ) {
+              if (this.measureText(currentLine.slice(0, mid), fontStyle) <= contentWidth) {
                 splitAt = mid;
                 low = mid + 1;
               } else {
@@ -281,7 +272,6 @@ export class DocumentLayoutEngine {
         }
       }
 
-      // Flush remaining text
       if (currentLine.length > 0) {
         lines.push({
           lineIndex,
@@ -296,20 +286,24 @@ export class DocumentLayoutEngine {
     return lines;
   }
 
-  // ── Phase 2: Page Allocation ────────────────────────────────────────────
+  // ── Page Allocation (Line-Based Grid) ───────────────────────────────────
 
   /**
-   * Process the full document AST and produce paginated output.
-   * Handles hard page breaks, widow/orphan control, and keep-with-next.
+   * Process the AST and produce paginated output.
+   *
+   * Model: each page holds a fixed number of lines (linesPerPage).
+   * Paragraphs produce wrapped text lines + 1 blank line (spacing).
+   * Overflow lines flow to the next page.
+   * Page breaks force a flush to the next page.
    */
   paginate(): PageOutput[] {
     const pages: PageOutput[] = [];
-    const contentWidth =
-      this.geom.width - this.geom.margins.left - this.geom.margins.right;
+    const contentWidth = this.geom.width - this.geom.margins.left - this.geom.margins.right;
 
     let currentPage: RenderedBlock[] = [];
-    let currentY = 0;
+    let currentLineCount = 0;
     let pageIndex = 0;
+    let currentY = 0;
 
     const ast = this.config.documentAST;
 
@@ -319,161 +313,99 @@ export class DocumentLayoutEngine {
       // ── Hard page break ─────────────────────────────────────────────
       if (node.type === 'manual_page_break') {
         // Flush current page
-        if (currentPage.length > 0 || pages.length === 0) {
-          pages.push({
-            pageIndex,
-            usableHeight: this.usableHeight,
-            renderedBlocks: currentPage,
-          });
-        }
+        pages.push({
+          pageIndex,
+          usableHeight: this.usableHeight,
+          linesPerPage: this.linesPerPage,
+          renderedBlocks: currentPage,
+        });
         // Start fresh page
         currentPage = [];
+        currentLineCount = 0;
         currentY = 0;
         pageIndex++;
         continue;
       }
 
-      // Skip header/footer nodes (handled by page chrome)
-      if (node.type === 'header' || node.type === 'footer') {
-        continue;
-      }
+      // Skip header/footer nodes
+      if (node.type === 'header' || node.type === 'footer') continue;
 
       // ── Wrap paragraph into lines ───────────────────────────────────
-      const nodeRules = { ...this.defaultRules, ...node.paginationRules };
-      const marginTop = toPt(node.styleOverrides?.marginTop ?? 0, 'pt');
-      const marginBottom = toPt(node.styleOverrides?.marginBottom ?? 0, 'pt');
-
       const blockLines = this.wrapParagraph(node, contentWidth);
       if (blockLines.length === 0) continue;
 
-      const blockHeight =
-        marginTop +
-        blockLines.reduce((sum, l) => sum + l.height, 0) +
-        marginBottom;
+      // Paragraph spacing: +1 blank line after each paragraph
+      const totalLines = blockLines.length + 1; // +1 for blank line after paragraph
 
-      // ── Check if block fits on current page ─────────────────────────
-      const spaceOnPage = this.usableHeight - currentY;
+      // ── Check if paragraph fits on current page ─────────────────────
+      const linesRemaining = this.linesPerPage - currentLineCount;
 
-      if (blockHeight <= spaceOnPage) {
+      if (totalLines <= linesRemaining) {
         // Fits entirely — place it
         const block: RenderedBlock = {
           nodeId: node.id,
-          startY: currentY + marginTop,
-          endY: currentY + blockHeight - marginBottom,
-          lines: blockLines.map((line) => ({
+          startY: currentY,
+          endY: currentY + blockLines.length * this.lineHeight,
+          lines: blockLines.map((line, idx) => ({
             ...line,
-            baselineY: currentY + marginTop + line.baselineY,
+            lineIndex: currentLineCount + idx,
+            baselineY: currentY + (idx + 1) * this.lineHeight,
           })),
         };
         currentPage.push(block);
-        currentY += blockHeight;
+        currentLineCount += totalLines;
+        currentY += blockLines.length * this.lineHeight;
       } else {
-        // Doesn't fit — need to split or push
-        const linesThatFit = Math.floor(
-          (spaceOnPage - marginTop) /
-            (blockLines[0]?.height ?? this.typo.fontSize * this.typo.lineHeightMultiplier)
-        );
+        // Doesn't fit — split across pages
+        const linesThatFit = Math.max(0, linesRemaining - 1); // reserve 1 for blank line if possible
 
-        if (linesThatFit >= nodeRules.orphans) {
+        if (linesThatFit >= 1) {
           // Place lines that fit on current page
           const fittingLines = blockLines.slice(0, linesThatFit);
-          if (fittingLines.length > 0) {
-            const block: RenderedBlock = {
-              nodeId: node.id,
-              startY: currentY + marginTop,
-              endY: currentY + marginTop + fittingLines.reduce((s, l) => s + l.height, 0),
-              lines: fittingLines.map((line) => ({
-                ...line,
-                baselineY: currentY + marginTop + line.baselineY,
-              })),
-            };
-            currentPage.push(block);
-          }
+          const block: RenderedBlock = {
+            nodeId: node.id,
+            startY: currentY,
+            endY: currentY + fittingLines.length * this.lineHeight,
+            lines: fittingLines.map((line, idx) => ({
+              ...line,
+              lineIndex: currentLineCount + idx,
+              baselineY: currentY + (idx + 1) * this.lineHeight,
+            })),
+          };
+          currentPage.push(block);
+        }
 
-          // Flush current page
-          pages.push({
-            pageIndex,
-            usableHeight: this.usableHeight,
-            renderedBlocks: currentPage,
-          });
+        // Flush current page
+        pages.push({
+          pageIndex,
+          usableHeight: this.usableHeight,
+          linesPerPage: this.linesPerPage,
+          renderedBlocks: currentPage,
+        });
 
-          // Remaining lines go to next page
-          const remainingLines = blockLines.slice(linesThatFit);
-          pageIndex++;
-          currentPage = [];
-          currentY = 0;
+        // Remaining lines go to next page
+        const startIdx = linesThatFit > 0 ? linesThatFit : 0;
+        const remainingLines = blockLines.slice(startIdx);
+        pageIndex++;
+        currentPage = [];
+        currentLineCount = 0;
+        currentY = 0;
 
-          if (remainingLines.length > 0) {
-            const remainingBlock: RenderedBlock = {
-              nodeId: `${node.id}-cont`,
-              startY: 0,
-              endY: remainingLines.reduce((s, l) => s + l.height, 0),
-              lines: remainingLines.map((line) => ({
-                ...line,
-                baselineY: line.baselineY,
-              })),
-            };
-            currentPage.push(remainingBlock);
-            currentY = remainingBlock.endY + marginBottom;
-          }
-        } else {
-          // Orphan control: push entire block to next page
-          // But first check keepWithNext: if previous block has keepWithNext,
-          // we should also push that block
-          if (nodeRules.keepWithNext && currentPage.length > 0) {
-            const prevBlock = currentPage[currentPage.length - 1];
-            currentPage.pop();
-            currentY = prevBlock.startY - marginTop;
-          }
-
-          // Flush current page
-          if (currentPage.length > 0 || pages.length === 0) {
-            pages.push({
-              pageIndex,
-              usableHeight: this.usableHeight,
-              renderedBlocks: currentPage,
-            });
-          }
-
-          // Start new page with this block
-          pageIndex++;
-          currentPage = [];
-          currentY = 0;
-
-          // Re-check if block fits on fresh page (it should unless block > page height)
-          if (blockHeight <= this.usableHeight) {
-            const block: RenderedBlock = {
-              nodeId: node.id,
-              startY: currentY + marginTop,
-              endY: currentY + blockHeight - marginBottom,
-              lines: blockLines.map((line) => ({
-                ...line,
-                baselineY: currentY + marginTop + line.baselineY,
-              })),
-            };
-            currentPage.push(block);
-            currentY += blockHeight;
-          } else {
-            // Block is taller than entire page — force split anyway
-            const linesPerPage = Math.floor(
-              (this.usableHeight - marginTop) /
-                (blockLines[0]?.height ?? this.typo.fontSize * this.typo.lineHeightMultiplier)
-            );
-            const fittingLines = blockLines.slice(0, linesPerPage);
-            if (fittingLines.length > 0) {
-              const block: RenderedBlock = {
-                nodeId: node.id,
-                startY: currentY + marginTop,
-                endY: currentY + marginTop + fittingLines.reduce((s, l) => s + l.height, 0),
-                lines: fittingLines.map((line) => ({
-                  ...line,
-                  baselineY: currentY + marginTop + line.baselineY,
-                })),
-              };
-              currentPage.push(block);
-              currentY = block.endY + marginBottom;
-            }
-          }
+        if (remainingLines.length > 0) {
+          // Place remaining lines on fresh page (with blank line after)
+          const remainingBlock: RenderedBlock = {
+            nodeId: `${node.id}-cont`,
+            startY: 0,
+            endY: remainingLines.length * this.lineHeight,
+            lines: remainingLines.map((line, idx) => ({
+              ...line,
+              lineIndex: idx,
+              baselineY: (idx + 1) * this.lineHeight,
+            })),
+          };
+          currentPage.push(remainingBlock);
+          currentLineCount = remainingLines.length + 1; // +1 blank line
+          currentY = remainingLines.length * this.lineHeight;
         }
       }
     }
@@ -483,15 +415,17 @@ export class DocumentLayoutEngine {
       pages.push({
         pageIndex,
         usableHeight: this.usableHeight,
+        linesPerPage: this.linesPerPage,
         renderedBlocks: currentPage,
       });
     }
 
-    // Ensure at least one page is returned
+    // Ensure at least one page
     if (pages.length === 0) {
       pages.push({
         pageIndex: 0,
         usableHeight: this.usableHeight,
+        linesPerPage: this.linesPerPage,
         renderedBlocks: [],
       });
     }
@@ -503,6 +437,14 @@ export class DocumentLayoutEngine {
 
   getUsableHeight(): number {
     return this.usableHeight;
+  }
+
+  getLinesPerPage(): number {
+    return this.linesPerPage;
+  }
+
+  getLineHeight(): number {
+    return this.lineHeight;
   }
 
   getContentWidth(): number {

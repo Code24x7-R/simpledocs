@@ -2,74 +2,70 @@
 // Copyright (c) 2026 Richard Robertson
 import { NodeViewWrapper } from '@tiptap/react';
 import { useEffect, useRef, useState } from 'react';
-import { usePagination } from '../../../hooks/usePagination';
+import { useDocStore } from '../../../store/useDocStore';
+import { calculatePageGeometry } from '../../../utils/pageGeometry';
 
 /**
  * PageBreakView — Dynamic spacer that pushes content to the next page.
  *
- * Uses the DocumentLayoutEngine (via usePagination) to get the usable
- * height per page, then calculates its own spacer height based on its
- * DOM position so that content after the break starts at the top of the
- * next page boundary.
- *
- * This follows the standard WYSIWYG pagination pattern: the editor
- * content flows continuously, and page break nodes stretch to fill the
- * remaining space on their current page, creating visual page separation.
+ * Uses the shared page geometry utility to calculate the correct spacer
+ * height so that content after the break starts at the top of the next
+ * page boundary. The spacer fills from the current position to the next
+ * page stride boundary.
  */
 export default function PageBreakView() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [spacerHeight, setSpacerHeight] = useState<number | null>(null);
-  const { usableHeightPx } = usePagination();
+  const { docState } = useDocStore();
 
   useEffect(() => {
     const el = wrapperRef.current;
-    if (!el || usableHeightPx <= 0) return;
+    if (!el) return;
 
-    // Find the editor content container (.tiptap)
-    const editorEl = el.closest('.tiptap') as HTMLElement | null;
-    if (!editorEl) return;
-
-    /**
-     * Calculate the spacer height:
-     * 1. Get this node's offsetTop relative to the editor content
-     * 2. Determine position within the current page
-     * 3. Fill remaining space to next page boundary
-     */
     const calculateHeight = () => {
+      // Get page geometry from settings
+      const { pageStridePx } = calculatePageGeometry(docState.settings);
+
+      // offsetTop is relative to the .tiptap container
       const offsetTop = el.offsetTop;
-      const positionInPage = offsetTop % usableHeightPx;
-      let remaining = usableHeightPx - positionInPage;
+
+      // Find the next page boundary
+      const pageIndex = Math.floor(offsetTop / pageStridePx);
+      const nextPageStart = (pageIndex + 1) * pageStridePx;
+
+      // Spacer fills from current position to next page boundary
+      let remaining = nextPageStart - offsetTop;
 
       // If we're within 5px of a boundary, snap to a full page
-      // (prevents near-zero spacers when break is at/near page edge)
       if (remaining < 5) {
-        remaining = usableHeightPx;
+        remaining = pageStridePx;
       }
 
       // Clamp to reasonable bounds
-      remaining = Math.max(20, Math.min(remaining, usableHeightPx));
+      remaining = Math.max(20, Math.min(remaining, pageStridePx));
 
       setSpacerHeight((prev) =>
         prev !== Math.round(remaining) ? Math.round(remaining) : prev
       );
     };
 
-    // Calculate after mount (rAF ensures DOM is laid out)
+    // Calculate after mount
     requestAnimationFrame(calculateHeight);
 
-    // Recalculate when the document structure changes (content added/removed above)
-    const observer = new MutationObserver(() => {
-      requestAnimationFrame(calculateHeight);
-    });
-
-    observer.observe(editorEl, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-
-    return () => observer.disconnect();
-  }, [usableHeightPx]);
+    // Recalculate when document structure changes
+    const editorEl = el.closest('.tiptap') as HTMLElement | null;
+    if (editorEl) {
+      const observer = new MutationObserver(() => {
+        requestAnimationFrame(calculateHeight);
+      });
+      observer.observe(editorEl, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      return () => observer.disconnect();
+    }
+  }, [docState.settings]);
 
   return (
     <NodeViewWrapper

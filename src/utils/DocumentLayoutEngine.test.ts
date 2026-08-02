@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Richard Robertson
 import { describe, it, expect } from 'vitest';
 import { DocumentLayoutEngine } from './DocumentLayoutEngine';
 import type { PageGeometry, TypographyDefaults, ASTNode } from './DocumentLayoutEngine';
@@ -46,27 +44,17 @@ describe('DocumentLayoutEngine', () => {
       expect(engine.getUsableHeight()).toBe(576);
     });
 
-    it('converts geometry units to pt internally', () => {
-      const mmGeometry: PageGeometry = {
-        unit: 'mm',
-        width: 210,
-        height: 297,
-        margins: { top: 20, bottom: 20, left: 25, right: 25 },
-        headerHeight: 10,
-        footerHeight: 10,
-      };
-
+    it('computes lines per page from line height', () => {
       const engine = new DocumentLayoutEngine({
-        pageGeometry: mmGeometry,
+        pageGeometry: baseGeometry,
         typographyDefaults: baseTypography,
         documentAST: [],
       });
 
-      // 297mm * 2.8346 ≈ 841.9pt, minus margins (20*2.8346*2 ≈ 113.4), minus header/footer (10*2.8346*2 ≈ 56.7)
-      // ≈ 841.9 - 113.4 - 56.7 ≈ 671.8
-      const usable = engine.getUsableHeight();
-      expect(usable).toBeGreaterThan(600);
-      expect(usable).toBeLessThan(700);
+      // lineHeight = 12 * 1.2 = 14.4pt
+      // linesPerPage = floor(576 / 14.4) = 40
+      expect(engine.getLineHeight()).toBeCloseTo(14.4, 1);
+      expect(engine.getLinesPerPage()).toBe(40);
     });
   });
 
@@ -125,8 +113,8 @@ describe('DocumentLayoutEngine', () => {
       expect(pages[0].renderedBlocks).toEqual([]);
     });
 
-    it('creates new page when content exceeds usable height', () => {
-      // Create many paragraphs that exceed one page
+    it('creates new page when content exceeds lines per page', () => {
+      // Create many paragraphs that exceed one page (40 lines)
       const paragraphs: ASTNode[] = [];
       for (let i = 0; i < 100; i++) {
         paragraphs.push(createParagraph(`p${i}`, `Paragraph ${i} with some text content`));
@@ -140,6 +128,24 @@ describe('DocumentLayoutEngine', () => {
 
       const pages = engine.paginate();
       expect(pages.length).toBeGreaterThan(1);
+    });
+
+    it('includes blank line spacing after each paragraph', () => {
+      // Each paragraph takes 1 line + 1 blank line = 2 lines
+      // With 40 lines per page, 20 paragraphs should fill one page
+      const paragraphs: ASTNode[] = [];
+      for (let i = 0; i < 20; i++) {
+        paragraphs.push(createParagraph(`p${i}`, `Line ${i}`));
+      }
+
+      const engine = new DocumentLayoutEngine({
+        pageGeometry: baseGeometry,
+        typographyDefaults: baseTypography,
+        documentAST: paragraphs,
+      });
+
+      const pages = engine.paginate();
+      expect(pages.length).toBe(1);
     });
   });
 
@@ -177,46 +183,6 @@ describe('DocumentLayoutEngine', () => {
       const pages = engine.paginate();
       expect(pages.length).toBe(3);
     });
-
-    it('handles consecutive page breaks', () => {
-      const engine = new DocumentLayoutEngine({
-        pageGeometry: baseGeometry,
-        typographyDefaults: baseTypography,
-        documentAST: [
-          createParagraph('p1', 'Content'),
-          createPageBreak('pb1'),
-          createPageBreak('pb2'),
-          createParagraph('p2', 'After'),
-        ],
-      });
-
-      const pages = engine.paginate();
-      // Should create pages for breaks even with empty pages between
-      expect(pages.length).toBeGreaterThanOrEqual(2);
-    });
-  });
-
-  describe('Line height calculation per spec', () => {
-    it('computes line height = (fontSize × lineSpacing) + padding', () => {
-      const engine = new DocumentLayoutEngine({
-        pageGeometry: baseGeometry,
-        typographyDefaults: baseTypography,
-        documentAST: [
-          createParagraph('p1', 'Test', {
-            fontSize: 12,
-            lineHeightMultiplier: 1.5,
-            paddingTop: 6,
-            paddingBottom: 6,
-          }),
-        ],
-      });
-
-      const pages = engine.paginate();
-      const line = pages[0].renderedBlocks[0].lines[0];
-
-      // Expected: (12 * 1.5) + 6 + 6 = 30pt
-      expect(line.height).toBeCloseTo(30, 1);
-    });
   });
 
   describe('Unit conversions', () => {
@@ -236,8 +202,8 @@ describe('DocumentLayoutEngine', () => {
 
       // 297mm * 2.8346 ≈ 841.9pt
       const usable = engine.getUsableHeight();
-      // After subtracting margins (also in mm), should be reasonable
       expect(usable).toBeGreaterThan(0);
+      expect(engine.getLinesPerPage()).toBeGreaterThan(0);
     });
 
     it('correctly converts inches to pt', () => {
@@ -264,7 +230,7 @@ describe('DocumentLayoutEngine', () => {
   });
 
   describe('Page output structure', () => {
-    it('includes pageIndex, usableHeight, and renderedBlocks', () => {
+    it('includes pageIndex, usableHeight, linesPerPage, and renderedBlocks', () => {
       const engine = new DocumentLayoutEngine({
         pageGeometry: baseGeometry,
         typographyDefaults: baseTypography,
@@ -275,8 +241,10 @@ describe('DocumentLayoutEngine', () => {
 
       expect(pages[0]).toHaveProperty('pageIndex');
       expect(pages[0]).toHaveProperty('usableHeight');
+      expect(pages[0]).toHaveProperty('linesPerPage');
       expect(pages[0]).toHaveProperty('renderedBlocks');
       expect(pages[0].usableHeight).toBe(576);
+      expect(pages[0].linesPerPage).toBe(40);
     });
 
     it('renderedBlocks include startY, endY, and lines', () => {

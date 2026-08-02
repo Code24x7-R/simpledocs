@@ -4,11 +4,10 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import DocumentEditor from './DocumentEditor';
 import PageBackground from './PageBackground';
-import { usePagination } from '../../hooks/usePagination';
-import { mmToPx } from '../../utils/unitConversion';
+import { calculatePageGeometry } from '../../utils/pageGeometry';
 
 /**
- * Paginated Viewport - Approach A: Continuous Scroll with Visual Pages
+ * Paginated Viewport — Continuous Scroll with Visual Pages
  *
  * Architecture:
  * - Single Tiptap editor holds ALL content (one continuous document)
@@ -16,9 +15,9 @@ import { mmToPx } from '../../utils/unitConversion';
  * - Page gaps between backgrounds for clear visual separation
  * - Headers/Footers shown on each page
  * - Navigation scrolls viewport by page increments
- * - Zoom rescales the entire view
  *
- * This matches Microsoft Word's Print Layout experience.
+ * Page geometry is calculated once via calculatePageGeometry and shared
+ * with PageBreakView to ensure perfect alignment.
  */
 export default function PaginatedViewport() {
   const {
@@ -32,94 +31,68 @@ export default function PaginatedViewport() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isNavigatingRef = useRef(false);
 
-  // Use the DocumentLayoutEngine for page geometry calculations
-  const { totalPages: engineTotalPages } = usePagination();
-
   const { settings } = docState;
-  const { pageFormat, orientation, margins, pageGap = 24 } = settings;
   const { showPageBackgrounds = true } = settings;
 
-  // Calculate page dimensions
-  const { heightPx } = (() => {
-    const fmt = pageFormat === 'A4' ? { w: 210, h: 297 } : { w: 215.9, h: 279.4 };
-    return orientation === 'landscape'
-      ? { heightPx: mmToPx(fmt.w) }
-      : { heightPx: mmToPx(fmt.h) };
-  })();
+  // Calculate page geometry (shared with PageBreakView)
+  const geo = calculatePageGeometry(settings);
+  const { pageHeightPx, pageStridePx, marginLeftPx, marginRightPx } = geo;
 
-  // Left/right margins in px — must match PageBackground padding
-  const marginPx = {
-    left: mmToPx(parseFloat(margins.left) || 25),
-    right: mmToPx(parseFloat(margins.right) || 25),
-  };
-
-  // Measure actual content height via ResizeObserver — this is the source
-  // of truth for total pages. Engine estimates can be off due to complex
-  // formatting, so we use the real rendered height to ensure the scroll
+  // Measure actual content height via ResizeObserver — ensures the scroll
   // container is always tall enough to fit all content.
   const [measuredTotalPages, setMeasuredTotalPages] = useState(1);
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // The scaled content wrapper is the first child of the scroll container
     const contentWrapper = container.firstElementChild as HTMLElement | null;
     if (!contentWrapper) return;
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const contentHeight = entry.contentRect.height;
-        const pageStride = heightPx + pageGap;
-        const pages = Math.max(1, Math.ceil(contentHeight / pageStride));
+        const pages = Math.max(1, Math.ceil(contentHeight / pageStridePx));
         setMeasuredTotalPages(pages);
       }
     });
 
     observer.observe(contentWrapper);
     return () => observer.disconnect();
-  }, [heightPx, pageGap]);
+  }, [pageStridePx]);
 
-  // Use the MAXIMUM of engine estimate, store value, and actual measured
-  // content height. This ensures the scroll container is always tall enough
-  // to fit all content, even if the engine underestimates.
-  const effectiveTotalPages = Math.max(
-    engineTotalPages,
-    totalPages,
-    measuredTotalPages,
-    1
-  );
+  // Use the MAXIMUM of store value and actual measured content height.
+  const effectiveTotalPages = Math.max(totalPages, measuredTotalPages, 1);
 
-  // Total scroll height = pages * (pageHeight + gap)
-  const totalScrollHeight = effectiveTotalPages * (heightPx + pageGap);
+  // Total scroll height = pages * pageStride
+  const totalScrollHeight = effectiveTotalPages * pageStridePx;
 
-  // Sync engine-calculated total pages to store
+  // Sync total pages to store
   useEffect(() => {
-    if (engineTotalPages > 0 && engineTotalPages !== totalPages) {
-      setTotalPages(engineTotalPages);
+    if (effectiveTotalPages !== totalPages) {
+      setTotalPages(effectiveTotalPages);
     }
-  }, [engineTotalPages, totalPages, setTotalPages]);
+  }, [effectiveTotalPages, totalPages, setTotalPages]);
 
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
     if (!containerRef.current || isNavigatingRef.current) return;
 
     const scrollTop = containerRef.current.scrollTop;
-    const pageIndex = Math.floor(scrollTop / (heightPx + pageGap)) + 1;
+    const pageIndex = Math.floor(scrollTop / pageStridePx) + 1;
     const clampedPage = Math.max(1, Math.min(pageIndex, effectiveTotalPages));
 
     if (clampedPage !== currentPage) {
       setCurrentPage(clampedPage);
     }
-  }, [currentPage, heightPx, pageGap, effectiveTotalPages, setCurrentPage]);
+  }, [currentPage, pageStridePx, effectiveTotalPages, setCurrentPage]);
 
   // Scroll to current page when it changes via navigation controls
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const targetScroll = (currentPage - 1) * (heightPx + pageGap);
+    const targetScroll = (currentPage - 1) * pageStridePx;
     const currentScroll = containerRef.current.scrollTop;
 
-    // Only scroll if not already at target (prevents fighting with user scroll)
     if (Math.abs(currentScroll - targetScroll) > 5) {
       isNavigatingRef.current = true;
       containerRef.current.scrollTo({
@@ -127,9 +100,6 @@ export default function PaginatedViewport() {
         behavior: 'smooth',
       });
 
-      // Reset navigation flag only when the scroll animation actually ends.
-      // Using scrollend event (with setTimeout fallback for older browsers)
-      // instead of a fixed timeout that may fire mid-scroll.
       let scrollTimeout: ReturnType<typeof setTimeout>;
       const onScrollEnd = () => {
         isNavigatingRef.current = false;
@@ -138,38 +108,32 @@ export default function PaginatedViewport() {
       };
 
       containerRef.current.addEventListener('scrollend', onScrollEnd, { once: true });
-      // Fallback: if scrollend doesn't fire within 1.5s, reset anyway
       scrollTimeout = setTimeout(onScrollEnd, 1500);
     }
-  }, [currentPage, heightPx, pageGap]);
+  }, [currentPage, pageStridePx]);
 
   const handleRef = useCallback(
     (node: HTMLDivElement | null) => {
-      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current =
-        node;
+      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
     },
     []
   );
 
   // Calculate page positions
-  const pagePositions = Array.from({ length: effectiveTotalPages }).map(
-    (_, i) => ({
-      pageNumber: i + 1,
-      top: i * (heightPx + pageGap),
-      height: heightPx,
-    })
-  );
+  const pagePositions = Array.from({ length: effectiveTotalPages }).map((_, i) => ({
+    pageNumber: i + 1,
+    top: i * pageStridePx,
+    height: pageHeightPx,
+  }));
 
   return (
     <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
-      {/* Scrollable Viewport */}
       <div
         id="paginated-viewport"
         ref={handleRef}
         className="flex-1 overflow-y-auto relative min-h-0"
         onScroll={handleScroll}
       >
-        {/* Content area with zoom transform */}
         <div
           style={{
             transform: `scale(${zoom})`,
@@ -178,26 +142,24 @@ export default function PaginatedViewport() {
             position: 'relative',
           }}
         >
-          {/* Visual page backgrounds (rendered first = behind editor) */}
+          {/* Visual page backgrounds */}
           {showPageBackgrounds &&
             pagePositions.map((page) => (
               <PageBackground
                 key={page.pageNumber}
                 pageNumber={page.pageNumber}
-                top={page.top + 24} // Account for padding-top: 6
+                top={page.top + 24}
                 height={page.height}
               />
             ))}
 
-          {/* The continuous editor content (on top of page backgrounds).
-              Padding matches the page background margins so text aligns
-              with the visible content area. */}
+          {/* Editor content with margins */}
           <div className="flex justify-center pt-6" style={{ position: 'relative', zIndex: 1 }}>
             <div
               style={{
-                width: orientation === 'landscape' ? '1010px' : '794px',
-                paddingLeft: `${marginPx.left}px`,
-                paddingRight: `${marginPx.right}px`,
+                width: geo.pageWidthPx,
+                paddingLeft: `${marginLeftPx}px`,
+                paddingRight: `${marginRightPx}px`,
               }}
             >
               <DocumentEditor />
