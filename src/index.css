@@ -23,12 +23,7 @@
   min-height: 100%;
 }
 
-/* ProseMirror selection - yellow for search matches */
-.tiptap .ProseMirror-selectednode {
-  outline: 2px solid #3b82f6;
-}
-
-/* ProseMirror text selection */
+/* Search match highlight - yellow background */
 .tiptap ::selection {
   background-color: #fef08a;
   color: inherit;
@@ -37,23 +32,6 @@
 .tiptap ::-moz-selection {
   background-color: #fef08a;
   color: inherit;
-}
-
-/* ProseMirror internal selection class */
-.ProseMirror-selected {
-  background-color: #fef08a !important;
-}
-
-.tiptap .ProseMirror-hideselection ::selection {
-  background: transparent;
-}
-
-.tiptap .ProseMirror-hideselection ::-moz-selection {
-  background: transparent;
-}
-
-.tiptap .ProseMirror-hideselection {
-  caret-color: transparent;
 }
 
 .tiptap p {

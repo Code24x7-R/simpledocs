@@ -30,38 +30,41 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     return { caseSensitive, wholeWord };
   }, [caseSensitive, wholeWord]);
 
-  const scrollMatchIntoView = (from: number) => {
+  const scrollMatchIntoView = (from: number, to: number) => {
     if (!editor) return;
 
-    // Get the DOM node at the selection position
-    const domNode = editor.view.nodeDOM(from);
+    // First, ensure editor has focus so selection is visible
+    editor.commands.focus();
 
-    // If it's an Element, use scrollIntoView
-    if (domNode instanceof Element) {
-      domNode.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    } else if (domNode instanceof Text) {
-      // For text nodes, get the parent element
-      const parent = domNode.parentElement;
-      if (parent) {
-        parent.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // Set the selection again to ensure it's active
+    editor.commands.setTextSelection({ from, to });
+
+    // Use requestAnimationFrame to wait for the selection to render
+    requestAnimationFrame(() => {
+      // Get coordinates of the selection
+      const startCoords = editor.view.coordsAtPos(from);
+      const endCoords = editor.view.coordsAtPos(to);
+
+      if (!startCoords || !endCoords) return;
+
+      // Find the scrollable container
+      const scrollContainer = document.getElementById('paginated-viewport');
+      if (!scrollContainer) return;
+
+      const scrollInner = scrollContainer.querySelector('.overflow-y-auto') as HTMLElement;
+      if (!scrollInner) return;
+
+      // Calculate the middle of the selection relative to viewport
+      const midY = (startCoords.top + endCoords.bottom) / 2;
+      const containerRect = scrollInner.getBoundingClientRect();
+
+      // Check if selection is outside visible area
+      if (midY < containerRect.top + 60 || midY > containerRect.bottom - 60) {
+        // Calculate scroll offset to center the selection
+        const targetScroll = scrollInner.scrollTop + (midY - containerRect.top - containerRect.height / 2);
+        scrollInner.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
       }
-    } else {
-      // Fallback: use coords to calculate scroll position
-      const coords = editor.view.coordsAtPos(from);
-      if (coords) {
-        // Find the scrollable container
-        const scrollContainer = document.getElementById('paginated-viewport');
-        if (scrollContainer) {
-          const scrollContainerInner = scrollContainer.querySelector('.overflow-y-auto') as HTMLElement;
-          if (scrollContainerInner) {
-            // Calculate target scroll position to center the match
-            const containerRect = scrollContainerInner.getBoundingClientRect();
-            const targetScroll = scrollContainerInner.scrollTop + coords.top - containerRect.height / 2;
-            scrollContainerInner.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-          }
-        }
-      }
-    }
+    });
   };
 
   const handleFind = () => {
@@ -88,8 +91,8 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
       const to = match.end + 1;
       editor.commands.setTextSelection({ from, to });
 
-      // Scroll to make the match visible
-      scrollMatchIntoView(from);
+      // Scroll to make the match visible (focus editor first so selection shows)
+      scrollMatchIntoView(from, to);
     }
 
     setReplaceResult(null);
@@ -109,7 +112,7 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     const from = match.index + 1;
     const to = match.end + 1;
     editor.commands.setTextSelection({ from, to });
-    scrollMatchIntoView(from);
+    scrollMatchIntoView(from, to);
   };
 
   const handleFindPrev = () => {
@@ -126,7 +129,7 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     const from = match.index + 1;
     const to = match.end + 1;
     editor.commands.setTextSelection({ from, to });
-    scrollMatchIntoView(from);
+    scrollMatchIntoView(from, to);
   };
 
   const handleReplace = () => {
