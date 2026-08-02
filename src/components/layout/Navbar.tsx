@@ -7,7 +7,8 @@ import {
   Printer,
   Undo2,
   Redo2,
-
+  Keyboard,
+  Info,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument } from '../../utils/fileIO';
@@ -28,6 +29,10 @@ export default function Navbar() {
     loadDocument,
     setZoom,
     setPageSetupOpen,
+    helpMenuOpen,
+    setHelpMenuOpen,
+    setAboutOpen,
+    setShortcutsOpen,
   } = useDocStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +174,32 @@ export default function Navbar() {
             {level.label}
           </button>
         ))}
+      </div>
+
+      {/* Help Menu */}
+      <div className="relative shrink-0">
+        <button
+          onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+          className="px-3 py-1.5 text-sm border border-gray-200 rounded hover:bg-gray-50 flex items-center gap-1"
+        >
+          Help
+        </button>
+        {helpMenuOpen && (
+          <div className="absolute top-full right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <button
+              onClick={() => { setShortcutsOpen(true); setHelpMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Keyboard className="w-4 h-4" /> Keyboard Shortcuts
+            </button>
+            <button
+              onClick={() => { setAboutOpen(true); setHelpMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Info className="w-4 h-4" /> About simpledocs
+            </button>
+          </div>
+        )}
       </div>
 
       <input

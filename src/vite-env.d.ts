@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+declare const __GIT_COMMIT_HASH__: string;
+declare const __BUILD_TIMESTAMP__: string;
+declare const __APP_VERSION__: string;
+
 // html2pdf.js type declaration (no @types package available)
 declare module 'html2pdf.js' {
   interface Html2PdfOptions {

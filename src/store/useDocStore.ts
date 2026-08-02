@@ -37,6 +37,9 @@ interface DocStore {
   insertFieldOpen: boolean;
   tableGridOpen: boolean;
   tableGridSize: { rows: number; cols: number } | null;
+  helpMenuOpen: boolean;
+  aboutOpen: boolean;
+  shortcutsOpen: boolean;
 
   setEditor: (editor: Editor) => void;
   updateContent: (content: Record<string, unknown>) => void;
@@ -49,6 +52,9 @@ interface DocStore {
   setInsertFieldOpen: (open: boolean) => void;
   setTableGridOpen: (open: boolean) => void;
   setTableGridSize: (size: { rows: number; cols: number } | null) => void;
+  setHelpMenuOpen: (open: boolean) => void;
+  setAboutOpen: (open: boolean) => void;
+  setShortcutsOpen: (open: boolean) => void;
 }
 
 const STORAGE_KEY = 'SIMPLEDOCS_STATE';
@@ -119,6 +125,9 @@ export const useDocStore = create<DocStore>((set, get) => {
     insertFieldOpen: false,
     tableGridOpen: false,
     tableGridSize: null,
+    helpMenuOpen: false,
+    aboutOpen: false,
+    shortcutsOpen: false,
 
     setEditor: (editor) => set({ editor }),
 
@@ -171,5 +180,8 @@ export const useDocStore = create<DocStore>((set, get) => {
     setInsertFieldOpen: (open) => set({ insertFieldOpen: open }),
     setTableGridOpen: (open) => set({ tableGridOpen: open }),
     setTableGridSize: (size) => set({ tableGridSize: size }),
+    setHelpMenuOpen: (open) => set({ helpMenuOpen: open }),
+    setAboutOpen: (open) => set({ aboutOpen: open }),
+    setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
   };
 });

@@ -6,10 +6,12 @@ import Toolbar from './components/layout/Toolbar/Toolbar';
 import PageSetupModal from './components/layout/PageSetupModal';
 import TableGridModal from './components/layout/TableGridModal';
 import InsertFieldModal from './components/layout/InsertFieldModal';
+import AboutModal from './components/layout/AboutModal';
+import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import PaginatedViewport from './components/editor/PaginatedViewport';
 
 export default function App() {
-  const { docState } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen } = useDocStore();
   const pageElementsRef = useRef<HTMLElement[]>([]);
 
   useEffect(() => {
@@ -38,6 +40,8 @@ export default function App() {
       <PageSetupModal />
       <TableGridModal />
       <InsertFieldModal />
+      <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }
