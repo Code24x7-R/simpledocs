@@ -24,7 +24,6 @@ import {
   ClipboardPaste,
   Scissors,
   Search,
-  Replace,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
 import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';

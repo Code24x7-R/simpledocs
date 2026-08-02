@@ -8,8 +8,8 @@ export interface SearchResult {
 }
 
 export interface SearchOptions {
-  caseSensitive: boolean;
-  wholeWord: boolean;
+  caseSensitive?: boolean;
+  wholeWord?: boolean;
 }
 
 /**

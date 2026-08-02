@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { X, Search, Replace, ArrowRight, ArrowDown } from 'lucide-react';
+import { X, Search, Replace } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { findAllOccurrences, replaceAllOccurrences, SearchOptions } from '../../utils/search';
 

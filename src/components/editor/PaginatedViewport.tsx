@@ -3,13 +3,15 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDocStore } from '../../store/useDocStore';
 import DocumentEditor from './DocumentEditor';
 import PageCanvas from './PageCanvas';
-import { calculateAvailableHeight, doesContentOverflow } from '../../utils/pageOverflow';
+import { calculateAvailableHeight } from '../../utils/pageOverflow';
+import { splitHtmlAtPageBreaks } from '../../utils/autoPageBreak';
 import { mmToPx } from '../../utils/unitConversion';
 
 export default function PaginatedViewport() {
   const { docState, zoom, editor } = useDocStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(1);
+  const [pageContents, setPageContents] = useState<string[]>([]);
 
   const { settings } = docState;
   const { pageFormat, orientation, margins, header, footer } = settings;
@@ -40,22 +42,40 @@ export default function PaginatedViewport() {
     footerHeight
   );
 
-  // Measure content and calculate pages
+  // Count pages based on content
   useEffect(() => {
     if (!editor) return;
 
-    const measureContent = () => {
-      const editorEl = document.querySelector('.tiptap');
-      if (editorEl) {
-        const height = editorEl.scrollHeight;
-        const overflows = doesContentOverflow(height, availableHeight);
-        const pages = overflows ? Math.ceil(height / availableHeight) : 1;
-        setPageCount(pages);
+    const updatePageCount = () => {
+      const editorEl = document.querySelector('.tiptap') as HTMLElement;
+      if (!editorEl) return;
+
+      const contentHeight = editorEl.scrollHeight;
+      const pageBreaks = editorEl.querySelectorAll('[data-type="page-break"]');
+      const totalPages = pageBreaks.length + 1;
+
+      // Also check if overflow exists without page breaks
+      if (totalPages === 1 && contentHeight > availableHeight) {
+        // Content overflows but no page breaks yet - let auto-insert handle it
+        // For now, just show 1 page
+        setPageCount(1);
+        setPageContents([]);
+      } else {
+        setPageCount(totalPages);
+
+        // Split content at page breaks
+        if (totalPages > 1) {
+          const html = editorEl.innerHTML;
+          const parts = splitHtmlAtPageBreaks(html);
+          setPageContents(parts);
+        } else {
+          setPageContents([]);
+        }
       }
     };
 
-    // Measure after editor updates
-    const timeout = setTimeout(measureContent, 100);
+    // Delay to let editor render
+    const timeout = setTimeout(updatePageCount, 200);
     return () => clearTimeout(timeout);
   }, [editor, editor?.getJSON(), availableHeight]);
 
@@ -111,10 +131,16 @@ export default function PaginatedViewport() {
               className="py-6"
             >
               <PageCanvas pageNumber={virtualRow.index + 1} totalPages={pageCount}>
-                {virtualRow.index === 0 && <DocumentEditor />}
-                {virtualRow.index > 0 && (
+                {virtualRow.index === 0 ? (
+                  <DocumentEditor />
+                ) : pageContents[virtualRow.index] ? (
+                  <div
+                    className="page-content-readonly"
+                    dangerouslySetInnerHTML={{ __html: pageContents[virtualRow.index] }}
+                  />
+                ) : (
                   <div className="text-center text-gray-400 text-sm py-4">
-                    Page {virtualRow.index + 1} (auto-continued)
+                    Page {virtualRow.index + 1}
                   </div>
                 )}
               </PageCanvas>
