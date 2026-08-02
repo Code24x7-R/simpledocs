@@ -33,24 +33,33 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   const scrollMatchIntoView = (from: number) => {
     if (!editor) return;
 
-    // Get coordinates of the selection
-    const startCoords = editor.view.coordsAtPos(from);
+    // Get the DOM node at the selection position
+    const domNode = editor.view.nodeDOM(from);
 
-    if (!startCoords) return;
-
-    // Get the viewport container
-    const viewport = document.getElementById('paginated-viewport');
-    if (!viewport) return;
-
-    const viewportRect = viewport.getBoundingClientRect();
-
-    // Check if the match is visible in the viewport
-    if (startCoords.top < viewportRect.top + 80 || startCoords.top > viewportRect.bottom - 80) {
-      // Scroll the match to center of viewport
-      const scrollContainer = viewport.querySelector('.overflow-y-auto') as HTMLElement;
-      if (scrollContainer) {
-        const targetScroll = scrollContainer.scrollTop + (startCoords.top - viewportRect.height / 2);
-        scrollContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+    // If it's an Element, use scrollIntoView
+    if (domNode instanceof Element) {
+      domNode.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    } else if (domNode instanceof Text) {
+      // For text nodes, get the parent element
+      const parent = domNode.parentElement;
+      if (parent) {
+        parent.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    } else {
+      // Fallback: use coords to calculate scroll position
+      const coords = editor.view.coordsAtPos(from);
+      if (coords) {
+        // Find the scrollable container
+        const scrollContainer = document.getElementById('paginated-viewport');
+        if (scrollContainer) {
+          const scrollContainerInner = scrollContainer.querySelector('.overflow-y-auto') as HTMLElement;
+          if (scrollContainerInner) {
+            // Calculate target scroll position to center the match
+            const containerRect = scrollContainerInner.getBoundingClientRect();
+            const targetScroll = scrollContainerInner.scrollTop + coords.top - containerRect.height / 2;
+            scrollContainerInner.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+          }
+        }
       }
     }
   };
