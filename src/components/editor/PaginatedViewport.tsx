@@ -29,10 +29,19 @@ export default function PaginatedViewport() {
   return (
     <div
       ref={handleRef}
-      className="flex-1 overflow-y-auto bg-canvas flex justify-center"
+      className="flex-1 overflow-y-auto bg-canvas"
       id="paginated-viewport"
     >
-      <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
+      <div
+        style={{
+          transform: `scale(${zoom})`,
+          transformOrigin: 'top center',
+          minWidth: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
         <div
           style={{
             height: `${virtualizer.getTotalSize()}px`,
@@ -48,6 +57,8 @@ export default function PaginatedViewport() {
                 top: 0,
                 left: 0,
                 width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
                 transform: `translateY(${virtualRow.start}px)`,
               }}
               className="py-6"
