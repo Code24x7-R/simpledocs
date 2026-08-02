@@ -35,7 +35,7 @@ export default function App() {
   }, [docState]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col">
       <Navbar />
       <Toolbar />
       <PageNavigation />
