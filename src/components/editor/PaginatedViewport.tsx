@@ -125,14 +125,14 @@ export default function PaginatedViewport() {
   );
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-100">
+    <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
       {/* Page Navigation Controls */}
       <PageNavigation />
 
       {/* Scrollable Viewport */}
       <div
         ref={handleRef}
-        className="flex-1 overflow-y-auto relative"
+        className="flex-1 overflow-y-auto relative min-h-0"
         onScroll={handleScroll}
       >
         {/* Content area with zoom transform */}
