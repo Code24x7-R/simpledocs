@@ -14,6 +14,7 @@
 | 8 | Deployment (GitHub Pages) | COMPLETE ✅ |
 | 9 | Documentation (README) | COMPLETE ✅ |
 | 10 | Help Menu & About Modal | COMPLETE ✅ |
+| 11 | Clipboard Functions | COMPLETE ✅ |
 
 ---
 
@@ -75,6 +76,15 @@
 - Keyboard Shortcuts modal (categorized reference)
 - About modal (version, build date, commit hash, description)
 - Help menu dropdown in Navbar
+
+### Phase 11: Clipboard Functions ✅
+- Created `src/utils/clipboard.ts` with copy/cut/paste utilities
+- Uses browser Clipboard API with text/plain and text/html formats
+- Fallback to `execCommand` for older browsers
+- Added Copy/Cut/Paste buttons to Toolbar
+- Added Copy/Cut/Paste items to File menu in Navbar
+- Wired handlers to editor selection state
+- Added 5 unit tests for clipboard utilities
 
 ---
 

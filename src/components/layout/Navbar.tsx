@@ -9,9 +9,13 @@ import {
   Redo2,
   Keyboard,
   Info,
+  Copy,
+  Scissors,
+  ClipboardPaste,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument } from '../../utils/fileIO';
+import { copyToClipboard, pasteFromClipboard } from '../../utils/clipboard';
 
 const ZOOM_LEVELS = [
   { label: '75%', value: 0.75 },
@@ -72,6 +76,38 @@ export default function Navbar() {
     window.print();
   };
 
+  const handleCopy = async () => {
+    if (!editor) return;
+    const { state } = editor;
+    const { from, to } = state.selection;
+    const selectedText = state.doc.textBetween(from, to, '\n');
+    if (selectedText) {
+      const htmlContent = editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? '';
+      await copyToClipboard(selectedText, htmlContent);
+    }
+  };
+
+  const handleCut = async () => {
+    if (!editor) return;
+    const { state } = editor;
+    const { from, to } = state.selection;
+    const selectedText = state.doc.textBetween(from, to, '\n');
+    if (selectedText) {
+      const htmlContent = editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? '';
+      await copyToClipboard(selectedText, htmlContent);
+      editor.chain().focus().deleteSelection().run();
+    }
+  };
+
+  const handlePaste = async () => {
+    if (!editor) return;
+    const { text, html } = await pasteFromClipboard();
+    const content = html || text;
+    if (content) {
+      editor.chain().focus().insertContent(content).run();
+    }
+  };
+
   return (
     <nav className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-4 shrink-0 shadow-sm z-10">
       {/* Brand */}
@@ -129,6 +165,26 @@ export default function Navbar() {
             >
               <Printer className="w-4 h-4" /> Print
             </button>
+            <div className="border-t border-gray-100 my-1" />
+            <button
+              onClick={() => { handleCopy(); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Copy className="w-4 h-4" /> Copy
+            </button>
+            <button
+              onClick={() => { handleCut(); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Scissors className="w-4 h-4" /> Cut
+            </button>
+            <button
+              onClick={() => { handlePaste(); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <ClipboardPaste className="w-4 h-4" /> Paste
+            </button>
+            <div className="border-t border-gray-100 my-1" />
             <button
               onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"

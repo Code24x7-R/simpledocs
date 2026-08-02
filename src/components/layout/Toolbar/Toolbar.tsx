@@ -20,8 +20,12 @@ import {
   Table,
   Sparkles,
   ChevronDown,
+  Copy,
+  ClipboardPaste,
+  Scissors,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
+import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';
 
 const FONT_FAMILIES = [
   'Arial',
@@ -63,6 +67,39 @@ export default function Toolbar() {
 
   const isActive = (mark: string) => editor.isActive(mark);
   const isHeading = (level: number) => editor.isActive('heading', { level });
+
+  // Clipboard handlers
+  const handleCopy = async () => {
+    const { state } = editor;
+    const { from, to } = state.selection;
+    const selectedText = state.doc.textBetween(from, to, '\n');
+    const selectedHtml = editor.state.doc.slice(from, to).content;
+    const htmlContent = selectedHtml.content?.length
+      ? editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? ''
+      : '';
+    if (selectedText) {
+      await copyToClipboard(selectedText, htmlContent);
+    }
+  };
+
+  const handleCut = async () => {
+    const { state } = editor;
+    const { from, to } = state.selection;
+    const selectedText = state.doc.textBetween(from, to, '\n');
+    if (selectedText) {
+      const selectedHtml = editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? '';
+      await copyToClipboard(selectedText, selectedHtml);
+      editor.chain().focus().deleteSelection().run();
+    }
+  };
+
+  const handlePaste = async () => {
+    const { text, html } = await pasteFromClipboard();
+    const content = html || text;
+    if (content) {
+      editor.chain().focus().insertContent(content).run();
+    }
+  };
 
   const Button = ({
     onClick,
@@ -201,6 +238,23 @@ export default function Toolbar() {
       <Button onClick={() => editor.chain().focus().toggleStrike().run()} active={isActive('strike')} title="Strikethrough">
         <Strikethrough className="w-4 h-4" />
       </Button>
+
+      {/* Clipboard */}
+      <div className="relative group">
+        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Copy" onClick={handleCopy}>
+          <Copy className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="relative group">
+        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Cut" onClick={handleCut}>
+          <Scissors className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="relative group">
+        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Paste" onClick={handlePaste}>
+          <ClipboardPaste className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Text Color */}
       <div className="relative group">
