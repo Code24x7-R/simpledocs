@@ -107,7 +107,6 @@ const createNewDoc = (): DocState => ({
     content: [
       {
         type: 'paragraph',
-        content: [{ type: 'text', text: '' }],
       },
     ],
   },

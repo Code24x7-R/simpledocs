@@ -136,7 +136,13 @@ export function replaceAllPreservingStyles(
       const matches = node.text.match(regex);
       if (matches) {
         totalCount += matches.length;
-        node.text = node.text.replace(regex, replacement);
+        const newText = node.text.replace(regex, replacement);
+        // Only update if result is non-empty (Tiptap doesn't allow empty text nodes)
+        if (newText.length > 0) {
+          node.text = newText;
+        }
+        // If text becomes empty, we keep the original to avoid Tiptap error
+        // The user can manually delete if needed
       }
     }
 
