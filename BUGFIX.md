@@ -2,17 +2,17 @@
 
 ## Active Bugs
 
-| ID | Title | Date | Description | Status |
-|----|-------|------|-------------|--------|
-| B-011 | Auto page break doesn't split content across pages | 2026-08-02 | Large paste creates multiple pages but all content stays on first page. | IMPLEMENTED: True paginated viewport with CSS scroll-snap, fixed viewport showing one page at a time, prev/next/page-jump navigation. Editor content is one continuous document. Zoom rescales the page canvas. |
-| B-012 | Color picker inconsistent with mouse selection | 2026-08-02 | Clicking color toolbar icon shows palette but unable to always pick/apply color to previously selected text. Selection is lost when clicking palette. | Changed from hover-based (CSS group-hover) to click-to-open dropdown. Added state management like other dropdowns. Applied color on click and closes palette. |
-
----
+*No active bugs.*
 
 ## Fixed Bugs
 
 | ID | Title | Date | Description | Fix |
 |----|-------|------|-------------|-----|
+| B-013 | Editor not accepting keystrokes | 2026-08-02 | Clicking in editor and typing had no effect. Keystrokes were intercepted by PageBackground overlay. | Removed `pointer-events-auto` div inside `pointer-events-none` overlay in PageBackground.tsx. The inner div was creating an invisible shield over the Tiptap contenteditable area. |
+| B-014 | Editor content hidden behind page backgrounds | 2026-08-02 | Even after fixing pointer-events, editor text was invisible because absolutely-positioned white page backgrounds painted on top of the editor. | Reordered rendering in PaginatedViewport.tsx: backgrounds render first (behind), editor renders after with `z-index: 1`. |
+| B-015 | Search & Replace scroll-to-match not working | 2026-08-02 | SearchReplaceModal queried `getElementById('paginated-viewport')` for scrolling to matches, but the ID was missing from the viewport div. | Added `id="paginated-viewport"` to the scrollable container div in PaginatedViewport.tsx. |
+| B-016 | Page navigation next/prev bounces back | 2026-08-02 | Clicking next page navigated briefly then immediately bounced back to the previous page. | Race condition: `isNavigatingRef` was reset after a fixed 400ms timeout, but smooth scrolling a full page takes longer. Fixed by using the `scrollend` event (with 1500ms timeout fallback) to reset the flag only when scrolling actually completes. |
+| B-017 | Page break doesn't push content to next page | 2026-08-02 | Inserting a page break only showed a small dashed line; text after it stayed on the same visual page. | Implemented DocumentLayoutEngine following the standard two-phase pagination pattern (line wrapping + page allocation). PageBreakView now dynamically calculates spacer height to fill remaining page space, pushing following content to the next page boundary. Files: `DocumentLayoutEngine.ts`, `pagination.ts`, `usePagination.ts`, updated `PageBreakView.tsx`. |
 | B-010 | Content overflow causes scrollbars instead of auto page break | 2026-08-02 | When pasting content larger than a page, scrollbars appear inside the pageview. Content should flow over page breaks automatically up to the length. | Added page overflow calculation utility. PaginatedViewport now measures content height and renders multiple page canvases when content exceeds available height. |
 
 | ID | Title | Date | Description | Fix |

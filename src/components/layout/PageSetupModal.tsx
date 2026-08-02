@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';

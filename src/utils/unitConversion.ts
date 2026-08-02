@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 const MM_PER_INCH = 25.4;
 const DPI = 96;
 

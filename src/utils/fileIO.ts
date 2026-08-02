@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import type { DocState } from '../store/useDocStore';
 
 export function saveDocument(doc: DocState): void {

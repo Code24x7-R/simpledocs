@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock mammoth before importing the module

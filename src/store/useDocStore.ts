@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { create } from 'zustand';
 import type { Editor } from '@tiptap/react';
 import { getMRUList, addMRUEntry, removeMRUEntry } from '../utils/mru';

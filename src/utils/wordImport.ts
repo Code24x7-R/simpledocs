@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import mammoth from 'mammoth';
 
 export interface WordImportResult {

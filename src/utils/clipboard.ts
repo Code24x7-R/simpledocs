@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 /**
  * Clipboard utilities for rich text copy/cut/paste operations.
  * Uses the browser Clipboard API with both text/plain and text/html formats.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { saveDocument, openDocument } from './fileIO';
 import type { DocState } from '../store/useDocStore';

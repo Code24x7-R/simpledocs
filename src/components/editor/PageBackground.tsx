@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useDocStore } from '../../store/useDocStore';
 
 interface PageBackgroundProps {
@@ -64,10 +66,10 @@ export default function PageBackground({
           </div>
         )}
 
-        {/* Content area - empty, content flows from editor behind */}
-        <div className="w-full h-full pointer-events-auto">
-          {/* This is where editor content shows through */}
-        </div>
+        {/* Content area - intentionally empty.
+             Editor content renders behind this overlay.
+             No pointer-events-auto here — that would block clicks/keystrokes
+             from reaching the Tiptap editor underneath. */}
 
         {/* Footer */}
         {footer.enabled && footer.showPageNumbers && (

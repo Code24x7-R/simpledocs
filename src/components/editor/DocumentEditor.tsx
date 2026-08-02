@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useEditor, EditorContent } from '@tiptap/react';
 import { useEffect } from 'react';
 import { useDocStore } from '../../store/useDocStore';

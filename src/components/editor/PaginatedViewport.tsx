@@ -1,8 +1,10 @@
-import { useRef, useCallback, useEffect } from 'react';
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import DocumentEditor from './DocumentEditor';
 import PageBackground from './PageBackground';
-import { calculateAvailableHeight } from '../../utils/pageOverflow';
+import { usePagination } from '../../hooks/usePagination';
 import { mmToPx } from '../../utils/unitConversion';
 
 /**
@@ -22,7 +24,6 @@ export default function PaginatedViewport() {
   const {
     docState,
     zoom,
-    editor,
     currentPage,
     totalPages,
     setCurrentPage,
@@ -31,9 +32,11 @@ export default function PaginatedViewport() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isNavigatingRef = useRef(false);
 
+  // Use the DocumentLayoutEngine for page geometry calculations
+  const { totalPages: engineTotalPages } = usePagination();
+
   const { settings } = docState;
-  const { pageFormat, orientation, margins, header, footer, pageGap = 24 } =
-    settings;
+  const { pageFormat, orientation, margins, pageGap = 24 } = settings;
   const { showPageBackgrounds = true } = settings;
 
   // Calculate page dimensions
@@ -44,45 +47,57 @@ export default function PaginatedViewport() {
       : { heightPx: mmToPx(fmt.h) };
   })();
 
+  // Left/right margins in px — must match PageBackground padding
   const marginPx = {
-    top: mmToPx(parseFloat(margins.top) || 20),
-    bottom: mmToPx(parseFloat(margins.bottom) || 20),
     left: mmToPx(parseFloat(margins.left) || 25),
     right: mmToPx(parseFloat(margins.right) || 25),
   };
 
-  const headerHeight = header.enabled ? mmToPx(10) : 0;
-  const footerHeight = footer.enabled && footer.showPageNumbers ? mmToPx(10) : 0;
+  // Measure actual content height via ResizeObserver — this is the source
+  // of truth for total pages. Engine estimates can be off due to complex
+  // formatting, so we use the real rendered height to ensure the scroll
+  // container is always tall enough to fit all content.
+  const [measuredTotalPages, setMeasuredTotalPages] = useState(1);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  const availableHeight = calculateAvailableHeight(
-    heightPx,
-    marginPx.top,
-    marginPx.bottom,
-    headerHeight,
-    footerHeight
+    // The scaled content wrapper is the first child of the scroll container
+    const contentWrapper = container.firstElementChild as HTMLElement | null;
+    if (!contentWrapper) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const contentHeight = entry.contentRect.height;
+        const pageStride = heightPx + pageGap;
+        const pages = Math.max(1, Math.ceil(contentHeight / pageStride));
+        setMeasuredTotalPages(pages);
+      }
+    });
+
+    observer.observe(contentWrapper);
+    return () => observer.disconnect();
+  }, [heightPx, pageGap]);
+
+  // Use the MAXIMUM of engine estimate, store value, and actual measured
+  // content height. This ensures the scroll container is always tall enough
+  // to fit all content, even if the engine underestimates.
+  const effectiveTotalPages = Math.max(
+    engineTotalPages,
+    totalPages,
+    measuredTotalPages,
+    1
   );
 
   // Total scroll height = pages * (pageHeight + gap)
-  const totalScrollHeight = Math.max(totalPages, 1) * (heightPx + pageGap);
+  const totalScrollHeight = effectiveTotalPages * (heightPx + pageGap);
 
-  // Calculate total pages from content height - use docState.content as dependency
-  // since editor?.getHTML is a function that doesn't change reference
-  const contentJson = JSON.stringify(docState.content);
+  // Sync engine-calculated total pages to store
   useEffect(() => {
-    if (!editor) return;
-
-    const updateTotalPages = () => {
-      const editorEl = document.querySelector('.tiptap') as HTMLElement;
-      if (!editorEl) return;
-
-      const contentHeight = editorEl.scrollHeight;
-      const total = Math.max(1, Math.ceil(contentHeight / availableHeight));
-      setTotalPages(total);
-    };
-
-    const timeout = setTimeout(updateTotalPages, 150);
-    return () => clearTimeout(timeout);
-  }, [editor, contentJson, availableHeight, setTotalPages]);
+    if (engineTotalPages > 0 && engineTotalPages !== totalPages) {
+      setTotalPages(engineTotalPages);
+    }
+  }, [engineTotalPages, totalPages, setTotalPages]);
 
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
@@ -90,12 +105,12 @@ export default function PaginatedViewport() {
 
     const scrollTop = containerRef.current.scrollTop;
     const pageIndex = Math.floor(scrollTop / (heightPx + pageGap)) + 1;
-    const clampedPage = Math.max(1, Math.min(pageIndex, totalPages));
+    const clampedPage = Math.max(1, Math.min(pageIndex, effectiveTotalPages));
 
     if (clampedPage !== currentPage) {
       setCurrentPage(clampedPage);
     }
-  }, [currentPage, heightPx, pageGap, totalPages, setCurrentPage]);
+  }, [currentPage, heightPx, pageGap, effectiveTotalPages, setCurrentPage]);
 
   // Scroll to current page when it changes via navigation controls
   useEffect(() => {
@@ -111,10 +126,20 @@ export default function PaginatedViewport() {
         top: targetScroll,
         behavior: 'smooth',
       });
-      // Reset navigation flag after scroll completes
-      setTimeout(() => {
+
+      // Reset navigation flag only when the scroll animation actually ends.
+      // Using scrollend event (with setTimeout fallback for older browsers)
+      // instead of a fixed timeout that may fire mid-scroll.
+      let scrollTimeout: ReturnType<typeof setTimeout>;
+      const onScrollEnd = () => {
         isNavigatingRef.current = false;
-      }, 400);
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        containerRef.current?.removeEventListener('scrollend', onScrollEnd);
+      };
+
+      containerRef.current.addEventListener('scrollend', onScrollEnd, { once: true });
+      // Fallback: if scrollend doesn't fire within 1.5s, reset anyway
+      scrollTimeout = setTimeout(onScrollEnd, 1500);
     }
   }, [currentPage, heightPx, pageGap]);
 
@@ -127,7 +152,7 @@ export default function PaginatedViewport() {
   );
 
   // Calculate page positions
-  const pagePositions = Array.from({ length: Math.max(totalPages, 1) }).map(
+  const pagePositions = Array.from({ length: effectiveTotalPages }).map(
     (_, i) => ({
       pageNumber: i + 1,
       top: i * (heightPx + pageGap),
@@ -139,6 +164,7 @@ export default function PaginatedViewport() {
     <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
       {/* Scrollable Viewport */}
       <div
+        id="paginated-viewport"
         ref={handleRef}
         className="flex-1 overflow-y-auto relative min-h-0"
         onScroll={handleScroll}
@@ -152,14 +178,7 @@ export default function PaginatedViewport() {
             position: 'relative',
           }}
         >
-          {/* The continuous editor content */}
-          <div className="flex justify-center pt-6">
-            <div style={{ width: orientation === 'landscape' ? '1010px' : '794px' }}>
-              <DocumentEditor />
-            </div>
-          </div>
-
-          {/* Visual page backgrounds */}
+          {/* Visual page backgrounds (rendered first = behind editor) */}
           {showPageBackgrounds &&
             pagePositions.map((page) => (
               <PageBackground
@@ -169,6 +188,21 @@ export default function PaginatedViewport() {
                 height={page.height}
               />
             ))}
+
+          {/* The continuous editor content (on top of page backgrounds).
+              Padding matches the page background margins so text aligns
+              with the visible content area. */}
+          <div className="flex justify-center pt-6" style={{ position: 'relative', zIndex: 1 }}>
+            <div
+              style={{
+                width: orientation === 'landscape' ? '1010px' : '794px',
+                paddingLeft: `${marginPx.left}px`,
+                paddingRight: `${marginPx.right}px`,
+              }}
+            >
+              <DocumentEditor />
+            </div>
+          </div>
         </div>
       </div>
     </div>

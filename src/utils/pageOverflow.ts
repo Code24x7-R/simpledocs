@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 export interface PageBreakPoint {
   /** The position in the document where the break should be inserted */
   pos: number;

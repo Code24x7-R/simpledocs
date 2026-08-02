@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
 import { useEffect, useRef } from 'react';
 import { useDocStore } from './store/useDocStore';
 import { exportToPdf } from './utils/pdfExport';
