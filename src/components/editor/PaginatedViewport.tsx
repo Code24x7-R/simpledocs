@@ -61,7 +61,9 @@ export default function PaginatedViewport() {
   }, [pageStridePx]);
 
   // Use the MAXIMUM of store value and actual measured content height.
-  const effectiveTotalPages = Math.max(totalPages, measuredTotalPages, 1);
+  // Guard against NaN from stale localStorage state.
+  const safeTotalPages = typeof totalPages === 'number' ? totalPages : 1;
+  const effectiveTotalPages = Math.max(safeTotalPages, measuredTotalPages, 1);
 
   // Total scroll height = pages * pageStride
   const totalScrollHeight = effectiveTotalPages * pageStridePx;

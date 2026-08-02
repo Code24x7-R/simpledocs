@@ -225,7 +225,8 @@ export const useDocStore = create<DocStore>((set, get) => {
       if (isNaN(page)) return;
       set({ currentPage: Math.max(1, Math.min(Math.floor(page), totalPages)) });
     },
-    setTotalPages: (pages) => set({ totalPages: Math.max(1, pages) }),
+    setTotalPages: (pages) =>
+      set({ totalPages: Math.max(1, typeof pages === 'number' ? pages : 1) }),
     goToNextPage: () => {
       const { currentPage, totalPages } = get();
       if (!isNaN(currentPage) && currentPage < totalPages) {
