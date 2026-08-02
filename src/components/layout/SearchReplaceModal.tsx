@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { X, Search, Replace } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { findAllOccurrences, replaceAllOccurrences, SearchOptions } from '../../utils/search';
@@ -15,20 +15,45 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(-1);
   const [replaceResult, setReplaceResult] = useState<string | null>(null);
+  const matchesRef = useRef<{ index: number; end: number }[]>([]);
 
   const getSearchOptions = useCallback((): SearchOptions => {
     return { caseSensitive, wholeWord };
   }, [caseSensitive, wholeWord]);
 
-  const handleSearch = () => {
+  const handleFind = () => {
     if (!editor || !searchTerm) {
       setMatchCount(null);
+      matchesRef.current = [];
+      setCurrentMatchIndex(-1);
       return;
     }
+
     const text = editor.getText();
     const results = findAllOccurrences(text, searchTerm, getSearchOptions());
+    matchesRef.current = results;
     setMatchCount(results.length);
+
+    if (results.length > 0) {
+      // Move to next match (or first match if at end)
+      const nextIndex = currentMatchIndex >= results.length - 1 ? 0 : currentMatchIndex + 1;
+      setCurrentMatchIndex(nextIndex);
+
+      // Select the match in the editor
+      const match = results[nextIndex];
+      editor.commands.setTextSelection({ from: match.index + 1, to: match.end + 1 });
+
+      // Scroll the editor to show the selection
+      const selection = editor.view.state.selection;
+      const coords = editor.view.coordsAtPos(selection.from);
+      const editorEl = document.querySelector('.tiptap') as HTMLElement;
+      if (editorEl && coords) {
+        editorEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+
     setReplaceResult(null);
   };
 
@@ -40,6 +65,8 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
       editor.commands.setContent(result.text);
       setReplaceResult(`Replaced ${result.count} occurrence${result.count > 1 ? 's' : ''}`);
       setMatchCount(0);
+      matchesRef.current = [];
+      setCurrentMatchIndex(-1);
     } else {
       setReplaceResult('No matches found');
     }
@@ -71,14 +98,15 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => e.key === 'Enter' && handleFind()}
                 placeholder="Search for..."
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <button
-              onClick={handleSearch}
-              className="px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded hover:bg-gray-200"
+              onClick={handleFind}
+              disabled={!searchTerm}
+              className="px-3 py-2 text-sm bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Find
             </button>
@@ -132,7 +160,9 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
             <div className="text-sm text-gray-600 py-2 px-3 bg-gray-50 rounded">
               {matchCount === 0
                 ? 'No matches found'
-                : `${matchCount} match${matchCount > 1 ? 'es' : ''} found`}
+                : currentMatchIndex >= 0
+                  ? `Match ${currentMatchIndex + 1} of ${matchCount}`
+                  : `${matchCount} match${matchCount > 1 ? 'es' : ''} found`}
             </div>
           )}
           {replaceResult && (

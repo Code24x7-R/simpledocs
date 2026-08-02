@@ -65,7 +65,9 @@ export default function PaginatedViewport() {
   // Total scroll height = pages * (pageHeight + gap)
   const totalScrollHeight = Math.max(totalPages, 1) * (heightPx + pageGap);
 
-  // Calculate total pages from content height
+  // Calculate total pages from content height - use docState.content as dependency
+  // since editor?.getHTML is a function that doesn't change reference
+  const contentJson = JSON.stringify(docState.content);
   useEffect(() => {
     if (!editor) return;
 
@@ -80,7 +82,7 @@ export default function PaginatedViewport() {
 
     const timeout = setTimeout(updateTotalPages, 150);
     return () => clearTimeout(timeout);
-  }, [editor, editor?.getHTML, availableHeight, setTotalPages]);
+  }, [editor, contentJson, availableHeight, setTotalPages]);
 
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
