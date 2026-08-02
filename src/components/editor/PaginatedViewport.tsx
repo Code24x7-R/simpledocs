@@ -1,12 +1,21 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import DocumentEditor from './DocumentEditor';
 import PageCanvas from './PageCanvas';
 import { calculateAvailableHeight } from '../../utils/pageOverflow';
-import { splitHtmlAtPageBreaks } from '../../utils/autoPageBreak';
 import { mmToPx } from '../../utils/unitConversion';
 
+/**
+ * Paginated Viewport - Microsoft Word/Google Docs Model
+ *
+ * Architecture:
+ * - Single Tiptap editor holds ALL content (one continuous document)
+ * - Page 1 renders the live editor
+ * - Pages 2+ render read-only HTML extracted from the editor
+ * - Clicking on pages 2+ scrolls the editor to that position
+ * - Content reflows naturally when typing/pasting
+ * - Cursor position is preserved after paste
+ */
 export default function PaginatedViewport() {
   const { docState, zoom, editor } = useDocStore();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,49 +51,83 @@ export default function PaginatedViewport() {
     footerHeight
   );
 
-  // Count pages based on content
+  // Calculate page count and extract content for pages 2+
   useEffect(() => {
     if (!editor) return;
 
-    const updatePageCount = () => {
+    const updatePages = () => {
       const editorEl = document.querySelector('.tiptap') as HTMLElement;
       if (!editorEl) return;
 
       const contentHeight = editorEl.scrollHeight;
-      const pageBreaks = editorEl.querySelectorAll('[data-type="page-break"]');
-      const totalPages = pageBreaks.length + 1;
+      const pages = Math.max(1, Math.ceil(contentHeight / availableHeight));
+      setPageCount(pages);
 
-      // Also check if overflow exists without page breaks
-      if (totalPages === 1 && contentHeight > availableHeight) {
-        // Content overflows but no page breaks yet - let auto-insert handle it
-        // For now, just show 1 page
-        setPageCount(1);
-        setPageContents([]);
-      } else {
-        setPageCount(totalPages);
+      // Extract content for pages 2+
+      if (pages > 1) {
+        const blocks = Array.from(
+          editorEl.querySelectorAll(
+            'p, h1, h2, h3, h4, h5, h6, ul, ol, li, blockquote, pre, table'
+          )
+        ) as HTMLElement[];
 
-        // Split content at page breaks
-        if (totalPages > 1) {
-          const html = editorEl.innerHTML;
-          const parts = splitHtmlAtPageBreaks(html);
-          setPageContents(parts);
-        } else {
-          setPageContents([]);
+        const pageBlocks: HTMLElement[][] = [[]];
+        let currentPage = 0;
+
+        for (const block of blocks) {
+          const blockTop = block.offsetTop;
+          const blockPage = Math.floor(blockTop / availableHeight);
+
+          while (currentPage < blockPage) {
+            pageBlocks.push([]);
+            currentPage++;
+          }
+
+          pageBlocks[currentPage] = pageBlocks[currentPage] || [];
+          pageBlocks[currentPage].push(block);
         }
+
+        // Convert blocks to HTML for pages 2+
+        const contents: string[] = [];
+        for (let i = 1; i < pageBlocks.length; i++) {
+          const wrapper = document.createElement('div');
+          pageBlocks[i].forEach((block) => {
+            wrapper.appendChild(block.cloneNode(true));
+          });
+          contents.push(wrapper.innerHTML);
+        }
+        setPageContents(contents);
+      } else {
+        setPageContents([]);
       }
     };
 
-    // Delay to let editor render
-    const timeout = setTimeout(updatePageCount, 200);
+    const timeout = setTimeout(updatePages, 150);
     return () => clearTimeout(timeout);
-  }, [editor, editor?.getJSON(), availableHeight]);
+  }, [editor, editor?.getHTML, availableHeight]);
 
-  const virtualizer = useVirtualizer({
-    count: pageCount,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => heightPx,
-    overscan: 1,
-  });
+  // Handle click on pages 2+ to scroll editor to that position
+  const handlePageClick = useCallback(
+    (pageIndex: number) => {
+      if (!editor) return;
+
+      const editorContainer = document.getElementById('editor-scroll-container');
+      if (!editorContainer) return;
+
+      const scrollTarget = pageIndex * availableHeight;
+      editorContainer.scrollTop = scrollTarget;
+
+      // Focus the editor and set cursor to approximate position
+      editor.commands.focus();
+
+      // Find the text position at this scroll offset
+      const pos = findTextPositionAtOffset(editor, scrollTarget);
+      if (pos >= 0) {
+        editor.commands.setTextSelection(pos);
+      }
+    },
+    [editor, availableHeight]
+  );
 
   const handleRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -109,45 +152,62 @@ export default function PaginatedViewport() {
           alignItems: 'center',
         }}
       >
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualRow) => (
-            <div
-              key={virtualRow.key}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
-              className="py-6"
+        {/* Render stacked page canvases */}
+        {Array.from({ length: Math.max(pageCount, 1) }).map((_, index) => (
+          <div
+            key={index}
+            className="py-6"
+            onClick={() => index > 0 && handlePageClick(index)}
+            style={{ cursor: index > 0 ? 'text' : 'default' }}
+          >
+            <PageCanvas
+              pageNumber={index + 1}
+              totalPages={pageCount}
+              isFirstPage={index === 0}
             >
-              <PageCanvas pageNumber={virtualRow.index + 1} totalPages={pageCount}>
-                {virtualRow.index === 0 ? (
-                  <DocumentEditor />
-                ) : pageContents[virtualRow.index] ? (
-                  <div
-                    className="page-content-readonly"
-                    dangerouslySetInnerHTML={{ __html: pageContents[virtualRow.index] }}
-                  />
-                ) : (
-                  <div className="text-center text-gray-400 text-sm py-4">
-                    Page {virtualRow.index + 1}
-                  </div>
-                )}
-              </PageCanvas>
-            </div>
-          ))}
-        </div>
+              {index === 0 ? (
+                <DocumentEditor />
+              ) : pageContents[index - 1] ? (
+                <div
+                  className="prose prose-sm max-w-none text-gray-700"
+                  dangerouslySetInnerHTML={{ __html: pageContents[index - 1] }}
+                />
+              ) : (
+                <div className="text-gray-400 text-sm">Page {index + 1}</div>
+              )}
+            </PageCanvas>
+          </div>
+        ))}
       </div>
     </div>
   );
+}
+
+/**
+ * Find the text position in the editor at a given scroll offset.
+ */
+function findTextPositionAtOffset(editor: any, scrollOffset: number): number {
+  try {
+    const doc = editor.state.doc;
+    let foundPos = 0;
+
+    doc.descendants((_node: any, pos: number) => {
+      try {
+        const dom = editor.view.nodeDOM(pos);
+        if (dom instanceof HTMLElement) {
+          if (dom.offsetTop >= scrollOffset) {
+            return false;
+          }
+          foundPos = pos + 1;
+        }
+      } catch {
+        // Ignore errors
+      }
+      return true;
+    });
+
+    return foundPos;
+  } catch {
+    return 0;
+  }
 }

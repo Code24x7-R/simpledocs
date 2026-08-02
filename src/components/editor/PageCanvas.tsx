@@ -5,9 +5,11 @@ interface PageCanvasProps {
   pageNumber: number;
   totalPages: number;
   children: React.ReactNode;
+  isFirstPage?: boolean;
+  onClick?: () => void;
 }
 
-export default function PageCanvas({ pageNumber, totalPages, children }: PageCanvasProps) {
+export default function PageCanvas({ pageNumber, totalPages, children, onClick }: PageCanvasProps) {
   const { docState } = useDocStore();
   const { settings } = docState;
   const { pageFormat, orientation, margins } = settings;
@@ -29,6 +31,7 @@ export default function PageCanvas({ pageNumber, totalPages, children }: PageCan
   return (
     <div
       className="page-canvas mx-auto relative shrink-0"
+      onClick={onClick}
       style={{
         width: `${widthPx}px`,
         height: `${heightPx}px`,

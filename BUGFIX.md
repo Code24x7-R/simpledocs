@@ -4,7 +4,7 @@
 
 | ID | Title | Date | Description | Status |
 |----|-------|------|-------------|--------|
-| B-011 | Auto page break doesn't split content across pages | 2026-08-02 | Large paste creates multiple pages but all content stays on first page (scrolling view), remaining pages are blank. Content should actually split at page boundaries. | Added auto page break insertion in DocumentEditor. PaginatedViewport now splits content at page breaks and renders per-page HTML. Page 1 uses live editor; pages 2+ render read-only HTML extracted at page break boundaries. |
+| B-011 | Auto page break doesn't split content across pages | 2026-08-02 | Large paste creates multiple pages but all content stays on first page. | REWRITTEN: Single continuous editor (Word model). Page 1 has live editor, pages 2+ show read-only HTML extracted by block position. Clicking pages 2+ scrolls editor to that position. Content reflows naturally. |
 | B-012 | Color picker inconsistent with mouse selection | 2026-08-02 | Clicking color toolbar icon shows palette but unable to always pick/apply color to previously selected text. Selection is lost when clicking palette. | Changed from hover-based (CSS group-hover) to click-to-open dropdown. Added state management like other dropdowns. Applied color on click and closes palette. |
 
 ---
