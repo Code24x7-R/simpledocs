@@ -3,6 +3,12 @@ import { useEffect } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import { createExtensions } from '../../extensions';
 
+/**
+ * Document Editor
+ *
+ * Single Tiptap instance holding ALL document content.
+ * Content flows continuously - pagination is handled visually by the viewport.
+ */
 export default function DocumentEditor() {
   const { docState, setEditor, updateContent } = useDocStore();
 
@@ -35,10 +41,8 @@ export default function DocumentEditor() {
   }, [docState.content, editor]);
 
   return (
-    <div className="h-full" id="editor-scroll-container">
-      <div id="tiptap-editor" className="min-h-full">
-        <EditorContent editor={editor} />
-      </div>
+    <div id="tiptap-editor" className="min-h-full">
+      <EditorContent editor={editor} />
     </div>
   );
 }

@@ -14,6 +14,8 @@ describe('fileIO', () => {
       margins: { top: '20mm', bottom: '20mm', left: '25mm', right: '25mm' },
       header: { enabled: true, content: '' },
       footer: { enabled: true, showPageNumbers: true },
+    pageGap: 24,
+    showPageBackgrounds: true,
     },
     content: {
       type: 'doc',

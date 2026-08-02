@@ -1,20 +1,23 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import DocumentEditor from './DocumentEditor';
-import PageCanvas from './PageCanvas';
+import PageBackground from './PageBackground';
 import PageNavigation from './PageNavigation';
 import { calculateAvailableHeight } from '../../utils/pageOverflow';
 import { mmToPx } from '../../utils/unitConversion';
 
 /**
- * Paginated Viewport - True Fixed-Viewport Experience
+ * Paginated Viewport - Approach A: Continuous Scroll with Visual Pages
  *
  * Architecture:
- * - Fixed viewport area shows ONE page at a time
- * - CSS scroll-snap enforces page-by-page navigation
- * - Navigation controls (prev/next/page jump) for explicit movement
- * - Zoom rescales the page canvas within the viewport
- * - Editor content is one continuous document
+ * - Single Tiptap editor holds ALL content (one continuous document)
+ * - Visual page backgrounds rendered at calculated Y positions
+ * - Page gaps between backgrounds for clear visual separation
+ * - Headers/Footers shown on each page
+ * - Navigation scrolls viewport by page increments
+ * - Zoom rescales the entire view
+ *
+ * This matches Microsoft Word's Print Layout experience.
  */
 export default function PaginatedViewport() {
   const {
@@ -27,11 +30,10 @@ export default function PaginatedViewport() {
     setTotalPages,
   } = useDocStore();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [pageHeight, setPageHeight] = useState(0);
-  const [snapReady, setSnapReady] = useState(false);
 
   const { settings } = docState;
-  const { pageFormat, orientation, margins, header, footer } = settings;
+  const { pageFormat, orientation, margins, header, footer, pageGap } =
+    settings;
 
   // Calculate page dimensions
   const { heightPx } = (() => {
@@ -59,10 +61,8 @@ export default function PaginatedViewport() {
     footerHeight
   );
 
-  // Set page height for snap scrolling
-  useEffect(() => {
-    setPageHeight(heightPx);
-  }, [heightPx]);
+  // Total scroll height = pages * (pageHeight + gap)
+  const totalScrollHeight = Math.max(totalPages, 1) * (heightPx + pageGap);
 
   // Calculate total pages from content height
   useEffect(() => {
@@ -81,36 +81,31 @@ export default function PaginatedViewport() {
     return () => clearTimeout(timeout);
   }, [editor, editor?.getHTML, availableHeight, setTotalPages]);
 
-  // Handle scroll with snap-to-page
+  // Handle scroll to track current page
   const handleScroll = useCallback(() => {
-    if (!containerRef.current || !snapReady) return;
+    if (!containerRef.current) return;
 
     const scrollTop = containerRef.current.scrollTop;
-    const pageIndex = Math.round(scrollTop / pageHeight) + 1;
+    const pageIndex = Math.floor(scrollTop / (heightPx + pageGap)) + 1;
+    const clampedPage = Math.max(1, Math.min(pageIndex, totalPages));
 
-    if (pageIndex !== currentPage && pageIndex >= 1) {
-      setCurrentPage(pageIndex);
+    if (clampedPage !== currentPage) {
+      setCurrentPage(clampedPage);
     }
-  }, [currentPage, pageHeight, setCurrentPage, snapReady]);
+  }, [currentPage, heightPx, pageGap, totalPages, setCurrentPage]);
 
   // Scroll to current page when it changes via navigation controls
   useEffect(() => {
-    if (!containerRef.current || !snapReady) return;
+    if (!containerRef.current) return;
 
-    const targetScroll = (currentPage - 1) * pageHeight;
+    const targetScroll = (currentPage - 1) * (heightPx + pageGap);
     if (Math.abs(containerRef.current.scrollTop - targetScroll) > 1) {
       containerRef.current.scrollTo({
         top: targetScroll,
         behavior: 'smooth',
       });
     }
-  }, [currentPage, pageHeight, snapReady]);
-
-  // Enable snap after initial render
-  useEffect(() => {
-    const timer = setTimeout(() => setSnapReady(true), 200);
-    return () => clearTimeout(timer);
-  }, []);
+  }, [currentPage, heightPx, pageGap]);
 
   const handleRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -120,82 +115,53 @@ export default function PaginatedViewport() {
     []
   );
 
+  // Calculate page positions
+  const pagePositions = Array.from({ length: Math.max(totalPages, 1) }).map(
+    (_, i) => ({
+      pageNumber: i + 1,
+      top: i * (heightPx + pageGap),
+      height: heightPx,
+    })
+  );
+
   return (
-    <div className="flex-1 flex flex-col bg-canvas">
+    <div className="flex-1 flex flex-col bg-gray-100">
       {/* Page Navigation Controls */}
       <PageNavigation />
 
-      {/* Fixed Viewport Area */}
-      <div className="flex-1 overflow-hidden relative">
-        {/* Scrollable container with snap */}
+      {/* Scrollable Viewport */}
+      <div
+        ref={handleRef}
+        className="flex-1 overflow-y-auto relative"
+        onScroll={handleScroll}
+      >
+        {/* Content area with zoom transform */}
         <div
-          ref={handleRef}
-          className="h-full overflow-y-auto"
-          onScroll={handleScroll}
           style={{
-            scrollSnapType: snapReady ? 'y mandatory' : 'none',
-            scrollBehavior: 'smooth',
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top center',
+            minHeight: `${totalScrollHeight}px`,
+            position: 'relative',
           }}
         >
-          {/* Content area - tall enough for all pages */}
-          <div
-            style={{
-              height: `${pageHeight * Math.max(totalPages, 1)}px`,
-              minHeight: `${pageHeight}px`,
-            }}
-          >
-            {/* Page Canvas - shows one page at a time */}
-            <div
-              style={{
-                height: `${pageHeight}px`,
-                scrollSnapAlign: 'start',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'flex-start',
-                paddingTop: '24px',
-              }}
-            >
-              <div
-                style={{
-                  transform: `scale(${zoom})`,
-                  transformOrigin: 'top center',
-                }}
-              >
-                <PageCanvas
-                  pageNumber={currentPage}
-                  totalPages={totalPages}
-                  isFirstPage={currentPage === 1}
-                >
-                  <DocumentEditor />
-                </PageCanvas>
-              </div>
+          {/* The continuous editor content */}
+          <div className="flex justify-center pt-6">
+            <div style={{ width: orientation === 'landscape' ? '1010px' : '794px' }}>
+              <DocumentEditor />
             </div>
-
-            {/* Additional snap points for pages 2+ */}
-            {Array.from({ length: Math.max(0, totalPages - 1) }).map(
-              (_, i) => (
-                <div
-                  key={`snap-${i}`}
-                  style={{
-                    height: `${pageHeight}px`,
-                    scrollSnapAlign: 'start',
-                  }}
-                />
-              )
-            )}
           </div>
-        </div>
 
-        {/* Page break visual indicator */}
-        <div
-          className="absolute left-0 right-0 pointer-events-none"
-          style={{
-            top: '50%',
-            height: '1px',
-            background:
-              'linear-gradient(to right, transparent, #ccc, transparent)',
-          }}
-        />
+          {/* Visual page backgrounds */}
+          {settings.showPageBackgrounds &&
+            pagePositions.map((page) => (
+              <PageBackground
+                key={page.pageNumber}
+                pageNumber={page.pageNumber}
+                top={page.top + 24} // Account for padding-top: 6
+                height={page.height}
+              />
+            ))}
+        </div>
       </div>
     </div>
   );

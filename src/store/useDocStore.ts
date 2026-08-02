@@ -19,6 +19,8 @@ export interface DocSettings {
     enabled: boolean;
     showPageNumbers: boolean;
   };
+  pageGap: number;
+  showPageBackgrounds: boolean;
 }
 
 export interface DocState {
@@ -90,6 +92,8 @@ const defaultSettings: DocSettings = {
     enabled: true,
     showPageNumbers: true,
   },
+  pageGap: 24,
+  showPageBackgrounds: true,
 };
 
 const createNewDoc = (): DocState => ({
