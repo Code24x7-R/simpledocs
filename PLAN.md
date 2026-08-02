@@ -15,6 +15,8 @@
 | 9 | Documentation (README) | COMPLETE ✅ |
 | 10 | Help Menu & About Modal | COMPLETE ✅ |
 | 11 | Clipboard Functions | COMPLETE ✅ |
+| 12 | Microsoft Word Import + MRU | COMPLETE ✅ |
+| 13 | Auto Page Break on Overflow | COMPLETE ✅ |
 
 ---
 
@@ -85,6 +87,23 @@
 - Added Copy/Cut/Paste items to File menu in Navbar
 - Wired handlers to editor selection state
 - Added 5 unit tests for clipboard utilities
+
+### Phase 12: Microsoft Word Import + MRU 🔄
+- Add .docx file import via mammoth.js (converts docx → HTML)
+- Parse imported HTML and set as editor content
+- Add "Import Word" item to File menu
+- Build MRU (Most Recently Used) list in File menu
+- Store MRU entries in localStorage (max 5)
+- Display recently opened files with click-to-reopen
+- Add unit tests for Word import parser and MRU logic
+
+### Phase 13: Auto Page Break on Overflow 🔄
+- Calculate content height vs available page height
+- Split content at page boundaries
+- Insert automatic page breaks when content overflows
+- Render multiple page canvases in virtualized viewport
+- Update page count display dynamically
+- Add tests for overflow calculation logic
 
 ---
 

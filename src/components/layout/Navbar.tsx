@@ -12,10 +12,13 @@ import {
   Copy,
   Scissors,
   ClipboardPaste,
+  FileUp,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument } from '../../utils/fileIO';
 import { copyToClipboard, pasteFromClipboard } from '../../utils/clipboard';
+import { importWordDocument } from '../../utils/wordImport';
+import { formatMRUTimestamp } from '../../utils/mru';
 
 const ZOOM_LEVELS = [
   { label: '75%', value: 0.75 },
@@ -37,6 +40,8 @@ export default function Navbar() {
     setHelpMenuOpen,
     setAboutOpen,
     setShortcutsOpen,
+    mruList,
+    addRecentFile,
   } = useDocStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +113,38 @@ export default function Navbar() {
     }
   };
 
+  const wordFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportWord = () => {
+    wordFileInputRef.current?.click();
+  };
+
+  const handleWordFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { html, messages } = await importWordDocument(file);
+      if (editor) {
+        editor.commands.setContent(html);
+      }
+      // Add to MRU
+      addRecentFile(file.name, file.size);
+      // Show warnings if any
+      if (messages.length > 0) {
+        console.warn('Word import warnings:', messages);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to import Word document');
+    }
+    if (wordFileInputRef.current) wordFileInputRef.current.value = '';
+  };
+
+  const handleOpenMRUFile = async (entry: { name: string; timestamp: number; size: number }) => {
+    // For MRU, we just show info since we don't store the actual file content
+    // In a full implementation, we'd store file references via File System Access API
+    alert(`MRU: ${entry.name} (${formatMRUTimestamp(entry.timestamp)}). Use Open JSON to reopen saved documents.`);
+  };
+
   return (
     <nav className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-4 shrink-0 shadow-sm z-10">
       {/* Brand */}
@@ -148,6 +185,12 @@ export default function Navbar() {
               <FolderOpen className="w-4 h-4" /> Open JSON
             </button>
             <button
+              onClick={() => { handleImportWord(); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <FileUp className="w-4 h-4" /> Import Word
+            </button>
+            <button
               onClick={() => { handleSaveJson(); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
@@ -184,6 +227,24 @@ export default function Navbar() {
             >
               <ClipboardPaste className="w-4 h-4" /> Paste
             </button>
+            {mruList.length > 0 && (
+              <>
+                <div className="border-t border-gray-100 my-1" />
+                <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Recent Files
+                </div>
+                {mruList.map((entry) => (
+                  <button
+                    key={entry.name + entry.timestamp}
+                    onClick={() => { handleOpenMRUFile(entry); setFileMenuOpen(false); }}
+                    className="w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 flex items-center justify-between gap-2"
+                  >
+                    <span className="truncate text-gray-700">{entry.name}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{formatMRUTimestamp(entry.timestamp)}</span>
+                  </button>
+                ))}
+              </>
+            )}
             <div className="border-t border-gray-100 my-1" />
             <button
               onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}
@@ -263,6 +324,13 @@ export default function Navbar() {
         type="file"
         accept=".json"
         onChange={handleFileChange}
+        className="hidden"
+      />
+      <input
+        ref={wordFileInputRef}
+        type="file"
+        accept=".docx"
+        onChange={handleWordFileChange}
         className="hidden"
       />
     </nav>

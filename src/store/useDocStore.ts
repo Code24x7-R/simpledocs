@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Editor } from '@tiptap/react';
+import { getMRUList, addMRUEntry, removeMRUEntry } from '../utils/mru';
 
 export interface DocSettings {
   pageFormat: 'A4' | 'Letter';
@@ -40,6 +41,7 @@ interface DocStore {
   helpMenuOpen: boolean;
   aboutOpen: boolean;
   shortcutsOpen: boolean;
+  mruList: { name: string; timestamp: number; size: number }[];
 
   setEditor: (editor: Editor) => void;
   updateContent: (content: Record<string, unknown>) => void;
@@ -55,6 +57,9 @@ interface DocStore {
   setHelpMenuOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setShortcutsOpen: (open: boolean) => void;
+  setMruList: (list: { name: string; timestamp: number; size: number }[]) => void;
+  addRecentFile: (name: string, size: number) => void;
+  removeRecentFile: (name: string) => void;
 }
 
 const STORAGE_KEY = 'SIMPLEDOCS_STATE';
@@ -132,6 +137,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     helpMenuOpen: false,
     aboutOpen: false,
     shortcutsOpen: false,
+    mruList: getMRUList(),
 
     setEditor: (editor) => set({ editor }),
 
@@ -187,5 +193,14 @@ export const useDocStore = create<DocStore>((set, get) => {
     setHelpMenuOpen: (open) => set({ helpMenuOpen: open }),
     setAboutOpen: (open) => set({ aboutOpen: open }),
     setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
+    setMruList: (list) => set({ mruList: list }),
+    addRecentFile: (name: string, size: number) => {
+      const list = addMRUEntry({ name, size });
+      set({ mruList: list });
+    },
+    removeRecentFile: (name: string) => {
+      const list = removeMRUEntry(name);
+      set({ mruList: list });
+    },
   };
 });

@@ -10,6 +10,10 @@ _No active bugs._
 
 | ID | Title | Date | Description | Fix |
 |----|-------|------|-------------|-----|
+| B-010 | Content overflow causes scrollbars instead of auto page break | 2026-08-02 | When pasting content larger than a page, scrollbars appear inside the pageview. Content should flow over page breaks automatically up to the length. | Added page overflow calculation utility. PaginatedViewport now measures content height and renders multiple page canvases when content exceeds available height. |
+
+| ID | Title | Date | Description | Fix |
+|----|-------|------|-------------|-----|
 | B-001 | TS2339: setFontFamily/setFontSize not in StarterKit | 2026-08-02 | StarterKit doesn't include TextStyle/FontFamily extensions | Installed @tiptap/extension-text-style, @tiptap/extension-font-family, @tiptap/extension-color |
 | B-002 | TS2339: toggleTaskList not in ChainedCommands | 2026-08-02 | Tiptap 3.x renamed toggleTaskList to toggleList | Changed to `toggleList('taskList', 'taskItem')` |
 | B-003 | Rollup: getStyleProperty not exported by @tiptap/core | 2026-08-02 | extension-text-style v3 incompatible with @tiptap/core v2 | Upgraded all Tiptap packages to v3 consistently |
