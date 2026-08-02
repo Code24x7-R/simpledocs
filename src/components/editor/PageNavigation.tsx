@@ -54,7 +54,7 @@ export default function PageNavigation() {
       <button
         onClick={goToPrevPage}
         disabled={currentPage <= 1}
-        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-1.5 rounded hover:bg-gray-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
         title="Previous Page"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -81,7 +81,7 @@ export default function PageNavigation() {
         ) : (
           <button
             onClick={() => setIsEditing(true)}
-            className="px-2 py-0.5 rounded hover:bg-gray-200 min-w-[2rem] text-center"
+            className="px-2 py-0.5 rounded hover:bg-gray-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none min-w-[2rem] text-center"
             title="Click to jump to page"
           >
             {currentPage}
@@ -95,7 +95,7 @@ export default function PageNavigation() {
       <button
         onClick={goToNextPage}
         disabled={currentPage >= totalPages}
-        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-1.5 rounded hover:bg-gray-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
         title="Next Page"
       >
         <ChevronRight className="w-4 h-4" />
@@ -107,7 +107,7 @@ export default function PageNavigation() {
       {/* Search & Replace Button */}
       <button
         onClick={() => setSearchReplaceOpen(true)}
-        className="flex items-center gap-1.5 px-2 py-1 text-sm text-gray-600 hover:bg-gray-200 rounded"
+        className="flex items-center gap-1.5 px-2 py-1 text-sm text-gray-600 hover:bg-gray-200 rounded focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
         title="Search & Replace"
       >
         <Search className="w-4 h-4" />
