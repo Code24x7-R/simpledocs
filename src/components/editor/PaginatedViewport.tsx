@@ -140,8 +140,7 @@ export default function PaginatedViewport() {
       {/* Scrollable Viewport */}
       <div
         ref={handleRef}
-        tabIndex={0}
-        className="flex-1 overflow-y-auto relative min-h-0 outline-none"
+        className="flex-1 overflow-y-auto relative min-h-0"
         onScroll={handleScroll}
       >
         {/* Content area with zoom transform */}
