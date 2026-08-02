@@ -105,6 +105,10 @@ const loadFromStorage = (): DocState | null => {
   return null;
 };
 
+export const createInitialState = (): DocState => {
+  return loadFromStorage() ?? createNewDoc();
+};
+
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const persistToStorage = (state: DocState) => {
@@ -115,7 +119,7 @@ const persistToStorage = (state: DocState) => {
 };
 
 export const useDocStore = create<DocStore>((set, get) => {
-  const initial = loadFromStorage() ?? createNewDoc();
+  const initial = createInitialState();
 
   return {
     docState: initial,

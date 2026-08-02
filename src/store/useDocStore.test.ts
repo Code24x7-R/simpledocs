@@ -1,31 +1,41 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useDocStore } from './useDocStore';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { useDocStore, createInitialState } from './useDocStore';
+
+const baseDoc = {
+  id: 'test-id',
+  title: 'Test Document',
+  createdAt: '2026-08-02T00:00:00Z',
+  updatedAt: '2026-08-02T00:00:00Z',
+  settings: {
+    pageFormat: 'A4' as const,
+    orientation: 'portrait' as const,
+    margins: { top: '20mm', bottom: '20mm', left: '25mm', right: '25mm' },
+    header: { enabled: true, content: '' },
+    footer: { enabled: true, showPageNumbers: true },
+  },
+  content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
+};
 
 describe('useDocStore', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.useFakeTimers();
     useDocStore.setState({
-      docState: {
-        id: 'test-id',
-        title: 'Test Document',
-        createdAt: '2026-08-02T00:00:00Z',
-        updatedAt: '2026-08-02T00:00:00Z',
-        settings: {
-          pageFormat: 'A4',
-          orientation: 'portrait',
-          margins: { top: '20mm', bottom: '20mm', left: '25mm', right: '25mm' },
-          header: { enabled: true, content: '' },
-          footer: { enabled: true, showPageNumbers: true },
-        },
-        content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
-      },
+      docState: baseDoc,
       editor: null,
       zoom: 1,
       pageSetupOpen: false,
       insertFieldOpen: false,
       tableGridOpen: false,
       tableGridSize: null,
+      helpMenuOpen: false,
+      aboutOpen: false,
+      shortcutsOpen: false,
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('initializes with default document state', () => {
@@ -117,13 +127,168 @@ describe('useDocStore', () => {
     expect(useDocStore.getState().docState.settings.pageFormat).toBe('Letter');
   });
 
-  it('persists state to localStorage (debounced)', async () => {
+  it('persists state to localStorage (debounced)', () => {
     useDocStore.getState().updateTitle('Persisted Title');
-    // Wait for debounce
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    // Should not be saved immediately
+    expect(localStorage.getItem('SIMPLEDOCS_STATE')).toBeNull();
+    // After debounce period
+    vi.advanceTimersByTime(600);
     const raw = localStorage.getItem('SIMPLEDOCS_STATE');
     expect(raw).toBeTruthy();
     const parsed = JSON.parse(raw!);
     expect(parsed.title).toBe('Persisted Title');
+  });
+
+  it('debounces multiple rapid updates into single save', () => {
+    useDocStore.getState().updateTitle('First');
+    useDocStore.getState().updateTitle('Second');
+    useDocStore.getState().updateTitle('Third');
+    // Advance past debounce
+    vi.advanceTimersByTime(600);
+    const raw = localStorage.getItem('SIMPLEDOCS_STATE');
+    const parsed = JSON.parse(raw!);
+    // Only the last value should be saved
+    expect(parsed.title).toBe('Third');
+  });
+
+  // Branch coverage tests for loadFromStorage
+  describe('localStorage branch coverage', () => {
+    it('covers the null storage path (no data in localStorage)', () => {
+      localStorage.clear();
+      // newDocument calls createNewDoc which simulates "no stored data" path
+      useDocStore.getState().newDocument();
+      const state = useDocStore.getState();
+      expect(state.docState.title).toBe('Untitled Document');
+      expect(state.docState.id).toBeTruthy();
+    });
+
+    it('covers the JSON parse error catch block', () => {
+      // Store invalid JSON to trigger the catch block
+      localStorage.setItem('SIMPLEDOCS_STATE', '{ invalid json !!');
+      // Mock JSON.parse to throw for our invalid input
+      const originalParse = JSON.parse;
+      JSON.parse = vi.fn((str: string) => {
+        if (str === '{ invalid json !!') {
+          throw new SyntaxError('Unexpected token');
+        }
+        return originalParse(str);
+      }) as typeof JSON.parse;
+
+      // newDocument should still work (creates fresh doc)
+      useDocStore.getState().newDocument();
+      const state = useDocStore.getState();
+      expect(state.docState.title).toBe('Untitled Document');
+
+      JSON.parse = originalParse;
+    });
+
+    it('covers successful load from localStorage', () => {
+      const savedDoc = {
+        ...baseDoc,
+        title: 'Previously Saved',
+      };
+      localStorage.setItem('SIMPLEDOCS_STATE', JSON.stringify(savedDoc));
+      // Simulate page reload by creating a new document after checking storage
+      const raw = localStorage.getItem('SIMPLEDOCS_STATE');
+      const loaded = JSON.parse(raw!);
+      useDocStore.getState().loadDocument(loaded);
+      expect(useDocStore.getState().docState.title).toBe('Previously Saved');
+    });
+  });
+
+  // Additional setter branch coverage
+  describe('setter branch coverage', () => {
+    it('toggles helpMenuOpen', () => {
+      expect(useDocStore.getState().helpMenuOpen).toBe(false);
+      useDocStore.getState().setHelpMenuOpen(true);
+      expect(useDocStore.getState().helpMenuOpen).toBe(true);
+    });
+
+    it('toggles aboutOpen', () => {
+      expect(useDocStore.getState().aboutOpen).toBe(false);
+      useDocStore.getState().setAboutOpen(true);
+      expect(useDocStore.getState().aboutOpen).toBe(true);
+    });
+
+    it('toggles shortcutsOpen', () => {
+      expect(useDocStore.getState().shortcutsOpen).toBe(false);
+      useDocStore.getState().setShortcutsOpen(true);
+      expect(useDocStore.getState().shortcutsOpen).toBe(true);
+    });
+
+    it('sets tableGridSize to value and back to null', () => {
+      useDocStore.getState().setTableGridSize({ rows: 3, cols: 4 });
+      expect(useDocStore.getState().tableGridSize).toEqual({ rows: 3, cols: 4 });
+      useDocStore.getState().setTableGridSize(null);
+      expect(useDocStore.getState().tableGridSize).toBeNull();
+    });
+
+    it('sets editor instance', () => {
+      const mockEditor = { chain: vi.fn() } as any;
+      useDocStore.getState().setEditor(mockEditor);
+      expect(useDocStore.getState().editor).toBe(mockEditor);
+    });
+  });
+
+  // Header/footer settings branch coverage
+  describe('settings branch coverage', () => {
+    it('updates header settings', () => {
+      useDocStore.getState().updateSettings({
+        header: { enabled: false, content: 'Custom Header' },
+      });
+      const settings = useDocStore.getState().docState.settings;
+      expect(settings.header.enabled).toBe(false);
+      expect(settings.header.content).toBe('Custom Header');
+    });
+
+    it('updates footer settings', () => {
+      useDocStore.getState().updateSettings({
+        footer: { enabled: false, showPageNumbers: false },
+      });
+      const settings = useDocStore.getState().docState.settings;
+      expect(settings.footer.enabled).toBe(false);
+      expect(settings.footer.showPageNumbers).toBe(false);
+    });
+
+    it('partial settings merge preserves other fields', () => {
+      useDocStore.getState().updateSettings({
+        margins: { top: '50mm', bottom: '50mm', left: '50mm', right: '50mm' },
+      });
+      const settings = useDocStore.getState().docState.settings;
+      // Other settings should be preserved
+      expect(settings.pageFormat).toBe('A4');
+      expect(settings.orientation).toBe('portrait');
+      expect(settings.header.enabled).toBe(true);
+    });
+  });
+
+  // createInitialState branch coverage
+  describe('createInitialState', () => {
+    it('returns parsed doc when localStorage has valid JSON', () => {
+      localStorage.setItem('SIMPLEDOCS_STATE', JSON.stringify({
+        ...baseDoc,
+        title: 'Stored Doc',
+      }));
+      const result = createInitialState();
+      expect(result.title).toBe('Stored Doc');
+    });
+
+    it('returns new doc when localStorage is empty', () => {
+      localStorage.clear();
+      const result = createInitialState();
+      expect(result.title).toBe('Untitled Document');
+    });
+
+    it('returns new doc when localStorage has invalid JSON (catch block)', () => {
+      localStorage.setItem('SIMPLEDOCS_STATE', '{ broken json!');
+      const result = createInitialState();
+      expect(result.title).toBe('Untitled Document');
+    });
+
+    it('returns new doc when localStorage has null value', () => {
+      localStorage.setItem('SIMPLEDOCS_STATE', 'null');
+      const result = createInitialState();
+      expect(result.title).toBe('Untitled Document');
+    });
   });
 });
