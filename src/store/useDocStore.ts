@@ -43,6 +43,8 @@ interface DocStore {
   shortcutsOpen: boolean;
   mruList: { name: string; timestamp: number; size: number }[];
   searchReplaceOpen: boolean;
+  currentPage: number;
+  totalPages: number;
 
   setEditor: (editor: Editor) => void;
   updateContent: (content: Record<string, unknown>) => void;
@@ -62,6 +64,11 @@ interface DocStore {
   addRecentFile: (name: string, size: number) => void;
   removeRecentFile: (name: string) => void;
   setSearchReplaceOpen: (open: boolean) => void;
+  setCurrentPage: (page: number) => void;
+  setTotalPages: (pages: number) => void;
+  goToNextPage: () => void;
+  goToPrevPage: () => void;
+  goToPage: (page: number) => void;
 }
 
 const STORAGE_KEY = 'SIMPLEDOCS_STATE';
@@ -141,6 +148,8 @@ export const useDocStore = create<DocStore>((set, get) => {
     shortcutsOpen: false,
     mruList: getMRUList(),
     searchReplaceOpen: false,
+    currentPage: 1,
+    totalPages: 1,
 
     setEditor: (editor) => set({ editor }),
 
@@ -206,5 +215,26 @@ export const useDocStore = create<DocStore>((set, get) => {
       set({ mruList: list });
     },
     setSearchReplaceOpen: (open) => set({ searchReplaceOpen: open }),
+    setCurrentPage: (page) => {
+      const { totalPages } = get();
+      set({ currentPage: Math.max(1, Math.min(page, totalPages)) });
+    },
+    setTotalPages: (pages) => set({ totalPages: Math.max(1, pages) }),
+    goToNextPage: () => {
+      const { currentPage, totalPages } = get();
+      if (currentPage < totalPages) {
+        set({ currentPage: currentPage + 1 });
+      }
+    },
+    goToPrevPage: () => {
+      const { currentPage } = get();
+      if (currentPage > 1) {
+        set({ currentPage: currentPage - 1 });
+      }
+    },
+    goToPage: (page) => {
+      const { totalPages } = get();
+      set({ currentPage: Math.max(1, Math.min(page, totalPages)) });
+    },
   };
 });

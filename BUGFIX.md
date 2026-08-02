@@ -4,7 +4,7 @@
 
 | ID | Title | Date | Description | Status |
 |----|-------|------|-------------|--------|
-| B-011 | Auto page break doesn't split content across pages | 2026-08-02 | Large paste creates multiple pages but all content stays on first page. | REWRITTEN: Single continuous editor (Word model). Page 1 has live editor, pages 2+ show read-only HTML extracted by block position. Clicking pages 2+ scrolls editor to that position. Content reflows naturally. |
+| B-011 | Auto page break doesn't split content across pages | 2026-08-02 | Large paste creates multiple pages but all content stays on first page. | IMPLEMENTED: True paginated viewport with CSS scroll-snap, fixed viewport showing one page at a time, prev/next/page-jump navigation. Editor content is one continuous document. Zoom rescales the page canvas. |
 | B-012 | Color picker inconsistent with mouse selection | 2026-08-02 | Clicking color toolbar icon shows palette but unable to always pick/apply color to previously selected text. Selection is lost when clicking palette. | Changed from hover-based (CSS group-hover) to click-to-open dropdown. Added state management like other dropdowns. Applied color on click and closes palette. |
 
 ---
