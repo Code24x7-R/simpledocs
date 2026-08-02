@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { X, Search, Replace, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
-import { findAllOccurrences, replaceAllOccurrences, SearchOptions } from '../../utils/search';
+import { findAllOccurrences, replaceAllPreservingStyles, SearchOptions } from '../../utils/search';
 
 interface SearchReplaceModalProps {
   isOpen: boolean;
@@ -122,10 +122,11 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
 
   const handleReplace = () => {
     if (!editor || !searchTerm) return;
-    const text = editor.getText();
-    const result = replaceAllOccurrences(text, searchTerm, replaceTerm, getSearchOptions());
+    // Use JSON-based replacement to preserve formatting (bold, italic, etc.)
+    const docJSON = editor.getJSON();
+    const result = replaceAllPreservingStyles(docJSON, searchTerm, replaceTerm, getSearchOptions());
     if (result.count > 0) {
-      editor.commands.setContent(result.text);
+      editor.commands.setContent(result.doc, { emitUpdate: true });
       setReplaceResult(`Replaced ${result.count} occurrence${result.count > 1 ? 's' : ''}`);
       setMatchCount(0);
       matchesRef.current = [];
