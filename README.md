@@ -2,6 +2,8 @@
 
 A modern, browser-based paginated WYSIWYG document editor with Microsoft Word / Google Docs feature parity. Built with React, TypeScript, and Tiptap.
 
+**Live demo:** [https://Code24x7-R.github.io/simpledocs/](https://Code24x7-R.github.io/simpledocs/)
+
 ### Tech Stack
 - TypeScript
 - Tiptap
@@ -63,7 +65,7 @@ A modern, browser-based paginated WYSIWYG document editor with Microsoft Word / 
 
 ```bash
 # Clone the repository
-git clone https://github.com/<username>/simpledocs.git
+git clone https://github.com/Code24x7-R/simpledocs.git
 cd simpledocs
 
 # Install dependencies
@@ -103,7 +105,7 @@ The repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml
 2. Set "Source" to "GitHub Actions"
 3. Push to `main` — the workflow builds and deploys automatically
 
-The app will be available at `https://<username>.github.io/simpledocs/`
+The app will be available at `https://Code24x7-R.github.io/simpledocs/`
 
 ### Manual Deployment
 
