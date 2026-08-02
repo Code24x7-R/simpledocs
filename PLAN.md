@@ -17,6 +17,9 @@
 | 11 | Clipboard Functions | COMPLETE ✅ |
 | 12 | Microsoft Word Import + MRU | COMPLETE ✅ |
 | 13 | Auto Page Break on Overflow | COMPLETE ✅ |
+| 14 | Search and Replace | IN PROGRESS 🔄 |
+| 15 | True Content Splitting Across Pages | IN PROGRESS 🔄 |
+| 16 | Color Picker Fix | IN PROGRESS 🔄 |
 
 ---
 

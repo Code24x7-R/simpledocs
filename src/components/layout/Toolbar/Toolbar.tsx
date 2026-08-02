@@ -23,6 +23,8 @@ import {
   Copy,
   ClipboardPaste,
   Scissors,
+  Search,
+  Replace,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
 import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';
@@ -58,10 +60,12 @@ const HIGHLIGHT_COLORS = [
 ];
 
 export default function Toolbar() {
-  const { editor, setTableGridOpen, setInsertFieldOpen } = useDocStore();
+  const { editor, setTableGridOpen, setInsertFieldOpen, setSearchReplaceOpen } = useDocStore();
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
+  const [textColorDropdownOpen, setTextColorDropdownOpen] = useState(false);
+  const [highlightColorDropdownOpen, setHighlightColorDropdownOpen] = useState(false);
 
   if (!editor) return null;
 
@@ -257,41 +261,59 @@ export default function Toolbar() {
       </div>
 
       {/* Text Color */}
-      <div className="relative group">
-        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Text Color">
+      <div className="relative">
+        <button
+          onClick={() => setTextColorDropdownOpen(!textColorDropdownOpen)}
+          className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5"
+          title="Text Color"
+        >
           <Palette className="w-4 h-4" />
           <div className="w-3 h-0.5 bg-red-500 rounded" />
         </button>
-        <div className="absolute top-full left-0 mt-1 hidden group-hover:grid grid-cols-10 gap-0.5 p-2 bg-white border border-gray-200 rounded shadow-lg z-50 w-[220px]">
-          {TEXT_COLORS.map((color) => (
-            <button
-              key={color}
-              onClick={() => editor.chain().focus().setColor(color).run()}
-              className="w-4 h-4 rounded border border-gray-200 hover:scale-125 transition-transform"
-              style={{ backgroundColor: color }}
-              title={color}
-            />
-          ))}
-        </div>
+        {textColorDropdownOpen && (
+          <div className="absolute top-full left-0 mt-1 grid grid-cols-10 gap-0.5 p-2 bg-white border border-gray-200 rounded shadow-lg z-50 w-[220px]">
+            {TEXT_COLORS.map((color) => (
+              <button
+                key={color}
+                onClick={() => {
+                  editor.chain().focus().setColor(color).run();
+                  setTextColorDropdownOpen(false);
+                }}
+                className="w-4 h-4 rounded border border-gray-200 hover:scale-125 transition-transform"
+                style={{ backgroundColor: color }}
+                title={color}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Highlight Color */}
-      <div className="relative group">
-        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Highlight Color">
+      <div className="relative">
+        <button
+          onClick={() => setHighlightColorDropdownOpen(!highlightColorDropdownOpen)}
+          className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5"
+          title="Highlight Color"
+        >
           <Highlighter className="w-4 h-4" />
           <div className="w-3 h-0.5 bg-yellow-400 rounded" />
         </button>
-        <div className="absolute top-full left-0 mt-1 hidden group-hover:grid grid-cols-7 gap-0.5 p-2 bg-white border border-gray-200 rounded shadow-lg z-50">
-          {HIGHLIGHT_COLORS.map((color) => (
-            <button
-              key={color}
-              onClick={() => editor.chain().focus().toggleHighlight({ color }).run()}
-              className="w-4 h-4 rounded border border-gray-200 hover:scale-125 transition-transform"
-              style={{ backgroundColor: color }}
-              title={color}
-            />
-          ))}
-        </div>
+        {highlightColorDropdownOpen && (
+          <div className="absolute top-full left-0 mt-1 grid grid-cols-7 gap-0.5 p-2 bg-white border border-gray-200 rounded shadow-lg z-50">
+            {HIGHLIGHT_COLORS.map((color) => (
+              <button
+                key={color}
+                onClick={() => {
+                  editor.chain().focus().toggleHighlight({ color }).run();
+                  setHighlightColorDropdownOpen(false);
+                }}
+                className="w-4 h-4 rounded border border-gray-200 hover:scale-125 transition-transform"
+                style={{ backgroundColor: color }}
+                title={color}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="w-px h-6 bg-gray-200 mx-1" />
@@ -351,6 +373,11 @@ export default function Toolbar() {
       {/* Page Break */}
       <Button onClick={() => editor.chain().focus().setPageBreak().run()} title="Page Break (Ctrl+Enter)">
         <Minus className="w-4 h-4 rotate-90" />
+      </Button>
+
+      {/* Search & Replace */}
+      <Button onClick={() => setSearchReplaceOpen(true)} title="Search & Replace">
+        <Search className="w-4 h-4" />
       </Button>
     </div>
   );

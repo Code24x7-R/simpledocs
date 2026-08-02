@@ -42,6 +42,7 @@ interface DocStore {
   aboutOpen: boolean;
   shortcutsOpen: boolean;
   mruList: { name: string; timestamp: number; size: number }[];
+  searchReplaceOpen: boolean;
 
   setEditor: (editor: Editor) => void;
   updateContent: (content: Record<string, unknown>) => void;
@@ -60,6 +61,7 @@ interface DocStore {
   setMruList: (list: { name: string; timestamp: number; size: number }[]) => void;
   addRecentFile: (name: string, size: number) => void;
   removeRecentFile: (name: string) => void;
+  setSearchReplaceOpen: (open: boolean) => void;
 }
 
 const STORAGE_KEY = 'SIMPLEDOCS_STATE';
@@ -138,6 +140,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     aboutOpen: false,
     shortcutsOpen: false,
     mruList: getMRUList(),
+    searchReplaceOpen: false,
 
     setEditor: (editor) => set({ editor }),
 
@@ -202,5 +205,6 @@ export const useDocStore = create<DocStore>((set, get) => {
       const list = removeMRUEntry(name);
       set({ mruList: list });
     },
+    setSearchReplaceOpen: (open) => set({ searchReplaceOpen: open }),
   };
 });

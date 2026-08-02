@@ -8,10 +8,11 @@ import TableGridModal from './components/layout/TableGridModal';
 import InsertFieldModal from './components/layout/InsertFieldModal';
 import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
+import SearchReplaceModal from './components/layout/SearchReplaceModal';
 import PaginatedViewport from './components/editor/PaginatedViewport';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen } = useDocStore();
   const pageElementsRef = useRef<HTMLElement[]>([]);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function App() {
       <InsertFieldModal />
       <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
       <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <SearchReplaceModal isOpen={searchReplaceOpen} onClose={() => setSearchReplaceOpen(false)} />
     </div>
   );
 }

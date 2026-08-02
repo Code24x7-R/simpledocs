@@ -2,7 +2,10 @@
 
 ## Active Bugs
 
-_No active bugs._
+| ID | Title | Date | Description | Status |
+|----|-------|------|-------------|--------|
+| B-011 | Auto page break doesn't split content across pages | 2026-08-02 | Large paste creates multiple pages but all content stays on first page (scrolling view), remaining pages are blank. Content should actually split at page boundaries. | IN PROGRESS 🔄 |
+| B-012 | Color picker inconsistent with mouse selection | 2026-08-02 | Clicking color toolbar icon shows palette but unable to always pick/apply color to previously selected text. Selection is lost when clicking palette. | Changed from hover-based (CSS group-hover) to click-to-open dropdown. Added state management like other dropdowns. Applied color on click and closes palette. |
 
 ---
 
