@@ -74,25 +74,31 @@ export function splitContentIntoPages(
 }
 
 /**
- * Estimate the number of lines a block occupies.
- * - Paragraph: 1 line (or more if wrapping is significant)
- * - Heading: 1 line + extra spacing
- * - List item: 1 line each
- * - Table: 1 line per row
+ * Estimate the number of lines a block occupies, accounting for text
+ * wrapping within the page content width.
  */
 function estimateBlockLines(block: Record<string, unknown>): number {
   const type = block.type as string | undefined;
 
   switch (type) {
     case 'paragraph':
-    case 'heading':
-      return 1;
+    case 'heading': {
+      // Estimate wrapped lines based on text length and page width
+      const text = extractText(block);
+      return estimateTextLines(text);
+    }
 
     case 'bulletList':
     case 'orderedList':
     case 'taskList': {
       const items = (block.content as any[]) ?? [];
-      return Math.max(1, items.length);
+      // Each list item can wrap to multiple lines
+      let totalLines = 0;
+      for (const item of items) {
+        const itemText = extractText(item);
+        totalLines += estimateTextLines(itemText);
+      }
+      return Math.max(1, totalLines);
     }
 
     case 'table': {
@@ -100,14 +106,26 @@ function estimateBlockLines(block: Record<string, unknown>): number {
       return Math.max(1, rows.length);
     }
 
-    case 'codeBlock':
-      // Estimate based on newlines in text content
+    case 'codeBlock': {
       const text = extractText(block);
       return Math.max(1, (text.match(/\n/g)?.length ?? 0) + 1);
+    }
 
     default:
       return 1;
   }
+}
+
+/**
+ * Estimate how many visual lines a text will occupy when wrapped to the
+ * page content width. Based on average character width and line length.
+ */
+function estimateTextLines(text: string): number {
+  if (!text || text.length === 0) return 1;
+  // Average chars per line for A4 with default margins (~80-90 chars)
+  // This matches typical content width of ~500-550px at ~6-7px per char
+  const charsPerLine = 80;
+  return Math.max(1, Math.ceil(text.length / charsPerLine));
 }
 
 /**
