@@ -1,5 +1,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
+/**
+ * Serialized ProseMirror node representation (from JSON).
+ */
+export interface SerializedNode {
+  type?: string;
+  text?: string;
+  content?: SerializedNode[];
+  marks?: SerializedMark[];
+  attrs?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface SerializedMark {
+  type?: string;
+  attrs?: Record<string, unknown>;
+}
+
 export interface SearchResult {
   /** Index of the match in the text */
   index: number;
@@ -111,22 +128,22 @@ export function countOccurrences(
  * Replace text while preserving document structure and formatting.
  */
 export function replaceAllPreservingStyles(
-  doc: any,
+  doc: SerializedNode,
   searchTerm: string,
   replacement: string,
   options: SearchOptions = {}
-): { doc: any; count: number } {
+): { doc: SerializedNode; count: number } {
   if (!searchTerm) return { doc, count: 0 };
 
   let totalCount = 0;
-  const newDoc = JSON.parse(JSON.stringify(doc));
+  const newDoc = JSON.parse(JSON.stringify(doc)) as SerializedNode;
 
   const built = buildRegex(searchTerm, options);
   if (!built) return { doc, count: 0 };
 
   const regex = built.regex;
 
-  function processNode(node: any): any {
+  function processNode(node: SerializedNode): SerializedNode {
     if (!node) return node;
 
     if (node.text && typeof node.text === 'string') {
@@ -145,10 +162,6 @@ export function replaceAllPreservingStyles(
       node.content = node.content.map(processNode);
     }
 
-    if (Array.isArray(node.marks)) {
-      node.marks = node.marks.map(processNode);
-    }
-
     return node;
   }
 
@@ -160,7 +173,7 @@ export function replaceAllPreservingStyles(
  * Search for matches across document nodes and return positions with node paths.
  */
 export function findInDocument(
-  doc: any,
+  doc: SerializedNode,
   searchTerm: string,
   options: SearchOptions = {}
 ): { nodePath: number[]; index: number; end: number; text: string }[] {
@@ -173,7 +186,7 @@ export function findInDocument(
 
   const regex = built.regex;
 
-  function searchNode(node: any, path: number[]) {
+  function searchNode(node: SerializedNode, path: number[]): void {
     if (!node) return;
 
     if (node.text && typeof node.text === 'string') {
@@ -193,7 +206,7 @@ export function findInDocument(
     }
 
     if (Array.isArray(node.content)) {
-      node.content.forEach((child: any, i: number) => {
+      node.content.forEach((child: SerializedNode, i: number) => {
         searchNode(child, [...path, i]);
       });
     }
@@ -207,12 +220,12 @@ export function findInDocument(
  * Replace a single occurrence at the specified position in the document.
  */
 export function replaceOnePreservingStyles(
-  doc: any,
+  doc: SerializedNode,
   searchTerm: string,
   replacement: string,
   matchIndex: number,
   options: SearchOptions = {}
-): { doc: any; replaced: boolean; from?: number; to?: number } {
+): { doc: SerializedNode; replaced: boolean; from?: number; to?: number } {
   if (!searchTerm) return { doc, replaced: false };
 
   const matches = findInDocument(doc, searchTerm, options);
@@ -226,11 +239,11 @@ export function replaceOnePreservingStyles(
   if (positions.length === 0) return { doc, replaced: false };
 
   const { from, to } = positions[0];
-  const newDoc = JSON.parse(JSON.stringify(doc));
+  const newDoc = JSON.parse(JSON.stringify(doc)) as SerializedNode;
 
   let currentIndex = 0;
 
-  function processNode(node: any): any {
+  function processNode(node: SerializedNode): SerializedNode {
     if (!node) return node;
 
     if (node.text && typeof node.text === 'string') {
@@ -259,10 +272,6 @@ export function replaceOnePreservingStyles(
       node.content = node.content.map(processNode);
     }
 
-    if (Array.isArray(node.marks)) {
-      node.marks = node.marks.map(processNode);
-    }
-
     return node;
   }
 
@@ -274,18 +283,18 @@ export function replaceOnePreservingStyles(
  * Get the absolute document position for each match found via findInDocument.
  */
 export function resolveMatchPositions(
-  doc: any,
+  doc: SerializedNode,
   matches: { nodePath: number[]; index: number; end: number; text: string }[]
 ): { from: number; to: number; text: string }[] {
   const results: { from: number; to: number; text: string }[] = [];
 
   for (const match of matches) {
-    let node = doc;
+    let node: SerializedNode | undefined = doc;
     for (const idx of match.nodePath) {
       if (node.content && node.content[idx]) {
         node = node.content[idx];
       } else {
-        node = null;
+        node = undefined;
         break;
       }
     }
@@ -293,7 +302,7 @@ export function resolveMatchPositions(
     if (!node || !node.text) continue;
 
     let pos = 1;
-    let parent = doc;
+    let parent: SerializedNode = doc;
 
     for (let i = 0; i < match.nodePath.length; i++) {
       const idx = match.nodePath[i];
@@ -320,11 +329,11 @@ export function resolveMatchPositions(
 /**
  * Get the total text length of a node (recursive).
  */
-function getTextLength(node: any): number {
+function getTextLength(node: SerializedNode): number {
   if (!node) return 0;
   if (node.text) return node.text.length;
   if (Array.isArray(node.content)) {
-    return node.content.reduce((sum: number, child: any) => sum + getTextLength(child), 0) + 2;
+    return node.content.reduce((sum: number, child: SerializedNode) => sum + getTextLength(child), 0) + 2;
   }
   return 0;
 }

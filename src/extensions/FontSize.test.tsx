@@ -5,20 +5,28 @@ import { render, waitFor, act } from '@testing-library/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
 import { FontSize } from './FontSize';
+import type { Editor, AnyExtension } from '@tiptap/core';
 
 // Helper: editor component that stores editor in a ref-accessible way
-let testEditor: any = null;
+let testEditor: Editor | null = null;
+
+/** Get the test editor, failing if not yet mounted. */
+function getEditor(): Editor {
+  if (!testEditor) throw new Error('Editor not mounted');
+  return testEditor;
+}
 
 function TestEditor({
   content = '<p>Hello World</p>',
   extraExtensions = [],
 }: {
   content?: string;
-  extraExtensions?: any[];
+  extraExtensions?: unknown[];
 }) {
   const editor = useEditor({
-    extensions: [StarterKit, TextStyle, FontSize, ...extraExtensions],
+    extensions: [StarterKit, TextStyle, FontSize, ...extraExtensions] as AnyExtension[],
     content,
     onUpdate: () => {
       testEditor = editor;
@@ -50,8 +58,8 @@ describe('FontSize extension', () => {
       expect(testEditor).not.toBeNull();
     });
 
-    expect(testEditor.commands.setFontSize).toBeDefined();
-    expect(testEditor.commands.unsetFontSize).toBeDefined();
+    expect(getEditor().commands.setFontSize).toBeDefined();
+    expect(getEditor().commands.unsetFontSize).toBeDefined();
   });
 
   it('applies font size via setFontSize command', async () => {
@@ -62,12 +70,12 @@ describe('FontSize extension', () => {
     });
 
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.setFontSize('24px');
+      getEditor().commands.selectAll();
+      getEditor().commands.setFontSize('24px');
     });
 
     await waitFor(() => {
-      const html = testEditor.getHTML();
+      const html = getEditor().getHTML();
       expect(html).toContain('font-size: 24px');
     });
   });
@@ -81,29 +89,27 @@ describe('FontSize extension', () => {
 
     // First set a font size
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.setFontSize('18px');
+      getEditor().commands.selectAll();
+      getEditor().commands.setFontSize('18px');
     });
 
     await waitFor(() => {
-      expect(testEditor.getHTML()).toContain('font-size: 18px');
+      expect(getEditor().getHTML()).toContain('font-size: 18px');
     });
 
     // Then unset it
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.unsetFontSize();
+      getEditor().commands.selectAll();
+      getEditor().commands.unsetFontSize();
     });
 
     await waitFor(() => {
-      const html = testEditor.getHTML();
+      const html = getEditor().getHTML();
       expect(html).not.toContain('font-size');
     });
   });
 
   it('unsetFontSize preserves other textStyle attributes (color)', async () => {
-    const Color = require('@tiptap/extension-color').Color;
-
     function TestEditorWithColor() {
       const editor = useEditor({
         extensions: [StarterKit, TextStyle, FontSize, Color],
@@ -129,25 +135,25 @@ describe('FontSize extension', () => {
 
     // Set color + fontSize
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.setColor('#ff0000');
-      testEditor.commands.setFontSize('20px');
+      getEditor().commands.selectAll();
+      getEditor().commands.setColor('#ff0000');
+      getEditor().commands.setFontSize('20px');
     });
 
     await waitFor(() => {
-      const html = testEditor.getHTML();
+      const html = getEditor().getHTML();
       expect(html).toContain('font-size: 20px');
       expect(html).toContain('color: rgb(255, 0, 0)');
     });
 
     // Unset fontSize — color should remain
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.unsetFontSize();
+      getEditor().commands.selectAll();
+      getEditor().commands.unsetFontSize();
     });
 
     await waitFor(() => {
-      const html = testEditor.getHTML();
+      const html = getEditor().getHTML();
       expect(html).not.toContain('font-size');
       expect(html).toContain('color: rgb(255, 0, 0)');
     });
@@ -161,21 +167,21 @@ describe('FontSize extension', () => {
     });
 
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.setFontSize('14px');
+      getEditor().commands.selectAll();
+      getEditor().commands.setFontSize('14px');
     });
 
     await waitFor(() => {
-      expect(testEditor.getHTML()).toContain('font-size: 14px');
+      expect(getEditor().getHTML()).toContain('font-size: 14px');
     });
 
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.unsetFontSize();
+      getEditor().commands.selectAll();
+      getEditor().commands.unsetFontSize();
     });
 
     await waitFor(() => {
-      const html = testEditor.getHTML();
+      const html = getEditor().getHTML();
       // Should not have empty <span> tags
       expect(html).not.toMatch(/<span\s*>/);
     });
@@ -189,12 +195,12 @@ describe('FontSize extension', () => {
     });
 
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.setFontSize('14px');
+      getEditor().commands.selectAll();
+      getEditor().commands.setFontSize('14px');
     });
 
     await waitFor(() => {
-      const html = testEditor.getHTML();
+      const html = getEditor().getHTML();
       expect(html).toContain('font-size: 14px');
       // Should NOT include line-height (was a bug in previous version)
       expect(html).not.toContain('line-height: inherit');
@@ -209,12 +215,12 @@ describe('FontSize extension', () => {
     });
 
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.setFontSize('12px');
+      getEditor().commands.selectAll();
+      getEditor().commands.setFontSize('12px');
     });
 
     await waitFor(() => {
-      const html = testEditor.getHTML();
+      const html = getEditor().getHTML();
       expect(html).toContain('font-size: 12px');
     });
   });
@@ -228,22 +234,22 @@ describe('FontSize extension', () => {
 
     // Initially no font size
     act(() => {
-      testEditor.commands.selectAll();
+      getEditor().commands.selectAll();
     });
 
     await waitFor(() => {
-      const isActive = testEditor.isActive('textStyle', { fontSize: '16px' });
+      const isActive = getEditor().isActive('textStyle', { fontSize: '16px' });
       expect(isActive).toBe(false);
     });
 
     // Set font size and check isActive
     act(() => {
-      testEditor.commands.selectAll();
-      testEditor.commands.setFontSize('16px');
+      getEditor().commands.selectAll();
+      getEditor().commands.setFontSize('16px');
     });
 
     await waitFor(() => {
-      const isActive = testEditor.isActive('textStyle', { fontSize: '16px' });
+      const isActive = getEditor().isActive('textStyle', { fontSize: '16px' });
       expect(isActive).toBe(true);
     });
   });

@@ -7,41 +7,11 @@
  * directly from document settings. Page count is derived from content height.
  */
 
-import { createContext, useContext, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import { buildPageGeometry } from '../../utils/pagination';
 import { mmToPx } from '../../utils/unitConversion';
-
-export interface PaginationContextValue {
-  /** Fixed line height in px */
-  lineHeightPx: number;
-  /** Lines per page (fixed grid) */
-  linesPerPage: number;
-  /** Usable content height per page in px (body area only) */
-  usableHeightPx: number;
-  /** Full page height in px (including margins, header, footer) */
-  pageHeightPx: number;
-  /** Left margin in px */
-  marginLeftPx: number;
-  /** Right margin in px */
-  marginRightPx: number;
-  /** Top margin in px */
-  marginTopPx: number;
-  /** Bottom margin in px */
-  marginBottomPx: number;
-  /** Header height in px (0 if disabled) */
-  headerHeightPx: number;
-  /** Footer height in px (0 if disabled) */
-  footerHeightPx: number;
-  /** Content width in px (page width minus side margins) */
-  contentWidthPx: number;
-  /** Page width in px */
-  pageWidthPx: number;
-  /** Page gap in px (vertical space between page visuals) */
-  pageGapPx: number;
-}
-
-const PaginationContext = createContext<PaginationContextValue | null>(null);
+import { PaginationContext, type PaginationContextValue } from './paginationTypes';
 
 export function PaginationProvider({ children }: { children: React.ReactNode }) {
   const { docState } = useDocStore();
@@ -90,10 +60,4 @@ export function PaginationProvider({ children }: { children: React.ReactNode }) 
   return <PaginationContext.Provider value={value}>{children}</PaginationContext.Provider>;
 }
 
-export function usePaginationContext(): PaginationContextValue {
-  const ctx = useContext(PaginationContext);
-  if (!ctx) {
-    throw new Error('usePaginationContext must be used within PaginationProvider');
-  }
-  return ctx;
-}
+

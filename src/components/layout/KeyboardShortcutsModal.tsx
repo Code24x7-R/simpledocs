@@ -14,7 +14,7 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'U'], description: 'Underline' },
     { keys: ['Ctrl', 'Shift', 'X'], description: 'Strikethrough' },
     { keys: ['Ctrl', 'E'], description: 'Inline code' },
-    { keys: ['Ctrl', 'Shift', 'H'], description: 'Highlight' },
+    { keys: ['Ctrl', 'K'], description: 'Insert link' },
   ]},
   { category: 'Headings', items: [
     { keys: ['Ctrl', 'Alt', '1'], description: 'Heading 1' },

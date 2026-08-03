@@ -17,7 +17,8 @@ describe('TemplateField extension', () => {
   it('has a fieldName attribute', () => {
     type AddAttrsFn = () => Record<string, { default: unknown }>;
     const fn = TemplateField.config.addAttributes as AddAttrsFn | undefined;
-    const attrs = fn ? fn.call({ name: 'templateField', options: { HTMLAttributes: {} }, storage: {}, parent: undefined } as any) : {};
+    const mockThis = { name: 'templateField', options: { HTMLAttributes: {} }, storage: {}, parent: undefined };
+    const attrs = fn ? fn.call(mockThis) : {};
     expect(attrs).toBeDefined();
     expect(attrs).toHaveProperty('fieldName');
     expect(attrs['fieldName']).toEqual(expect.objectContaining({ default: '' }));
@@ -37,12 +38,13 @@ describe('TemplateField extension', () => {
     const renderHTML = TemplateField.config.renderHTML;
     expect(renderHTML).toBeDefined();
 
-    const mockNode = { attrs: { fieldName: 'client_name' } } as any;
+    const mockNode = { attrs: { fieldName: 'client_name' } };
     const HTMLAttributes = { 'data-field-name': 'client_name' };
-    const result = (renderHTML as any).call(
-      { options: { HTMLAttributes: {} } },
-      { node: mockNode, HTMLAttributes }
-    ) as [string, Record<string, unknown>, string];
+    const renderFn = renderHTML as unknown as (args: {
+      node: { attrs: { fieldName: string } };
+      HTMLAttributes: Record<string, string>;
+    }) => [string, Record<string, unknown>, string];
+    const result = renderFn.call({ options: { HTMLAttributes: {} } }, { node: mockNode, HTMLAttributes });
 
     expect(result[0]).toBe('span');
     expect(result[2]).toBe('{{client_name}}');
@@ -54,7 +56,7 @@ describe('TemplateField extension', () => {
   it('parses HTML back to attributes', () => {
     const parseHTML = TemplateField.config.parseHTML;
     expect(parseHTML).toBeDefined();
-    const result = (parseHTML as any).call({ options: {} });
+    const result = (parseHTML as () => Array<{ tag: string }>).call({ options: {} });
     expect(result).toEqual([{ tag: 'span[data-type="template-field"]' }]);
   });
 });

@@ -19,7 +19,7 @@
 | 13 | Auto Page Break on Overflow | COMPLETE ✅ |
 | 14 | Search and Replace | COMPLETE ✅ |
 | 15 | True Content Splitting Across Pages | COMPLETE ✅ |
-| 16 | Color Picker Fix | IN PROGRESS 🔄 |
+| 16 | Color Picker Fix | COMPLETE ✅ |
 | 17 | True Paginated Content Model | COMPLETE ✅ |
 | 18 | Keyboard Navigation & Focus Management | COMPLETE ✅ |
 | 19 | Template Field Display, Merge & Common Use Cases | COMPLETE ✅ |
@@ -28,7 +28,14 @@
 | 22 | Chatbot Integration (LM Studio) | COMPLETE ✅ |
 | 23 | Markdown Export | COMPLETE ✅ |
 | 24 | Search & Replace Enhancements | COMPLETE ✅ |
-| 25 | Table Cell Operations | IN PROGRESS 🔄 |
+| 25 | Table Cell Operations | COMPLETE ✅ |
+| 26 | Image Support | COMPLETE ✅ |
+| 27 | Hyperlinks | COMPLETE ✅ |
+| 28 | Bubble Menu | COMPLETE ✅ |
+| 29 | Placeholder | COMPLETE ✅ |
+| 30 | Character Count | COMPLETE ✅ |
+| 31 | Highlight Refactor (BackgroundColor) | COMPLETE ✅ |
+| 32 | Lint Cleanup (zero warnings) | COMPLETE ✅ |
 
 ---
 
@@ -100,7 +107,7 @@
 - Wired handlers to editor selection state
 - Added 5 unit tests for clipboard utilities
 
-### Phase 12: Microsoft Word Import + MRU 🔄
+### Phase 12: Microsoft Word Import + MRU ✅
 - Add .docx file import via mammoth.js (converts docx → HTML)
 - Parse imported HTML and set as editor content
 - Add "Import Word" item to File menu
@@ -109,7 +116,9 @@
 - Display recently opened files with click-to-reopen
 - Add unit tests for Word import parser and MRU logic
 
-### Phase 13: Auto Page Break on Overflow 🔄
+**Implementation:** `src/utils/wordImport.ts` (importWordDocument), `src/utils/mru.ts` (getMRUList, addMRUEntry, formatMRUTimestamp), wired into `Navbar.tsx`. Word import estimates wrapped lines for paragraphs and splits content across multiple pages. MRU shows recent files with formatted timestamps.
+
+### Phase 13: Auto Page Break on Overflow ✅
 - Calculate content height vs available page height
 - Split content at page boundaries
 - Insert automatic page breaks when content overflows
@@ -117,69 +126,36 @@
 - Update page count display dynamically
 - Add tests for overflow calculation logic
 
+**Implementation:** Superseded by Phase 17's true paginated content model. The single-editor "Google Docs" architecture with CSS-based pagination eliminated the need for manual overflow calculation — page breaks are now visual guides, and content flows naturally across pages.
+
 ---
 
-## Phase 17: True Paginated Content Model (Data-Driven) — IN PROGRESS 🔄
+## Phase 16: Color Picker Fix — COMPLETE ✅
 
-**Goal**: Replace the overlay-alignment architecture with a true paginated content model where each page is an independent, fixed-height container with its own Tiptap editor instance.
+**2026-08-03** — Fixed inconsistent color picker behavior and improved usability.
 
-### Why
-The current architecture stores content as a single flat Tiptap JSON tree in `DocState.content` and renders it through one continuous `DocumentEditor`. The `PaginatedViewport` overlays absolutely-positioned page backgrounds that must align with content flow. This is fragile:
-- Browser line-height rarely matches engine-computed line-height → cumulative drift
-- PT→PX conversion rounding errors accumulate across pages
-- CSS margins/padding on paragraphs break grid alignment
-- Sub-pixel font metrics cause misalignment that grows with each page
-
-### Architecture Change
-| Current | New |
-|---------|-----|
-| `DocState.content: Record<string, unknown>` | `DocState.pages: Page[]` |
-| 1 Tiptap editor for all content | N Tiptap editors (one per page) |
-| Absolute-positioned page backgrounds | Self-contained page containers |
-| Mathematical overlay alignment | Natural vertical page stack |
-| `DocumentLayoutEngine` computes break positions | Each page renders independently |
+### Issues Fixed
+- Color pickers used CSS `group-hover` which was unreliable — changed to click-to-open dropdown with proper state management
+- Palette closed prematurely on mouseleave — now stays open during selection, closes on apply
+- No way to clear highlight/text color — added "None" and "Default" options
+- Default Tiptap Highlight extension overrode text color with `color: inherit` — created CustomHighlight extension that only sets `background-color`
 
 ### Steps
 
-- [x] 1. Define `Page` interface in `src/types/page.ts` — DONE
-- [x] 2. Update `useDocStore.ts` — `pages[]` model, migration from old `content` format — DONE
-- [x] 3. Create `PageEditor.tsx` — single page editor with fixed height — DONE
-- [x] 4. Create `MultiPageEditor.tsx` — renders N page editors — DONE
-- [x] 5. Create `pageOverflow.ts` — overflow detection and content redistribution — DONE
-- [x] 6. Rewrite `PaginatedViewport.tsx` — vertical page stack — DONE
-- [x] 7. Simplify `PaginationContext.tsx` — per-page geometry — DONE
-- [x] 8. Update `PageBreak` extension + `PageBreakView` — visual break indicator — DONE
-- [x] 9. Update `fileIO.ts` — migration logic for old format — DONE
-- [x] 10. Update `search.ts` — cross-page search/replace — DONE (deferred, uses focused editor)
-- [x] 11. Update `Toolbar`, `SearchReplaceModal`, `App.tsx` — DONE (works via focused editor)
-- [x] 12. Update `pdfExport.ts` — per-page export — DONE (works via page containers)
-- [x] 13. Delete orphaned files: `DocumentEditor.tsx`, `PageBackground.tsx` — DONE
-- [x] 14. Update tests for new model — DONE
-- [x] 15. Run verification: type-check + test + build — DONE
-- [x] 16. Cross-page cursor navigation + page collapse on delete — DONE
+- [x] 1. Replace CSS group-hover with click-to-open dropdown + state management (`textColorDropdownOpen`, `highlightColorDropdownOpen`) — commit `67eaeb0`
+- [x] 2. Add "None" option to highlight palette, "Default" option to text colour palette — commit `0bcad83`
+- [x] 3. Eng_AU spelling ("Colour" not "Color") — commit `0bcad83`
+- [x] 4. Expand highlight palette to 42 colors organized by hue, larger swatches (28×28px), active color indicator — commit `5432707`
+- [x] 5. CustomHighlight extension to preserve text color when highlighting — commit `0f31a1b`
+- [x] 6. Toolbar audit: undo/redo, clear formatting, font family unset, active states — commit `a44b0f3`
 
 ### Files
 
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/types/page.ts` | **NEW** — Page interface |
-| `src/store/useDocStore.ts` | **MODIFY** — pages[] model, migration |
-| `src/components/editor/PageEditor.tsx` | **NEW** — single page editor |
-| `src/components/editor/MultiPageEditor.tsx` | **NEW** — renders N pages |
-| `src/components/editor/DocumentEditor.tsx` | **DELETE** — replaced by PageEditor |
-| `src/components/editor/PaginatedViewport.tsx` | **REWRITE** — vertical page stack |
-| `src/components/editor/PageBackground.tsx` | **DELETE** — no longer needed |
-| `src/components/editor/PaginationContext.tsx` | **SIMPLIFY** — per-page geometry |
-| `src/components/editor/nodes/PageBreakView.tsx` | **REWRITE** — visual indicator |
-| `src/extensions/PageBreak.ts` | **MODIFY** — page break = new page |
-| `src/utils/pageOverflow.ts` | **NEW** — overflow/redistribution |
-| `src/utils/fileIO.ts` | **MODIFY** — migration logic |
-| `src/utils/search.ts` | **MODIFY** — cross-page search |
-| `src/utils/pdfExport.ts` | **MODIFY** — per-page export |
-| `src/components/layout/Toolbar/Toolbar.tsx` | **MODIFY** — page break = new page |
-| `src/components/layout/SearchReplaceModal.tsx` | **MODIFY** — cross-page nav |
-| `src/App.tsx` | **MODIFY** — remove PageNavigation |
-| Test files | **UPDATE** — new model tests |
+| `src/components/layout/Toolbar/Toolbar.tsx` | Click-to-open dropdowns, Default/None options, 42-color highlight palette, larger swatches, active state indicators |
+| `src/extensions/CustomHighlight.ts` | **NEW** — Highlight extension that preserves text color (no `color: inherit`) |
+| `src/extensions/index.ts` | Replaced default Highlight with CustomHighlight |
 
 ---
 
@@ -265,57 +241,47 @@ The previous architecture stored content as a single flat Tiptap JSON tree in `D
 
 ---
 
-## Phase 19: Template Field Display, Merge & Common Use Cases — IN PROGRESS 🔄
+## Phase 19: Template Field Display, Merge & Common Use Cases — COMPLETE ✅
 
-**2026-08-04** — Enhancing template fields with display values, merge functionality, and common use cases.
+**2026-08-04** — Implemented template field insertion, resolution, and merge functionality.
 
-### Current State
-Template fields are inline placeholders (`{{field_name}}`) that don't resolve to actual values. Users expect fields like `{{current_date}}` to display the current date, and `{{page_number}}` to show the page number.
-
-### Design
-
-#### 1. Field Display
-- **Edit Mode**: Show placeholder `{{field_name}}` (current behavior)
-- **Preview Mode**: Show resolved value (e.g., "15 Aug 2026" for `{{current_date}}`)
-- **Toggle**: Button to switch between edit and preview modes
-
-#### 2. Field Resolution
+### Field Resolution
 | Field | Resolution |
 |-------|------------|
-| `{{current_date}}` | Current date (configurable format) |
-| `{{document_title}}` | Document title from store |
-| `{{page_number}}` | Current page number |
+| `{{current_date}}` | Current date (short/long/ISO formats, en-AU locale) |
+| `{{document_title}}` | Document title from store (falls back to "Untitled Document") |
+| `{{page_number}}` | Current page number (1-indexed) |
 | `{{total_pages}}` | Total page count |
 | `{{custom_field}}` | User-defined value (prompted at merge time) |
 
-#### 3. Field Merge
+### Field Merge
 - Replace all field placeholders with resolved values
 - Creates a "flat" document with no template fields
 - Useful for export, print, or finalizing a document
 - Non-destructive: original template preserved until merge
+- Merge dialog shows preview of all resolved values before committing
 
-#### 4. Common Use Cases
-- **Letters**: Date, recipient name, address blocks
-- **Invoices**: Invoice number, date, due date, totals
-- **Reports**: Report title, author, date, page X of Y
-- **Forms**: Field labels with fillable values
-- **Mail Merge**: Import data source, replace fields for each record
+### Common Use Cases
+- **Letters**: `{{current_date}}`, `{{document_title}}`
+- **Invoices**: Custom fields for invoice number, date, totals
+- **Reports**: `{{document_title}}`, `{{current_date}}`, `{{page_number}}` of `{{total_pages}}`
+- **Forms**: Custom fields with user-defined values
+- **Mail Merge**: Merge dialog prompts for custom field values
 
 ### Implementation
 
 #### New Files
-- `src/utils/templateFields.ts` — Field resolution and merge logic
-- `src/components/layout/FieldMergeModal.tsx` — Merge dialog with options
+- `src/utils/templateFields.ts` — Field resolution and merge logic (resolveField, resolveText, resolveDate, mergeFields, extractFieldNames)
+- `src/components/layout/FieldMergeModal.tsx` — Merge dialog with preview, custom field input, merge execution
+- `src/utils/templateFields.test.ts` — 27+ unit tests for resolution and merge
 
 #### Modified Files
-- `src/components/editor/nodes/TemplateFieldView.tsx` — Preview mode display
-- `src/components/layout/InsertFieldModal.tsx` — Additional field types
-- `src/store/useDocStore.ts` — Add preview mode toggle
-- `src/extensions/TemplateField.ts` — Add field type attribute
-
-### Tests
-- `src/utils/templateFields.test.ts` — Unit tests for resolution logic
-- `tests/e2e/template-fields.spec.ts` — E2E tests for display and merge
+- `src/components/layout/InsertFieldModal.tsx` — Standard fields (current_date, document_title, page_number, total_pages) + custom field input
+- `src/extensions/TemplateField.ts` — Extension with insertTemplateField command
+- `src/components/editor/nodes/TemplateFieldView.tsx` — NodeView showing `{{fieldName}}`
+- `src/store/useDocStore.ts` — fieldMergeOpen state + setFieldMergeOpen
+- `src/App.tsx` — FieldMergeModal wired in
+- `src/components/layout/Navbar.tsx` — "Merge Fields" menu item in File menu
 
 ---
 
@@ -496,14 +462,217 @@ Template fields are inline placeholders (`{{field_name}}`) that don't resolve to
 
 ---
 
+## Phase 26: Image Support — COMPLETE ✅
+
+**2026-08-04** — Added image insertion via file upload or URL.
+
+### Features
+- Upload images from file (PNG, JPG, GIF, WebP, SVG) — converted to base64
+- Insert images via URL
+- Alt text for accessibility
+- Preview before insertion
+- 5MB file size limit
+- Image renders in editor with native browser handling
+
+### Implementation
+
+#### New Files
+- `src/components/layout/ImageModal.tsx` — Upload/URL dialog with preview, file size validation, tabbed interface
+
+#### Modified Files
+- `src/extensions/index.ts` — Added `@tiptap/extension-image` (inline: false, allowBase64: true)
+- `src/components/layout/Toolbar/Toolbar.tsx` — Added Image button
+- `src/components/layout/Navbar.tsx` — Added "Insert Image" to File menu
+- `src/App.tsx` — Added ImageModal with submit handler (`editor.chain().focus().setImage()`)
+- `src/store/useDocStore.ts` — Added `imageOpen` state and `setImageOpen`
+- `src/utils/htmlToMarkdown.ts` — Added image conversion (`![alt](src)`)
+- `package.json` — Added `@tiptap/extension-image` dependency
+
+---
+
+## Phase 27: Hyperlinks — COMPLETE ✅
+
+**2026-08-04** — Added hyperlink insertion, editing, and removal.
+
+### Features
+- Insert link from selected text with URL and optional display text
+- Edit existing links (pre-filled modal)
+- Remove links via modal or toolbar button toggle
+- Ctrl+K keyboard shortcut to insert/edit link
+- URL validation (http, https, mailto, tel protocols)
+- Auto-detect URLs pasted as plain text (autolink)
+- Links auto-convert on paste
+
+### Implementation
+
+#### New Files
+- `src/components/layout/LinkModal.tsx` — Add/edit link dialog with URL input, display text, validation, remove option
+
+#### Modified Files
+- `src/extensions/index.ts` — Added `@tiptap/extension-link` (openOnClick: false, autolink: true, linkOnPaste: true)
+- `src/components/layout/Toolbar/Toolbar.tsx` — Added Link button with active state, click-to-toggle
+- `src/components/layout/Navbar.tsx` — Added "Insert Link" to File menu
+- `src/components/layout/KeyboardShortcutsModal.tsx` — Documented Ctrl+K shortcut
+- `src/components/editor/DocumentEditor.tsx` — Added Ctrl+K keydown handler
+- `src/App.tsx` — Added LinkModal with submit handler, `simpledocs:open-link` event listener
+- `src/store/useDocStore.ts` — Added `linkOpen` state and `setLinkOpen`
+- `package.json` — Added `@tiptap/extension-link` dependency
+
+---
+
+## Phase 28: Bubble Menu — COMPLETE ✅
+
+**2026-08-04** — Added floating formatting toolbar on text selection.
+
+### Features
+- Appears above selected text using Floating UI (Tiptap's built-in positioning)
+- Contains most-used formatting buttons: Bold, Italic, Underline, Highlight, Link
+- Disappears when selection clears
+- Follows selection if user scrolls
+- Uses Tiptap's `@tiptap/react/menus` BubbleMenu component
+
+### Implementation
+
+#### New Files
+- `src/components/editor/BubbleMenu.tsx` — Bubble menu component with Bold, Italic, Underline, Highlight, Link buttons
+
+#### Modified Files
+- `src/components/editor/DocumentEditor.tsx` — Wired BubbleMenu into editor render
+- `package.json` — Added `@tiptap/extension-bubble-menu` and `tippy.js` dependencies
+
+#### Dependencies
+- `@tiptap/extension-bubble-menu` (available in `node_modules` as transitive dep, needs promotion to `package.json`)
+- `tippy.js` (peer dependency of bubble-menu, needs installation)
+
+### Tests
+- `src/components/editor/BubbleMenu.test.tsx` — Component tests
+- E2E: select text, verify bubble menu appears, click formatting button
+
+---
+
+## Phase 29: Placeholder — COMPLETE ✅
+
+**2026-08-04** — Added placeholder text when editor is empty.
+
+### Features
+- "Start typing..." displayed when document has no content
+- Disappears automatically when user starts typing
+- Styled via Tiptap's built-in placeholder CSS
+
+### Implementation
+
+#### Modified Files
+- `src/extensions/index.ts` — Added `@tiptap/extension-placeholder` with "Start typing..." text
+- `package.json` — Added `@tiptap/extension-placeholder` dependency
+
+---
+
+## Phase 30: Character Count — COMPLETE ✅
+
+**2026-08-04** — Added word/character count and reading time to status bar.
+
+### Features
+- Word count (from Tiptap's CharacterCount extension)
+- Character count (with spaces)
+- Reading time estimate (based on 200 WPM)
+- Live update as user types
+- Displayed in status bar alongside cursor position
+
+### Implementation
+
+#### New Files
+- `src/utils/textStats.ts` — TextStats interface, countWords, countSentences, countParagraphs, readingTime, formatReadingTime
+- `src/utils/textStats.test.ts` — 15 unit tests for all counting functions
+
+#### Modified Files
+- `src/extensions/index.ts` — Added `@tiptap/extension-character-count`
+- `src/components/editor/PageNavigation.tsx` — Added stats display, update handlers for selection and document changes
+- `package.json` — Added `@tiptap/extension-character-count` dependency
+
+**Results:** 379 tests, type-check clean, build succeeds.
+
+---
+
+## Phase 31: Highlight Refactor — COMPLETE ✅
+
+**2026-08-04** — Replaced separate Highlight mark with BackgroundColor on textStyle mark.
+
+### Problem
+`CustomHighlight` extended `@tiptap/extension-highlight` which is a *separate mark* from `textStyle`. The default Highlight extension forces `color: inherit` which clobbers text colors. The custom version patched `renderHTML` to only set `background-color`, but the architecture was fundamentally wrong — highlight and text color lived on different marks.
+
+### Solution
+Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-style`. This puts highlight/background-color on the *same* `textStyle` mark as text color, font family, and font size. No `color: inherit` conflict.
+
+### Implementation
+
+#### Deleted Files
+- `src/extensions/CustomHighlight.ts` — Replaced by BackgroundColor extension
+
+#### New Files
+- `src/extensions/BackgroundColor.test.tsx` — 9 tests verifying coexistence with text color, independent unset, no `color: inherit`, etc.
+
+#### Modified Files
+- `src/extensions/index.ts` — `BackgroundColor` instead of `CustomHighlight`
+- `src/components/layout/Toolbar/Toolbar.tsx` — Merged two separate color pickers (Palette + Highlighter icons) → one combined picker with "Text Colour" / "Highlight" tabs
+- `src/components/editor/BubbleMenu.tsx` — Uses `setBackgroundColor`/`unsetBackgroundColor` with toggle logic instead of `toggleHighlight`
+- `src/components/layout/KeyboardShortcutsModal.tsx` — Removed stale `Ctrl+Shift-H` entry (BackgroundColor has no keyboard shortcut)
+
+### Key API Differences
+- Old: `editor.commands.toggleHighlight({ color })` / `editor.isActive('highlight', { color })`
+- New: `editor.commands.setBackgroundColor(color)` / `editor.isActive('textStyle', { backgroundColor: color })`
+- Unset: `editor.commands.unsetBackgroundColor()` (calls `removeEmptyTextStyle` internally)
+
+**Results:** 388 tests pass (379 + 9 new), type-check clean, build succeeds.
+
+---
+
+## Phase 32: Lint Cleanup — COMPLETE ✅
+
+**2026-08-04** — Fixed all 41 pre-existing lint issues (40 errors + 1 warning → 0).
+
+### Changes
+
+#### Type Safety Improvements
+- `src/main.tsx` — `(window as any)` → `declare global` interface for `__docStore`
+- `src/utils/search.ts` — All `any` → `SerializedNode`/`SerializedMark` local interfaces
+- `src/components/editor/TableContextMenu.tsx` — `editor: any` → `editor: Editor`
+- `src/extensions/FontSize.test.tsx` — `testEditor: any` → `Editor | null` with `getEditor()` helper
+
+#### Test File Typing
+- `src/utils/search.test.ts` — Test data typed as `SerializedNode`, non-null assertions on `.content!`
+- `src/components/editor/TableContextMenu.test.tsx` — Mock editor typed via `Partial<Editor>`
+- `src/utils/clipboard.test.ts` — `(global/document/navigator as any)` → `vi.stubGlobal`/`vi.spyOn`
+- `src/utils/wordImport.test.ts` — `(mammoth.convertToHtml as any)` → typed mock variable
+- `src/extensions/PageBreak.test.ts` — `(renderHTML as any)` → typed `RenderHTMLFn`
+- `src/extensions/TemplateField.test.ts` — All 3 `any` casts → proper type assertions via `unknown`
+
+#### Architecture
+- `src/components/editor/PaginationContext.tsx` — Moved context/interface to `paginationTypes.ts` to fix react-refresh warning
+- `src/components/editor/paginationTypes.ts` — **New** — holds `PaginationContextValue` interface + context creation
+- `src/components/editor/usePaginationContext.ts` — **New** — extracted hook from PaginationContext.tsx
+- `src/extensions/FontSize.test.tsx` — `require()` → top-level import (fixes `no-var-requires`)
+
+**Results:** 0 lint errors, 0 warnings, 388 tests pass, type-check clean.
+
+---
+
 ## Future Enhancements (Not Yet Planned)
 
-- [ ] Multi-page content splitting (automatic overflow to next page)
 - [ ] Table formatting (border thickness, cell background color)
 - [ ] Custom margins in inches (currently only mm display)
 - [ ] Drag-and-drop JSON import (currently file input only)
 - [ ] Print-optimized CSS (@media print styles)
 - [ ] Fit-to-width zoom option
 - [ ] Spell check
-- [ ] Collaborative editing
+- [ ] Collaborative editing (@tiptap/extension-collaboration)
 - [ ] Cloud storage integration
+- [ ] Subscript/Superscript support
+- [ ] Syntax highlighting in code blocks (@tiptap/extension-code-block-lowlight)
+- [ ] Floating menu (insert menu on new line)
+- [ ] @mentions with autocomplete
+- [ ] YouTube/video embed support
+- [ ] Typography extension (smart quotes, dashes)
+- [ ] Find and replace with replace-all confirmation dialog
+- [ ] Document outlines/navigation panel (headings tree)
+- [ ] Export to DOCX format
+- [ ] Import from Markdown (paste MD → convert to Tiptap)

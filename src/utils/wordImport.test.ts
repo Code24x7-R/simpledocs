@@ -12,6 +12,9 @@ vi.mock('mammoth', () => ({
 import mammoth from 'mammoth';
 import { importWordDocument } from './wordImport';
 
+type MockFn = ReturnType<typeof vi.fn>;
+const mockConvertToHtml = mammoth.convertToHtml as unknown as MockFn;
+
 function createMockFile(name: string): File {
   const file = new File(['dummy content'], name, {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -27,7 +30,7 @@ function createMockFile(name: string): File {
 
 describe('wordImport', () => {
   it('converts docx file to HTML', async () => {
-    (mammoth.convertToHtml as any).mockResolvedValue({
+    mockConvertToHtml.mockResolvedValue({
       value: '<p>Hello World</p>',
       messages: [],
     });
@@ -43,7 +46,7 @@ describe('wordImport', () => {
   });
 
   it('returns messages for unsupported features', async () => {
-    (mammoth.convertToHtml as any).mockResolvedValue({
+    mockConvertToHtml.mockResolvedValue({
       value: '<h1>Title</h1><p>Content</p>',
       messages: [
         { type: 'warning', message: 'Unsupported feature: embedded chart' },
@@ -57,7 +60,7 @@ describe('wordImport', () => {
   });
 
   it('maps Word headings to HTML headings', async () => {
-    (mammoth.convertToHtml as any).mockResolvedValue({
+    mockConvertToHtml.mockResolvedValue({
       value: '<h1>Main Heading</h1><h2>Sub Heading</h2><h3>Sub Sub</h3>',
       messages: [],
     });
@@ -69,7 +72,7 @@ describe('wordImport', () => {
   });
 
   it('propagates errors from mammoth', async () => {
-    (mammoth.convertToHtml as any).mockRejectedValue(new Error('Invalid docx file'));
+    mockConvertToHtml.mockRejectedValue(new Error('Invalid docx file'));
 
     await expect(importWordDocument(createMockFile('corrupt.docx'))).rejects.toThrow(
       'Invalid docx file'
@@ -77,7 +80,7 @@ describe('wordImport', () => {
   });
 
   it('preserves Word page breaks from mammoth', async () => {
-    (mammoth.convertToHtml as any).mockResolvedValue({
+    mockConvertToHtml.mockResolvedValue({
       value: '<h1>Title</h1><div data-type="page-break"></div><p>Next page</p>',
       messages: [],
     });

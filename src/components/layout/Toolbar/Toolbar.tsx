@@ -18,7 +18,6 @@ import {
   Minus,
   Type,
   Palette,
-  Highlighter,
   Table,
   Sparkles,
   ChevronDown,
@@ -30,6 +29,8 @@ import {
   Undo,
   Redo,
   RemoveFormatting,
+  Image,
+  Link,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
 import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';
@@ -68,13 +69,20 @@ const HIGHLIGHT_COLORS = [
   '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', // Oranges
 ];
 
+const COLOR_PICKER_TAB = {
+  TEXT: 'text',
+  HIGHLIGHT: 'highlight',
+} as const;
+
+type ColorPickerTab = (typeof COLOR_PICKER_TAB)[keyof typeof COLOR_PICKER_TAB];
+
 export default function Toolbar() {
-  const { editor, setTableGridOpen, setInsertFieldOpen, setSearchReplaceOpen, setChatOpen, chatOpen } = useDocStore();
+  const { editor, setTableGridOpen, setInsertFieldOpen, setSearchReplaceOpen, setChatOpen, chatOpen, setLinkOpen, setImageOpen } = useDocStore();
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
-  const [textColorDropdownOpen, setTextColorDropdownOpen] = useState(false);
-  const [highlightColorDropdownOpen, setHighlightColorDropdownOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [colorPickerTab, setColorPickerTab] = useState<ColorPickerTab>(COLOR_PICKER_TAB.TEXT);
 
   if (!editor) return null;
 
@@ -328,96 +336,113 @@ export default function Toolbar() {
         </button>
       </div>
 
-      {/* Text Colour */}
+      {/* Combined Colour Picker (Text + Highlight) */}
       <div className="relative">
         <button
-          onClick={() => setTextColorDropdownOpen(!textColorDropdownOpen)}
+          onClick={() => setColorPickerOpen(!colorPickerOpen)}
           className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5"
-          title="Text Colour"
+          title="Text & Highlight Colour"
         >
           <Palette className="w-4 h-4" />
           <div className="w-3 h-0.5 bg-red-500 rounded" />
         </button>
-        {textColorDropdownOpen && (
+        {colorPickerOpen && (
           <div className="absolute top-full left-0 mt-1 p-3 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-[280px]">
-            {/* Default option */}
-            <button
-              onClick={() => {
-                editor.chain().focus().unsetColor().run();
-                setTextColorDropdownOpen(false);
-              }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
-              title="Default (no colour)"
-            >
-              <span className="w-6 h-6 rounded border border-gray-300 bg-white" />
-              <span>Default</span>
-            </button>
-            <div className="grid grid-cols-7 gap-1.5">
-              {TEXT_COLORS.map((color) => {
-                const isActive = editor.isActive('textStyle', { color });
-                return (
-                  <button
-                    key={color}
-                    onClick={() => {
-                      editor.chain().focus().setColor(color).run();
-                      setTextColorDropdownOpen(false);
-                    }}
-                    className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
-                      isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                );
-              })}
+            {/* Tab switcher */}
+            <div className="flex gap-1 mb-3">
+              <button
+                onClick={() => setColorPickerTab(COLOR_PICKER_TAB.TEXT)}
+                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                  colorPickerTab === COLOR_PICKER_TAB.TEXT
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Text Colour
+              </button>
+              <button
+                onClick={() => setColorPickerTab(COLOR_PICKER_TAB.HIGHLIGHT)}
+                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                  colorPickerTab === COLOR_PICKER_TAB.HIGHLIGHT
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Highlight
+              </button>
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Highlight Colour */}
-      <div className="relative">
-        <button
-          onClick={() => setHighlightColorDropdownOpen(!highlightColorDropdownOpen)}
-          className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5"
-          title="Highlight Colour"
-        >
-          <Highlighter className="w-4 h-4" />
-          <div className="w-3 h-0.5 bg-yellow-400 rounded" />
-        </button>
-        {highlightColorDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 p-3 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-[280px]">
-            {/* None option */}
-            <button
-              onClick={() => {
-                editor.chain().focus().unsetHighlight().run();
-                setHighlightColorDropdownOpen(false);
-              }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
-              title="None (remove highlight)"
-            >
-              <span className="w-6 h-6 rounded border border-gray-300 bg-white flex items-center justify-center text-gray-400 text-xs">✕</span>
-              <span>None</span>
-            </button>
-            <div className="grid grid-cols-7 gap-1.5">
-              {HIGHLIGHT_COLORS.map((color) => {
-                const isActive = editor.isActive('highlight', { color });
-                return (
-                  <button
-                    key={color}
-                    onClick={() => {
-                      editor.chain().focus().toggleHighlight({ color }).run();
-                      setHighlightColorDropdownOpen(false);
-                    }}
-                    className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
-                      isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                );
-              })}
-            </div>
+            {colorPickerTab === COLOR_PICKER_TAB.TEXT && (
+              <>
+                {/* Default option */}
+                <button
+                  onClick={() => {
+                    editor.chain().focus().unsetColor().run();
+                    setColorPickerOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
+                  title="Default (no colour)"
+                >
+                  <span className="w-6 h-6 rounded border border-gray-300 bg-white" />
+                  <span>Default</span>
+                </button>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {TEXT_COLORS.map((color) => {
+                    const isActive = editor.isActive('textStyle', { color });
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          editor.chain().focus().setColor(color).run();
+                          setColorPickerOpen(false);
+                        }}
+                        className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
+                          isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {colorPickerTab === COLOR_PICKER_TAB.HIGHLIGHT && (
+              <>
+                {/* None option */}
+                <button
+                  onClick={() => {
+                    editor.chain().focus().unsetBackgroundColor().run();
+                    setColorPickerOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
+                  title="None (remove highlight)"
+                >
+                  <span className="w-6 h-6 rounded border border-gray-300 bg-white flex items-center justify-center text-gray-400 text-xs">✕</span>
+                  <span>None</span>
+                </button>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {HIGHLIGHT_COLORS.map((color) => {
+                    const isActive = editor.isActive('textStyle', { backgroundColor: color });
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          editor.chain().focus().setBackgroundColor(color).run();
+                          setColorPickerOpen(false);
+                        }}
+                        className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
+                          isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -474,6 +499,26 @@ export default function Toolbar() {
       {/* Insert Field */}
       <Button onClick={() => setInsertFieldOpen(true)} title="Insert Field">
         <Sparkles className="w-4 h-4" />
+      </Button>
+
+      {/* Image */}
+      <Button onClick={() => setImageOpen(true)} title="Insert Image">
+        <Image className="w-4 h-4" />
+      </Button>
+
+      {/* Link */}
+      <Button
+        onClick={() => {
+          if (editor.isActive('link')) {
+            editor.chain().focus().unsetLink().run();
+          } else {
+            setLinkOpen(true);
+          }
+        }}
+        active={editor.isActive('link')}
+        title="Insert Link (Ctrl+K)"
+      >
+        <Link className="w-4 h-4" />
       </Button>
 
       {/* Page Break */}

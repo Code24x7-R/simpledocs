@@ -7,7 +7,12 @@ import './index.css';
 import { useDocStore } from './store/useDocStore';
 
 // Expose store for E2E testing (always, since this is a local editor)
-(window as any).__docStore = useDocStore;
+declare global {
+  interface Window {
+    __docStore: typeof useDocStore;
+  }
+}
+window.__docStore = useDocStore;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

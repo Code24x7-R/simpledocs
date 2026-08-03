@@ -21,17 +21,18 @@ describe('clipboard', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    delete (document as any).execCommand;
+    // Clean up ClipboardItem stub between tests
+    delete (window as unknown as { ClipboardItem?: unknown }).ClipboardItem;
   });
 
   describe('copyToClipboard', () => {
     it('writes text and html to clipboard when ClipboardItem is available', async () => {
       // Mock ClipboardItem as available
-      (global as any).ClipboardItem = class {
+      vi.stubGlobal('ClipboardItem', class {
         constructor(items: Record<string, Blob>) {
           Object.assign(this, { items });
         }
-      };
+      });
 
       const result = await copyToClipboard('Hello World', '<p>Hello World</p>');
       expect(result).toBe(true);
@@ -39,8 +40,6 @@ describe('clipboard', () => {
     });
 
     it('falls back to execCommand when ClipboardItem is not available', async () => {
-      delete (global as any).ClipboardItem;
-
       const execCommandSpy = vi.spyOn(document, 'execCommand').mockReturnValue(true);
       const result = await copyToClipboard('Fallback text');
 
@@ -51,11 +50,11 @@ describe('clipboard', () => {
     });
 
     it('returns false when clipboard write fails and fallback also fails', async () => {
-      (global as any).ClipboardItem = class {
+      vi.stubGlobal('ClipboardItem', class {
         constructor() {
           throw new Error('Not supported');
         }
-      };
+      });
 
       const execCommandSpy = vi.spyOn(document, 'execCommand').mockReturnValue(false);
       const result = await copyToClipboard('Test');
@@ -68,9 +67,9 @@ describe('clipboard', () => {
   describe('pasteFromClipboard', () => {
     it('reads text and html from clipboard items', async () => {
       // Ensure ClipboardItem is defined so the primary path is used
-      (global as any).ClipboardItem = class {
+      vi.stubGlobal('ClipboardItem', class {
         constructor() {}
-      };
+      });
 
       const mockItems = [
         {
@@ -85,7 +84,7 @@ describe('clipboard', () => {
         },
       ];
 
-      (navigator.clipboard as any).read = vi.fn().mockResolvedValue(mockItems);
+      vi.spyOn(navigator.clipboard, 'read').mockResolvedValue(mockItems as never);
 
       const result = await pasteFromClipboard();
       expect(result.text).toBe('Pasted');
@@ -94,8 +93,7 @@ describe('clipboard', () => {
 
     it('calls fallback when clipboard read fails', async () => {
       // Remove ClipboardItem so fallback path is used
-      delete (global as any).ClipboardItem;
-      (navigator.clipboard as any).read = vi.fn().mockRejectedValue(new Error('Denied'));
+      vi.spyOn(navigator.clipboard, 'read').mockRejectedValue(new Error('Denied'));
 
       const result = await pasteFromClipboard();
       expect(result).toHaveProperty('text');

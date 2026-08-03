@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useEffect, useRef } from 'react';
+import { type Editor } from '@tiptap/core';
 import {
   Minus,
   Merge,
@@ -15,7 +16,7 @@ import {
 interface TableContextMenuProps {
   x: number;
   y: number;
-  editor: any;
+  editor: Editor;
   onClose: () => void;
 }
 

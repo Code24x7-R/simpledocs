@@ -2,10 +2,13 @@
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { type Editor } from '@tiptap/core';
 import TableContextMenu from './TableContextMenu';
 
+type PartialEditor = Partial<Editor> & Pick<Editor, 'isActive' | 'can' | 'chain'>;
+
 // Mock editor with table capabilities
-const createMockEditor = (overrides: Record<string, any> = {}) => ({
+const createMockEditor = (overrides: Partial<PartialEditor> = {}): Editor => ({
   isActive: vi.fn().mockReturnValue(true),
   can: vi.fn().mockReturnValue({
     mergeCells: vi.fn().mockReturnValue(true),
@@ -24,7 +27,7 @@ const createMockEditor = (overrides: Record<string, any> = {}) => ({
   }),
   chain: vi.fn().mockReturnThis(),
   ...overrides,
-});
+} as unknown as Editor);
 
 const mockOnClose = vi.fn();
 

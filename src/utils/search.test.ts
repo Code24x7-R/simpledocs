@@ -8,6 +8,7 @@ import {
   replaceAllPreservingStyles,
   replaceOnePreservingStyles,
   findInDocument,
+  type SerializedNode,
 } from './search';
 
 describe('search', () => {
@@ -200,7 +201,7 @@ describe('search', () => {
   });
 
   describe('replaceAllPreservingStyles', () => {
-    const sampleDoc = {
+    const sampleDoc: SerializedNode = {
       type: 'doc',
       content: [
         {
@@ -221,8 +222,8 @@ describe('search', () => {
     it('replaces text while preserving structure', () => {
       const result = replaceAllPreservingStyles(sampleDoc, 'World', 'Universe');
       expect(result.count).toBe(2);
-      expect(result.doc.content[0].content[0].text).toBe('Hello Universe');
-      expect(result.doc.content[1].content[0].text).toBe('Universe is big');
+      expect(result.doc.content![0].content![0].text).toBe('Hello Universe');
+      expect(result.doc.content![1].content![0].text).toBe('Universe is big');
     });
 
     it('does not mutate the original document', () => {
@@ -232,7 +233,7 @@ describe('search', () => {
     });
 
     it('handles nested content', () => {
-      const nestedDoc = {
+      const nestedDoc: SerializedNode = {
         type: 'doc',
         content: [
           {
@@ -267,7 +268,7 @@ describe('search', () => {
   });
 
   describe('replaceOnePreservingStyles', () => {
-    const sampleDoc = {
+    const sampleDoc: SerializedNode = {
       type: 'doc',
       content: [
         {
@@ -282,19 +283,19 @@ describe('search', () => {
     it('replaces only the specified occurrence', () => {
       const result = replaceOnePreservingStyles(sampleDoc, 'cat', 'X', 1);
       expect(result.replaced).toBe(true);
-      expect(result.doc.content[0].content[0].text).toBe('cat dog X bird cat');
+      expect(result.doc.content![0].content![0].text).toBe('cat dog X bird cat');
     });
 
     it('replaces first occurrence when index is 0', () => {
       const result = replaceOnePreservingStyles(sampleDoc, 'cat', 'X', 0);
       expect(result.replaced).toBe(true);
-      expect(result.doc.content[0].content[0].text).toBe('X dog cat bird cat');
+      expect(result.doc.content![0].content![0].text).toBe('X dog cat bird cat');
     });
 
     it('replaces last occurrence', () => {
       const result = replaceOnePreservingStyles(sampleDoc, 'cat', 'X', 2);
       expect(result.replaced).toBe(true);
-      expect(result.doc.content[0].content[0].text).toBe('cat dog cat bird X');
+      expect(result.doc.content![0].content![0].text).toBe('cat dog cat bird X');
     });
 
     it('returns replaced=false for out-of-range index', () => {
@@ -316,7 +317,7 @@ describe('search', () => {
   });
 
   describe('findInDocument', () => {
-    const sampleDoc = {
+    const sampleDoc: SerializedNode = {
       type: 'doc',
       content: [
         {

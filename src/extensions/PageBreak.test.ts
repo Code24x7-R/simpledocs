@@ -16,10 +16,10 @@ describe('PageBreak extension', () => {
     const renderHTML = PageBreak.config.renderHTML;
     expect(renderHTML).toBeDefined();
 
-    const result = (renderHTML as any).call(
-      { options: {} },
-      { HTMLAttributes: {} }
-    ) as [string, Record<string, unknown>];
+    type RenderHTMLFn = (args: {
+      HTMLAttributes: Record<string, unknown>;
+    }) => [string, Record<string, unknown>];
+    const result = (renderHTML as RenderHTMLFn).call({ options: {} }, { HTMLAttributes: {} });
 
     expect(result[0]).toBe('div');
     expect(result[1]['data-type']).toBe('page-break');
