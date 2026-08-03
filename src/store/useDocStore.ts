@@ -51,6 +51,7 @@ interface DocStore {
   shortcutsOpen: boolean;
   mruList: { name: string; timestamp: number; size: number }[];
   searchReplaceOpen: boolean;
+  fieldMergeOpen: boolean;
   currentPage: number;
   totalPages: number;
 
@@ -74,6 +75,7 @@ interface DocStore {
   addRecentFile: (name: string, size: number) => void;
   removeRecentFile: (name: string) => void;
   setSearchReplaceOpen: (open: boolean) => void;
+  setFieldMergeOpen: (open: boolean) => void;
   setCurrentPage: (page: number) => void;
   setTotalPages: (pages: number) => void;
   goToNextPage: () => void;
@@ -181,6 +183,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     shortcutsOpen: false,
     mruList: getMRUList(),
     searchReplaceOpen: false,
+    fieldMergeOpen: false,
     currentPage: 1,
     totalPages: 1,
 
@@ -279,6 +282,7 @@ export const useDocStore = create<DocStore>((set, get) => {
       set({ mruList: list });
     },
     setSearchReplaceOpen: (open) => set({ searchReplaceOpen: open }),
+    setFieldMergeOpen: (open) => set({ fieldMergeOpen: open }),
     setCurrentPage: (page) => {
       const { totalPages } = get();
       if (isNaN(page)) return;

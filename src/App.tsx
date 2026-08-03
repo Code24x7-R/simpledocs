@@ -11,11 +11,12 @@ import InsertFieldModal from './components/layout/InsertFieldModal';
 import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import SearchReplaceModal from './components/layout/SearchReplaceModal';
+import FieldMergeModal from './components/layout/FieldMergeModal';
 import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen } = useDocStore();
   const pageElementsRef = useRef<HTMLElement[]>([]);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function App() {
       <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
       <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <SearchReplaceModal isOpen={searchReplaceOpen} onClose={() => setSearchReplaceOpen(false)} />
+      <FieldMergeModal isOpen={fieldMergeOpen} onClose={() => setFieldMergeOpen(false)} />
     </div>
   );
 }

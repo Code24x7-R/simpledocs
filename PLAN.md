@@ -22,6 +22,7 @@
 | 16 | Color Picker Fix | IN PROGRESS 🔄 |
 | 17 | True Paginated Content Model | COMPLETE ✅ |
 | 18 | Keyboard Navigation & Focus Management | COMPLETE ✅ |
+| 19 | Template Field Display, Merge & Common Use Cases | IN PROGRESS 🔄 |
 
 ---
 
@@ -255,6 +256,60 @@ The previous architecture stored content as a single flat Tiptap JSON tree in `D
 ### Tests
 - `tests/e2e/keyboard-navigation.spec.ts` — 21 Playwright tests for navigation scenarios
 - `tests/e2e/merge-focus.spec.ts` — Focus behavior after merge
+
+---
+
+## Phase 19: Template Field Display, Merge & Common Use Cases — IN PROGRESS 🔄
+
+**2026-08-04** — Enhancing template fields with display values, merge functionality, and common use cases.
+
+### Current State
+Template fields are inline placeholders (`{{field_name}}`) that don't resolve to actual values. Users expect fields like `{{current_date}}` to display the current date, and `{{page_number}}` to show the page number.
+
+### Design
+
+#### 1. Field Display
+- **Edit Mode**: Show placeholder `{{field_name}}` (current behavior)
+- **Preview Mode**: Show resolved value (e.g., "15 Aug 2026" for `{{current_date}}`)
+- **Toggle**: Button to switch between edit and preview modes
+
+#### 2. Field Resolution
+| Field | Resolution |
+|-------|------------|
+| `{{current_date}}` | Current date (configurable format) |
+| `{{document_title}}` | Document title from store |
+| `{{page_number}}` | Current page number |
+| `{{total_pages}}` | Total page count |
+| `{{custom_field}}` | User-defined value (prompted at merge time) |
+
+#### 3. Field Merge
+- Replace all field placeholders with resolved values
+- Creates a "flat" document with no template fields
+- Useful for export, print, or finalizing a document
+- Non-destructive: original template preserved until merge
+
+#### 4. Common Use Cases
+- **Letters**: Date, recipient name, address blocks
+- **Invoices**: Invoice number, date, due date, totals
+- **Reports**: Report title, author, date, page X of Y
+- **Forms**: Field labels with fillable values
+- **Mail Merge**: Import data source, replace fields for each record
+
+### Implementation
+
+#### New Files
+- `src/utils/templateFields.ts` — Field resolution and merge logic
+- `src/components/layout/FieldMergeModal.tsx` — Merge dialog with options
+
+#### Modified Files
+- `src/components/editor/nodes/TemplateFieldView.tsx` — Preview mode display
+- `src/components/layout/InsertFieldModal.tsx` — Additional field types
+- `src/store/useDocStore.ts` — Add preview mode toggle
+- `src/extensions/TemplateField.ts` — Add field type attribute
+
+### Tests
+- `src/utils/templateFields.test.ts` — Unit tests for resolution logic
+- `tests/e2e/template-fields.spec.ts` — E2E tests for display and merge
 
 ---
 
