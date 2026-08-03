@@ -178,7 +178,26 @@ src/
 
 ---
 
-## 8. Verification & Test Suite Requirements
+## 8. Search & Replace
+
+### FR-10: Search & Replace Dialog
+- **Open**: Toolbar button, Ctrl+H, or Ctrl+F
+- **Find Next/Prev**: F3 / Shift+F3 keyboard shortcuts
+- **Replace One**: Replace current match and advance (Ctrl+Enter)
+- **Replace All**: Replace all occurrences
+- **Options**: Case sensitive, whole word, regex mode
+- **Live counter**: Shows match count as you type (debounced 150ms)
+- **Close**: Escape key or X button
+- **Keyboard shortcuts modal**: Documents all search shortcuts
+
+### FR-11: Search Capabilities
+- **Regex mode**: Full regex pattern support with error handling
+- **Whole word**: Word boundary matching via lookarounds
+- **Case sensitive**: Toggle case sensitivity
+- **Zero-length match protection**: Prevents infinite loops on empty matches
+- **Position resolution**: Accurate Tiptap position mapping for navigation
+
+## 9. Verification & Test Suite Requirements
 
 ### 6.1 Unit Tests (vitest)
 

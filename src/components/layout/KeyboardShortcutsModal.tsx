@@ -52,6 +52,14 @@ const SHORTCUTS = [
     { keys: ['PageUp'], description: 'Jump to previous page' },
     { keys: ['Ctrl', 'Enter'], description: 'Insert page break' },
   ]},
+  { category: 'Search & Replace', items: [
+    { keys: ['Ctrl', 'H'], description: 'Find & Replace' },
+    { keys: ['Ctrl', 'F'], description: 'Find (open panel)' },
+    { keys: ['F3'], description: 'Find next match' },
+    { keys: ['Shift', 'F3'], description: 'Find previous match' },
+    { keys: ['Ctrl', 'Enter'], description: 'Replace current match' },
+    { keys: ['Escape'], description: 'Close search panel' },
+  ]},
   { category: 'Document', items: [
     { keys: ['Ctrl', 'S'], description: 'Save (browser default)' },
     { keys: ['Ctrl', 'P'], description: 'Print' },

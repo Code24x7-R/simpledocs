@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useCallback, useEffect } from 'react';
-import { X, Search, Replace, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { X, Search, Replace, ChevronDown, ChevronUp, Regex } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
-import { findAllOccurrences, replaceAllPreservingStyles, SearchOptions } from '../../utils/search';
+import {
+  findAllOccurrences,
+  replaceAllPreservingStyles,
+  replaceOnePreservingStyles,
+  SearchOptions,
+} from '../../utils/search';
 
 interface SearchReplaceModalProps {
   isOpen: boolean;
@@ -13,7 +18,13 @@ interface SearchReplaceModalProps {
 /**
  * Search & Replace Panel
  *
- * Single-editor model: operates on the entire document content tree.
+ * Features:
+ * - Find Next / Find Previous with keyboard navigation (F3 / Shift+F3)
+ * - Replace One — replace current match and advance
+ * - Replace All — replace all occurrences
+ * - Case sensitive, whole word, and regex options
+ * - Live match count as you type
+ * - Opens with Ctrl+H or Ctrl+F (when no text selected)
  */
 export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceModalProps) {
   const { editor, docState, updateContent, setSearchReplaceOpen } = useDocStore();
@@ -21,14 +32,54 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   const [replaceTerm, setReplaceTerm] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
+  const [useRegex, setUseRegex] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(-1);
   const [replaceResult, setReplaceResult] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [allMatches, setAllMatches] = useState<{ from: number; to: number; text: string }[]>([]);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getSearchOptions = useCallback((): SearchOptions => {
-    return { caseSensitive, wholeWord };
-  }, [caseSensitive, wholeWord]);
+    return { caseSensitive, wholeWord, regex: useRegex };
+  }, [caseSensitive, wholeWord, useRegex]);
+
+  // Live search with debounce
+  const debouncedSearch = useCallback(
+    (term: string, options: SearchOptions) => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+      debounceTimer.current = setTimeout(() => {
+        if (!term || !editor) {
+          setMatchCount(null);
+          setAllMatches([]);
+          setCurrentMatchIndex(-1);
+          return;
+        }
+        const text = editor.getText();
+        const results = findAllOccurrences(text, term, options);
+        setMatchCount(results.length);
+        setAllMatches(results.map((r) => ({
+          from: r.index + 1,
+          to: r.index + r.text.length + 1,
+          text: r.text,
+        })));
+        setCurrentMatchIndex(results.length > 0 ? 0 : -1);
+        setReplaceResult(null);
+      }, 150);
+    },
+    [editor]
+  );
+
+  // Trigger live search when searchTerm or options change
+  useEffect(() => {
+    if (!isOpen) return;
+    debouncedSearch(searchTerm, getSearchOptions());
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [searchTerm, caseSensitive, wholeWord, useRegex, isOpen, debouncedSearch, getSearchOptions]);
 
   const scrollMatchIntoView = (from: number, to: number) => {
     if (!editor) return;
@@ -51,6 +102,16 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     });
   };
 
+  const navigateToMatch = (index: number) => {
+    if (!editor || allMatches.length === 0) return;
+
+    const match = allMatches[index];
+    editor.commands.setTextSelection({ from: match.from, to: match.to });
+    editor.commands.focus();
+    scrollMatchIntoView(match.from, match.to);
+    setCurrentMatchIndex(index);
+  };
+
   const handleFind = () => {
     if (!searchTerm || !editor) {
       setMatchCount(null);
@@ -58,20 +119,9 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
       return;
     }
 
-    const text = editor.getText();
-    const results = findAllOccurrences(text, searchTerm, getSearchOptions());
-    setMatchCount(results.length);
-
-    if (results.length > 0) {
-      const nextIndex = currentMatchIndex >= results.length - 1 ? 0 : currentMatchIndex + 1;
-      setCurrentMatchIndex(nextIndex);
-
-      const match = results[nextIndex];
-      const from = match.index + 1;
-      const to = match.index + match.text.length + 1;
-      editor.commands.setTextSelection({ from, to });
-      editor.commands.focus();
-      scrollMatchIntoView(from, to);
+    if (allMatches.length > 0) {
+      const nextIndex = currentMatchIndex >= allMatches.length - 1 ? 0 : currentMatchIndex + 1;
+      navigateToMatch(nextIndex);
     }
 
     setReplaceResult(null);
@@ -80,52 +130,68 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   const handleFindNext = () => {
     if (!editor) return;
 
-    if (matchCount === null || matchCount === 0) {
+    if (matchCount === null || matchCount === 0 || allMatches.length === 0) {
       handleFind();
       return;
     }
 
-    const text = editor.getText();
-    const results = findAllOccurrences(text, searchTerm, getSearchOptions());
-
-    if (results.length === 0) return;
-
-    const nextIndex = currentMatchIndex >= results.length - 1 ? 0 : currentMatchIndex + 1;
-    setCurrentMatchIndex(nextIndex);
-
-    const match = results[nextIndex];
-    const from = match.index + 1;
-    const to = match.index + match.text.length + 1;
-    editor.commands.setTextSelection({ from, to });
-    editor.commands.focus();
-    scrollMatchIntoView(from, to);
+    const nextIndex = currentMatchIndex >= allMatches.length - 1 ? 0 : currentMatchIndex + 1;
+    navigateToMatch(nextIndex);
   };
 
   const handleFindPrev = () => {
     if (!editor) return;
 
-    if (matchCount === null || matchCount === 0) {
+    if (matchCount === null || matchCount === 0 || allMatches.length === 0) {
       handleFind();
       return;
     }
 
-    const text = editor.getText();
-    const results = findAllOccurrences(text, searchTerm, getSearchOptions());
-
-    if (results.length === 0) return;
-
-    const prevIndex = currentMatchIndex <= 0 ? results.length - 1 : currentMatchIndex - 1;
-    setCurrentMatchIndex(prevIndex);
-
-    const match = results[prevIndex];
-    const from = match.index + 1;
-    const to = match.index + match.text.length + 1;
-    editor.commands.setTextSelection({ from, to });
-    editor.commands.focus();
-    scrollMatchIntoView(from, to);
+    const prevIndex = currentMatchIndex <= 0 ? allMatches.length - 1 : currentMatchIndex - 1;
+    navigateToMatch(prevIndex);
   };
 
-  const handleReplace = () => {
+  const handleReplaceOne = () => {
+    if (!searchTerm || !editor || allMatches.length === 0) return;
+
+    const currentMatch = allMatches[currentMatchIndex >= 0 ? currentMatchIndex : 0];
+    if (!currentMatch) return;
+
+    const result = replaceOnePreservingStyles(
+      docState.content,
+      searchTerm,
+      replaceTerm,
+      currentMatchIndex >= 0 ? currentMatchIndex : 0,
+      getSearchOptions()
+    );
+
+    if (result.replaced) {
+      updateContent(result.doc);
+      setReplaceResult('Replaced 1 occurrence');
+
+      // Re-run search after replace to update matches
+      setTimeout(() => {
+        const text = editor.getText();
+        const newResults = findAllOccurrences(text, searchTerm, getSearchOptions());
+        setMatchCount(newResults.length);
+        setAllMatches(newResults.map((r) => ({
+          from: r.index + 1,
+          to: r.index + r.text.length + 1,
+          text: r.text,
+        })));
+
+        if (newResults.length > 0) {
+          const newIndex = currentMatchIndex >= newResults.length ? 0 : Math.min(currentMatchIndex, newResults.length - 1);
+          setCurrentMatchIndex(newIndex);
+          navigateToMatch(newIndex);
+        } else {
+          setCurrentMatchIndex(-1);
+        }
+      }, 50);
+    }
+  };
+
+  const handleReplaceAll = () => {
     if (!searchTerm) return;
 
     const result = replaceAllPreservingStyles(docState.content, searchTerm, replaceTerm, getSearchOptions());
@@ -135,6 +201,7 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
       setReplaceResult(`Replaced ${result.count} occurrence${result.count > 1 ? 's' : ''}`);
       setMatchCount(0);
       setCurrentMatchIndex(-1);
+      setAllMatches([]);
     } else {
       setReplaceResult('No matches found');
     }
@@ -147,15 +214,26 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
       if (!selection.empty) {
         const selectedText = editor.state.doc.textBetween(selection.from, selection.to, ' ');
         if (selectedText && selectedText.length > 0 && selectedText.length < 200) {
+          // Escape regex special chars when pasting selection
           setSearchTerm(selectedText);
         }
       }
     }
   }, [isOpen, editor]);
 
-  // Keyboard shortcuts: F3 = find next, Shift+F3 = find prev
+  // Keyboard shortcuts: F3 = find next, Shift+F3 = find prev, Ctrl+H = open
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+H or Ctrl+F to open search/replace
+      if ((e.key === 'h' || e.key === 'f') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setSearchReplaceOpen(true);
+        return;
+      }
+
+      // F3 / Shift+F3 only when dialog is open
+      if (!isOpen) return;
+
       if (e.key === 'F3') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -163,6 +241,11 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
         } else {
           handleFindNext();
         }
+      }
+
+      // Escape to close
+      if (e.key === 'Escape') {
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -180,7 +263,7 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[420px]">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[460px]">
       <div className="bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -191,9 +274,12 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             Find & Replace
           </button>
-          <button onClick={handleClose} className="p-1 hover:bg-gray-200 rounded">
-            <X className="w-4 h-4 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-400">Ctrl+H</span>
+            <button onClick={handleClose} className="p-1 hover:bg-gray-200 rounded" title="Close search panel">
+              <X className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {isExpanded && (
@@ -215,24 +301,24 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
                       }
                     }
                   }}
-                  placeholder="Search for..."
+                  placeholder={useRegex ? "Regex pattern..." : "Search for..."}
                   className="w-full pl-7 pr-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
                   autoFocus
                 />
               </div>
               <button
                 onClick={handleFindPrev}
-                disabled={!searchTerm}
+                disabled={!searchTerm || allMatches.length === 0}
                 className="p-1.5 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Previous match"
+                title="Previous match (Shift+F3)"
               >
                 <ChevronUp className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleFindNext}
-                disabled={!searchTerm}
+                disabled={!searchTerm || allMatches.length === 0}
                 className="p-1.5 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Next match"
+                title="Next match (F3)"
               >
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
@@ -246,16 +332,29 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
                   type="text"
                   value={replaceTerm}
                   onChange={(e) => setReplaceTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                      handleReplaceOne();
+                    }
+                  }}
                   placeholder="Replace with..."
                   className="w-full pl-7 pr-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>
               <button
-                onClick={handleReplace}
+                onClick={handleReplaceOne}
+                disabled={!searchTerm || allMatches.length === 0}
+                className="px-2 py-1.5 text-xs bg-gray-100 border border-gray-300 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Replace one (Ctrl+Enter)"
+              >
+                Replace
+              </button>
+              <button
+                onClick={handleReplaceAll}
                 disabled={!searchTerm}
                 className="px-2 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                Replace All
+                All
               </button>
             </div>
 
@@ -263,6 +362,7 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
             <div className="flex items-center gap-3 text-xs">
               <label className="flex items-center gap-1 cursor-pointer">
                 <input
+                  id="search-case"
                   type="checkbox"
                   checked={caseSensitive}
                   onChange={(e) => setCaseSensitive(e.target.checked)}
@@ -272,12 +372,24 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
               </label>
               <label className="flex items-center gap-1 cursor-pointer">
                 <input
+                  id="search-word"
                   type="checkbox"
                   checked={wholeWord}
                   onChange={(e) => setWholeWord(e.target.checked)}
                   className="rounded"
                 />
                 Word
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  id="search-regex"
+                  type="checkbox"
+                  checked={useRegex}
+                  onChange={(e) => setUseRegex(e.target.checked)}
+                  className="rounded"
+                />
+                <Regex className="w-3 h-3" />
+                Regex
               </label>
             </div>
 
@@ -301,6 +413,11 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
                 {replaceResult}
               </div>
             )}
+
+            {/* Hint */}
+            <div className="text-[10px] text-gray-400 text-center pt-1">
+              F3 Next · Shift+F3 Prev · Ctrl+Enter Replace · Esc Close
+            </div>
           </div>
         )}
       </div>

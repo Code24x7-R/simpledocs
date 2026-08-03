@@ -27,6 +27,7 @@
 | 21 | Code Deduplication & Dead Code Cleanup | COMPLETE ✅ |
 | 22 | Chatbot Integration (LM Studio) | COMPLETE ✅ |
 | 23 | Markdown Export | COMPLETE ✅ |
+| 24 | Search & Replace Enhancements | IN PROGRESS 🔄 |
 
 ---
 
@@ -423,6 +424,41 @@ Template fields are inline placeholders (`{{field_name}}`) that don't resolve to
 
 ---
 
+## Phase 24: Search & Replace Enhancements — COMPLETE ✅
+
+**2026-08-04** — Enhanced the existing Search & Replace dialog with missing features.
+
+### Additions
+| Feature | Description |
+|---------|-------------|
+| Replace One | Replaces current match and advances to next (Ctrl+Enter) |
+| Regex toggle | Enables regex pattern matching with live validation |
+| Live match count | Debounced (150ms) counter updates as you type |
+| Keyboard shortcut to open | Ctrl+H or Ctrl+F opens the dialog |
+| Escape to close | Closes the panel |
+| Keyboard shortcuts modal | Documents all search shortcuts |
+
+### New Functions in `search.ts`
+| Function | Purpose |
+|----------|--------|
+| `buildRegex()` | Shared regex builder with error handling |
+| `replaceOnePreservingStyles()` | Replace single match at specified index |
+| `resolveMatchPositions()` | Convert node paths to absolute Tiptap positions |
+| `getTextLength()` | Calculate node text length recursively |
+
+### Files
+| File | Action |
+|------|--------|
+| `src/utils/search.ts` | Added regex mode, replaceOne, resolveMatchPositions, zero-length match handling |
+| `src/utils/search.test.ts` | +27 tests (44 total), regex + replaceOne coverage |
+| `src/components/layout/SearchReplaceModal.tsx` | Replace One button, regex checkbox, live count, Ctrl+H shortcut, Esc close |
+| `src/components/layout/SearchReplaceModal.test.tsx` | **NEW** — 18 component tests |
+| `src/components/layout/KeyboardShortcutsModal.tsx` | Added Search & Replace shortcut category |
+
+**Results:** 333 tests across 19 files, type-check clean, build succeeds.
+
+---
+
 ## Future Enhancements (Not Yet Planned)
 
 - [ ] Multi-page content splitting (automatic overflow to next page)
@@ -432,7 +468,6 @@ Template fields are inline placeholders (`{{field_name}}`) that don't resolve to
 - [ ] Drag-and-drop JSON import (currently file input only)
 - [ ] Print-optimized CSS (@media print styles)
 - [ ] Fit-to-width zoom option
-- [ ] Find and replace
 - [ ] Spell check
 - [ ] Collaborative editing
 - [ ] Cloud storage integration
