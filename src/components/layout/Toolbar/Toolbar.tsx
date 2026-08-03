@@ -72,11 +72,35 @@ export default function Toolbar() {
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [textColorDropdownOpen, setTextColorDropdownOpen] = useState(false);
   const [highlightColorDropdownOpen, setHighlightColorDropdownOpen] = useState(false);
+  const [currentFontSize, setCurrentFontSize] = useState<string | null>(null);
 
   if (!editor) return null;
 
   const isActive = (mark: string) => editor.isActive(mark);
   const isHeading = (level: number) => editor.isActive('heading', { level });
+
+  // Get the font size from the current selection
+  const getFontSize = (): string | null => {
+    const { selection } = editor.state;
+    if (selection.empty) return null;
+    // Walk through the selection to find font size
+    let fontSize: string | null = null;
+    editor.state.doc.nodesBetween(selection.from, selection.to, (node: any) => {
+      if (node.type.name === 'text' && node.marks) {
+        for (const mark of node.marks) {
+          if (mark.type.name === 'textStyle' && mark.attrs.fontSize) {
+            if (fontSize === null) {
+              fontSize = mark.attrs.fontSize;
+            } else if (fontSize !== mark.attrs.fontSize) {
+              // Mixed sizes in selection
+              return false;
+            }
+          }
+        }
+      }
+    });
+    return fontSize;
+  };
 
   // Clipboard handlers
   const handleCopy = async () => {
@@ -210,25 +234,34 @@ export default function Toolbar() {
       {/* Font Size */}
       <div className="relative">
         <button
-          onClick={() => setSizeDropdownOpen(!sizeDropdownOpen)}
+          onClick={() => {
+            setCurrentFontSize(getFontSize());
+            setSizeDropdownOpen(!sizeDropdownOpen);
+          }}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 min-w-[60px]"
         >
-          Size <ChevronDown className="w-3 h-3" />
+          {currentFontSize || 'Size'} <ChevronDown className="w-3 h-3" />
         </button>
         {sizeDropdownOpen && (
           <div className="absolute top-full left-0 mt-1 w-20 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-            {FONT_SIZES.map((size) => (
-              <button
-                key={size}
-                onClick={() => {
-                  editor.chain().focus().setFontSize(size).run();
-                  setSizeDropdownOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-              >
-                {size}
-              </button>
-            ))}
+            {FONT_SIZES.map((size) => {
+              const isActive = currentFontSize === size;
+              return (
+                <button
+                  key={size}
+                  onClick={() => {
+                    editor.chain().focus().setFontSize(size).run();
+                    setCurrentFontSize(size);
+                    setSizeDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                    isActive ? 'bg-blue-100 text-blue-700 font-medium' : ''
+                  }`}
+                >
+                  {size}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
