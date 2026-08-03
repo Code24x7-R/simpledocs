@@ -56,8 +56,13 @@ const TEXT_COLORS = [
 ];
 
 const HIGHLIGHT_COLORS = [
-  '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff9900', '#ff0000', '#0000ff',
-  '#99ff99', '#99ffff', '#ff99ff', '#ffcc99', '#ff9999', '#9999ff',
+  '#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04', // Yellows
+  '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', // Greens
+  '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', // Blues (light blue included)
+  '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', // Indigos
+  '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', // Reds
+  '#f0abfc', '#e879f9', '#d946ef', '#c026d3', '#a21caf', // Purples
+  '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', // Oranges
 ];
 
 export default function Toolbar() {
@@ -300,19 +305,24 @@ export default function Toolbar() {
           <div className="w-3 h-0.5 bg-yellow-400 rounded" />
         </button>
         {highlightColorDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 grid grid-cols-7 gap-0.5 p-2 bg-white border border-gray-200 rounded shadow-lg z-50">
-            {HIGHLIGHT_COLORS.map((color) => (
-              <button
-                key={color}
-                onClick={() => {
-                  editor.chain().focus().toggleHighlight({ color }).run();
-                  setHighlightColorDropdownOpen(false);
-                }}
-                className="w-4 h-4 rounded border border-gray-200 hover:scale-125 transition-transform"
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
+          <div className="absolute top-full left-0 mt-1 grid grid-cols-7 gap-1.5 p-3 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-[280px]">
+            {HIGHLIGHT_COLORS.map((color) => {
+              const isActive = editor.isActive('highlight', { color });
+              return (
+                <button
+                  key={color}
+                  onClick={() => {
+                    editor.chain().focus().toggleHighlight({ color }).run();
+                    setHighlightColorDropdownOpen(false);
+                  }}
+                  className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
+                    isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+              );
+            })}
           </div>
         )}
       </div>
