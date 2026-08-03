@@ -195,6 +195,19 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     }
   };
 
+  // Prepopulate search input with selected text when dialog opens
+  useEffect(() => {
+    if (isOpen && editor) {
+      const { selection } = editor.state;
+      if (!selection.empty) {
+        const selectedText = editor.state.doc.textBetween(selection.from, selection.to, ' ');
+        if (selectedText && selectedText.length > 0 && selectedText.length < 200) {
+          setSearchTerm(selectedText);
+        }
+      }
+    }
+  }, [isOpen, editor]);
+
   // Keyboard shortcuts: F3 = find next, Shift+F3 = find prev
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
