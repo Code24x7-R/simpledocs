@@ -35,12 +35,19 @@
 }
 
 .tiptap p {
-  margin: 0 0 0.5em 0;
+  margin: 0;
 }
 
-.tiptap h1 { font-size: 2em; font-weight: 700; margin: 0.5em 0; }
-.tiptap h2 { font-size: 1.5em; font-weight: 600; margin: 0.5em 0; }
-.tiptap h3 { font-size: 1.25em; font-weight: 600; margin: 0.5em 0; }
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+  margin: 0;
+  line-height: inherit;
+}
+
+.tiptap h1 { font-size: 2em; font-weight: 700; }
+.tiptap h2 { font-size: 1.5em; font-weight: 600; }
+.tiptap h3 { font-size: 1.25em; font-weight: 600; }
 
 .tiptap ul { padding-left: 1.5em; list-style: disc; }
 .tiptap ol { padding-left: 1.5em; list-style: decimal; }

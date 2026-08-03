@@ -50,6 +50,8 @@ export interface ASTNode {
   id: string;
   type: 'paragraph' | 'manual_page_break' | 'header' | 'footer';
   text?: string;
+  /** For page breaks: the sequential index matching the Tiptap node attribute */
+  nodeIndex?: number;
   styleOverrides?: {
     fontSize?: number;
     fontType?: FontType;
@@ -81,7 +83,29 @@ export interface PageOutput {
   pageIndex: number;
   usableHeight: number;
   linesPerPage: number;
+  linesUsed: number;
   renderedBlocks: RenderedBlock[];
+}
+
+/**
+ * Records where a page break lands so the renderer can compute spacer height.
+ */
+export interface PageBreakRecord {
+  /** Index of the AST node (for correlation with the DOM) */
+  nodeIndex: number;
+  /** Page the break flushes to (0-based) */
+  pageIndex: number;
+  /** Usable height remaining on that page after the break (pt) */
+  remainingHeightPt: number;
+}
+
+export interface PaginationResult {
+  pages: PageOutput[];
+  pageBreaks: PageBreakRecord[];
+  usableHeightPt: number;
+  linesPerPage: number;
+  lineHeightPt: number;
+  totalPages: number;
 }
 
 export type MeasureTextFn = (
@@ -151,7 +175,7 @@ export class DocumentLayoutEngine {
       right: toPt(this.geom.margins.right, this.geom.unit),
     };
 
-    // Usable height per spec
+    // Usable height per spec (body area, excluding header/footer)
     this.usableHeight =
       this.geom.height -
       this.geom.margins.top -
@@ -159,13 +183,10 @@ export class DocumentLayoutEngine {
       this.geom.headerHeight -
       this.geom.footerHeight;
 
-    // Fixed line height: fontSize × lineSpacingMultiplier (no padding for grid model)
-    const fontSize = this.typo.fontSize;
-    const lineSpacing = this.typo.lineHeightMultiplier;
-    this.lineHeight = fontSize * lineSpacing;
-
-    // Lines per page = floor(usableHeight / lineHeight)
-    this.linesPerPage = Math.max(1, Math.floor(this.usableHeight / this.lineHeight));
+    // Fixed grid: exactly 28 lines per page body.
+    // Line height is derived from usable height so the grid is consistent.
+    this.linesPerPage = 28;
+    this.lineHeight = this.usableHeight / this.linesPerPage;
 
     // Default measurement function
     this.measureText =
@@ -174,6 +195,73 @@ export class DocumentLayoutEngine {
         const charWidth = this.typo.fixedCharacterWidth ?? this.typo.fontSize * 0.5;
         return text.length * charWidth;
       });
+  }
+
+  // ── Geometry accessors ───────────────────────────────────────────────────
+
+  /** Get the usable body height (excluding header/footer) in pt */
+  getUsableHeight(): number {
+    return this.usableHeight;
+  }
+
+  /** Get lines per page (fixed at 28) */
+  getLinesPerPage(): number {
+    return this.linesPerPage;
+  }
+
+  /** Get the fixed line height in pt */
+  getLineHeight(): number {
+    return this.lineHeight;
+  }
+
+  /** Get content width in pt */
+  getContentWidth(): number {
+    return this.geom.width - this.geom.margins.left - this.geom.margins.right;
+  }
+
+  /** Get header height in pt */
+  getHeaderHeight(): number {
+    return this.geom.headerHeight;
+  }
+
+  /** Get footer height in pt */
+  getFooterHeight(): number {
+    return this.geom.footerHeight;
+  }
+
+  /** Get top margin in pt */
+  getMarginTop(): number {
+    return this.geom.margins.top;
+  }
+
+  /** Get bottom margin in pt */
+  getMarginBottom(): number {
+    return this.geom.margins.bottom;
+  }
+
+  /** Get left margin in pt */
+  getMarginLeft(): number {
+    return this.geom.margins.left;
+  }
+
+  /** Get right margin in pt */
+  getMarginRight(): number {
+    return this.geom.margins.right;
+  }
+
+  /** Get page width in pt (full page) */
+  getPageWidth(): number {
+    return this.geom.width;
+  }
+
+  /** Get page height in pt (full page including margins) */
+  getPageHeight(): number {
+    return this.geom.height;
+  }
+
+  /** Get page gap in pt (10 lines) */
+  getPageGapPt(): number {
+    return this.lineHeight * 10;
   }
 
   // ── Line Wrapping ───────────────────────────────────────────────────────
@@ -185,12 +273,9 @@ export class DocumentLayoutEngine {
   private wrapParagraph(node: ASTNode, contentWidth: number): LineBox[] {
     const fontSize = node.styleOverrides?.fontSize ?? this.typo.fontSize;
     const fontType = node.styleOverrides?.fontType ?? this.typo.fontType;
-    const lineHeightMult =
-      node.styleOverrides?.lineHeightMultiplier ?? this.typo.lineHeightMultiplier;
 
-    // Line height: use the grid line height (consistent across all lines)
-    // but allow per-paragraph override if explicitly set
-    const lineHeight = fontSize * lineHeightMult;
+    // Fixed grid: all lines use the same line height (usableHeight / 28)
+    const lineHeight = this.lineHeight;
 
     const fontFamily = this.typo.fontFamily;
     const fontStyle = { fontFamily, fontSize };
@@ -295,9 +380,14 @@ export class DocumentLayoutEngine {
    * Paragraphs produce wrapped text lines + 1 blank line (spacing).
    * Overflow lines flow to the next page.
    * Page breaks force a flush to the next page.
+   *
+   * @param pageBreaks — output array that will be populated with page break
+   *   records so the renderer can compute spacer heights.
    */
-  paginate(): PageOutput[] {
+  paginate(pageBreaks?: PageBreakRecord[]): PageOutput[] {
     const pages: PageOutput[] = [];
+    if (pageBreaks) pageBreaks.length = 0;
+
     const contentWidth = this.geom.width - this.geom.margins.left - this.geom.margins.right;
 
     let currentPage: RenderedBlock[] = [];
@@ -312,11 +402,32 @@ export class DocumentLayoutEngine {
 
       // ── Hard page break ─────────────────────────────────────────────
       if (node.type === 'manual_page_break') {
+        // Record remaining height on this page so the renderer can size the spacer.
+        // The spacer must bridge from the break position to the top of the next
+        // page's body area: remaining body lines + footer + bottom margin + page gap + top margin + header.
+        if (pageBreaks) {
+          const linesRemaining = this.linesPerPage - currentLineCount;
+          const remainingBodyPt = Math.max(0, linesRemaining * this.lineHeight);
+          const interPageGapPt =
+            this.geom.footerHeight +
+            this.geom.margins.bottom +
+            this.getPageGapPt() +
+            this.geom.margins.top +
+            this.geom.headerHeight;
+          const remainingHeightPt = remainingBodyPt + interPageGapPt;
+          pageBreaks.push({
+            nodeIndex: node.nodeIndex ?? i,
+            pageIndex,
+            remainingHeightPt,
+          });
+        }
+
         // Flush current page
         pages.push({
           pageIndex,
           usableHeight: this.usableHeight,
           linesPerPage: this.linesPerPage,
+          linesUsed: currentLineCount,
           renderedBlocks: currentPage,
         });
         // Start fresh page
@@ -380,6 +491,7 @@ export class DocumentLayoutEngine {
           pageIndex,
           usableHeight: this.usableHeight,
           linesPerPage: this.linesPerPage,
+          linesUsed: currentLineCount,
           renderedBlocks: currentPage,
         });
 
@@ -416,6 +528,7 @@ export class DocumentLayoutEngine {
         pageIndex,
         usableHeight: this.usableHeight,
         linesPerPage: this.linesPerPage,
+        linesUsed: currentLineCount,
         renderedBlocks: currentPage,
       });
     }
@@ -426,6 +539,7 @@ export class DocumentLayoutEngine {
         pageIndex: 0,
         usableHeight: this.usableHeight,
         linesPerPage: this.linesPerPage,
+        linesUsed: 0,
         renderedBlocks: [],
       });
     }
@@ -433,21 +547,21 @@ export class DocumentLayoutEngine {
     return pages;
   }
 
-  // ── Convenience accessors ────────────────────────────────────────────────
+  // ── Full pagination result ───────────────────────────────────────────────
 
-  getUsableHeight(): number {
-    return this.usableHeight;
-  }
-
-  getLinesPerPage(): number {
-    return this.linesPerPage;
-  }
-
-  getLineHeight(): number {
-    return this.lineHeight;
-  }
-
-  getContentWidth(): number {
-    return this.geom.width - this.geom.margins.left - this.geom.margins.right;
+  /**
+   * Run pagination and return a complete result suitable for rendering.
+   */
+  paginateFull(): PaginationResult {
+    const pageBreaks: PageBreakRecord[] = [];
+    const pages = this.paginate(pageBreaks);
+    return {
+      pages,
+      pageBreaks,
+      usableHeightPt: this.usableHeight,
+      linesPerPage: this.linesPerPage,
+      lineHeightPt: this.lineHeight,
+      totalPages: pages.length,
+    };
   }
 }

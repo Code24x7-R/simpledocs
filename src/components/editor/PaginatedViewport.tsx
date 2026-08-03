@@ -1,98 +1,62 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useDocStore } from '../../store/useDocStore';
-import DocumentEditor from './DocumentEditor';
-import PageBackground from './PageBackground';
-import { calculatePageGeometry } from '../../utils/pageGeometry';
+import MultiPageEditor from './MultiPageEditor';
+import {
+  PaginationProvider,
+  usePaginationContext,
+} from './PaginationContext';
 
 /**
- * Paginated Viewport — Continuous Scroll with Visual Pages
+ * Paginated Viewport — Vertical Page Stack
  *
  * Architecture:
- * - Single Tiptap editor holds ALL content (one continuous document)
- * - Visual page backgrounds rendered at calculated Y positions
- * - Page gaps between backgrounds for clear visual separation
- * - Headers/Footers shown on each page
- * - Navigation scrolls viewport by page increments
- *
- * Page geometry is calculated once via calculatePageGeometry and shared
- * with PageBreakView to ensure perfect alignment.
+ * - Each page is a self-contained fixed-height container
+ * - One Tiptap editor per page
+ * - Natural vertical flow — no overlay alignment needed
+ * - Page backgrounds are the page containers themselves
+ * - Navigation scrolls to page containers
  */
-export default function PaginatedViewport() {
+function PaginatedViewportInner() {
   const {
-    docState,
     zoom,
     currentPage,
-    totalPages,
     setCurrentPage,
     setTotalPages,
   } = useDocStore();
+  const { totalPages, pageHeightPx, pageGapPx } = usePaginationContext();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const isNavigatingRef = useRef(false);
 
-  const { settings } = docState;
-  const { showPageBackgrounds = true } = settings;
-
-  // Calculate page geometry (shared with PageBreakView)
-  const geo = calculatePageGeometry(settings);
-  const { pageHeightPx, pageStridePx, marginLeftPx, marginRightPx } = geo;
-
-  // Measure actual content height via ResizeObserver — ensures the scroll
-  // container is always tall enough to fit all content.
-  const [measuredTotalPages, setMeasuredTotalPages] = useState(1);
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const contentWrapper = container.firstElementChild as HTMLElement | null;
-    if (!contentWrapper) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const contentHeight = entry.contentRect.height;
-        const pages = Math.max(1, Math.ceil(contentHeight / pageStridePx));
-        setMeasuredTotalPages(pages);
-      }
-    });
-
-    observer.observe(contentWrapper);
-    return () => observer.disconnect();
-  }, [pageStridePx]);
-
-  // Use the MAXIMUM of store value and actual measured content height.
-  // Guard against NaN from stale localStorage state.
-  const safeTotalPages = typeof totalPages === 'number' ? totalPages : 1;
-  const effectiveTotalPages = Math.max(safeTotalPages, measuredTotalPages, 1);
-
-  // Total scroll height = pages * pageStride
-  const totalScrollHeight = effectiveTotalPages * pageStridePx;
-
   // Sync total pages to store
   useEffect(() => {
-    if (effectiveTotalPages !== totalPages) {
-      setTotalPages(effectiveTotalPages);
+    if (totalPages > 0) {
+      setTotalPages(totalPages);
     }
-  }, [effectiveTotalPages, totalPages, setTotalPages]);
+  }, [totalPages, setTotalPages]);
 
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
     if (!containerRef.current || isNavigatingRef.current) return;
 
     const scrollTop = containerRef.current.scrollTop;
-    const pageIndex = Math.floor(scrollTop / pageStridePx) + 1;
-    const clampedPage = Math.max(1, Math.min(pageIndex, effectiveTotalPages));
+    const pageStride = pageHeightPx + pageGapPx;
+    const pageIndex = Math.floor(scrollTop / pageStride) + 1;
+    const clampedPage = Math.max(1, Math.min(pageIndex, totalPages));
 
     if (clampedPage !== currentPage) {
       setCurrentPage(clampedPage);
     }
-  }, [currentPage, pageStridePx, effectiveTotalPages, setCurrentPage]);
+  }, [currentPage, pageHeightPx, pageGapPx, totalPages, setCurrentPage]);
 
   // Scroll to current page when it changes via navigation controls
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const targetScroll = (currentPage - 1) * pageStridePx;
+    const pageStride = pageHeightPx + pageGapPx;
+    const targetScroll = (currentPage - 1) * pageStride;
     const currentScroll = containerRef.current.scrollTop;
 
     if (Math.abs(currentScroll - targetScroll) > 5) {
@@ -112,7 +76,7 @@ export default function PaginatedViewport() {
       containerRef.current.addEventListener('scrollend', onScrollEnd, { once: true });
       scrollTimeout = setTimeout(onScrollEnd, 1500);
     }
-  }, [currentPage, pageStridePx]);
+  }, [currentPage, pageHeightPx, pageGapPx]);
 
   const handleRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -121,12 +85,58 @@ export default function PaginatedViewport() {
     []
   );
 
-  // Calculate page positions
-  const pagePositions = Array.from({ length: effectiveTotalPages }).map((_, i) => ({
-    pageNumber: i + 1,
-    top: i * pageStridePx,
-    height: pageHeightPx,
-  }));
+  // Handle PgUp/PgDn to move caret between pages
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'PageDown' && e.key !== 'PageUp') return;
+
+      const focused = document.activeElement;
+      if (!focused?.classList.contains('tiptap')) return;
+
+      // Find current page index
+      const wrapper = focused.closest('[data-page-editor]');
+      const currentIdx = wrapper
+        ? parseInt(wrapper.getAttribute('data-page-editor') || '0', 10)
+        : 0;
+
+      let targetIdx: number;
+      if (e.key === 'PageDown') {
+        targetIdx = currentIdx + 1;
+      } else {
+        targetIdx = currentIdx - 1;
+      }
+
+      // Bounds check
+      if (targetIdx < 0 || targetIdx >= totalPages) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Focus target page
+      setTimeout(() => {
+        const targetEditor = document.querySelector<HTMLElement>(
+          `[data-page-editor="${targetIdx}"] .tiptap`
+        );
+        if (targetEditor) {
+          const editor = (targetEditor as any)?.editor;
+          if (editor) {
+            editor.commands.focus();
+            if (e.key === 'PageDown') {
+              editor.commands.setTextSelection(1); // Start of page
+            } else {
+              editor.commands.selectTextblockEnd(); // End of page
+            }
+          }
+        }
+      }, 10);
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('keydown', handleKeyDown, true); // Capture phase
+      return () => container.removeEventListener('keydown', handleKeyDown, true);
+    }
+  }, [totalPages]);
 
   return (
     <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
@@ -140,35 +150,19 @@ export default function PaginatedViewport() {
           style={{
             transform: `scale(${zoom})`,
             transformOrigin: 'top center',
-            minHeight: `${totalScrollHeight}px`,
-            position: 'relative',
           }}
         >
-          {/* Visual page backgrounds */}
-          {showPageBackgrounds &&
-            pagePositions.map((page) => (
-              <PageBackground
-                key={page.pageNumber}
-                pageNumber={page.pageNumber}
-                top={page.top + 24}
-                height={page.height}
-              />
-            ))}
-
-          {/* Editor content with margins */}
-          <div className="flex justify-center pt-6" style={{ position: 'relative', zIndex: 1 }}>
-            <div
-              style={{
-                width: geo.pageWidthPx,
-                paddingLeft: `${marginLeftPx}px`,
-                paddingRight: `${marginRightPx}px`,
-              }}
-            >
-              <DocumentEditor />
-            </div>
-          </div>
+          <MultiPageEditor />
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaginatedViewport() {
+  return (
+    <PaginationProvider>
+      <PaginatedViewportInner />
+    </PaginationProvider>
   );
 }

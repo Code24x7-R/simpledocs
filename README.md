@@ -36,7 +36,10 @@ A modern, browser-based paginated WYSIWYG document editor with Microsoft Word / 
 - **Orientation** — Portrait and Landscape
 - **Margins** — Fully configurable top/bottom/left/right margins
 - **Headers & Footers** — Editable header content, automatic page numbering ("Page X of Y")
-- **Page Breaks** — Insert manual breaks with Ctrl+Enter or toolbar button
+- **True Paginated Model** — Each page is an independent editor with its own caret and selection
+- **Cross-Page Navigation** — Arrow keys, PgUp/PgDn move caret between pages
+- **Auto Overflow** — Content automatically flows to next page when page is full
+- **Smart Merge** — Backspace at start of page merges into previous page
 
 ### File Operations
 - **JSON Export** — Download your document as a `.json` file
@@ -197,16 +200,19 @@ npm run build
 ```
 simpledocs/
 ├── docs/
-│   └── requirements.md          # Functional specification
+│   ├── requirements.md          # Functional specification
+│   ├── wysiwyg-pagination.md    # Pagination design doc
+│   └── BUGFIX.md                # Bug fix log
 ├── public/
 │   └── favicon.svg
 ├── src/
 │   ├── components/
 │   │   ├── editor/              # Editor components
-│   │   │   ├── DocumentEditor.tsx
-│   │   │   ├── PaginatedViewport.tsx
-│   │   │   ├── PageCanvas.tsx
-│   │   │   └── nodes/           # Custom node views
+│   │   │   ├── MultiPageEditor.tsx   # Renders N page editors
+│   │   │   ├── PageEditor.tsx       # Single page editor
+│   │   │   ├── PaginatedViewport.tsx # Vertical page stack
+│   │   │   ├── PaginationContext.tsx # Per-page geometry
+│   │   │   └── nodes/               # Custom node views
 │   │   ├── layout/              # UI shell components
 │   │   │   ├── Navbar.tsx
 │   │   │   ├── Toolbar/
@@ -220,15 +226,24 @@ simpledocs/
 │   │   └── index.ts
 │   ├── store/                   # Zustand store
 │   │   └── useDocStore.ts
+│   ├── types/                   # TypeScript types
+│   │   └── page.ts
 │   ├── utils/                   # Helpers
 │   │   ├── unitConversion.ts
 │   │   ├── fileIO.ts
-│   │   └── pdfExport.ts
+│   │   ├── pdfExport.ts
+│   │   └── pageOverflow.ts
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
 ├── tests/e2e/                   # Playwright E2E tests
+│   ├── editor.spec.ts
+│   ├── keyboard-navigation.spec.ts
+│   └── merge-focus.spec.ts
 ├── .github/workflows/deploy.yml # GitHub Pages deploy
+├── PLAN.md                      # Project roadmap
+└── README.md
+```
 ├── index.html
 ├── vite.config.ts
 ├── tailwind.config.js

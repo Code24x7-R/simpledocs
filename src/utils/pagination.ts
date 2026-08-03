@@ -10,13 +10,10 @@
 
 import type { DocState } from '../store/useDocStore';
 import {
-  DocumentLayoutEngine,
   type ASTNode,
-  type PageOutput,
   type PageGeometry,
   type TypographyDefaults,
 } from './DocumentLayoutEngine';
-import { mmToPx } from './unitConversion';
 
 // ─── Tiptap JSON → AST ────────────────────────────────────────────────────
 
@@ -27,16 +24,20 @@ import { mmToPx } from './unitConversion';
 export function tiptapToAST(tiptapDoc: Record<string, unknown>): ASTNode[] {
   const nodes: ASTNode[] = [];
   const content = (tiptapDoc.content as Record<string, unknown>[]) ?? [];
+  let pbCounter = 0;
 
   for (let i = 0; i < content.length; i++) {
     const node = content[i];
     const type = node.type as string;
 
     if (type === 'pageBreak') {
+      const attrs = (node.attrs as Record<string, unknown>) || {};
       nodes.push({
         id: `pb-${i}`,
         type: 'manual_page_break',
+        nodeIndex: (attrs.nodeIndex as number) ?? pbCounter,
       });
+      pbCounter++;
       continue;
     }
 
@@ -171,66 +172,3 @@ export function buildTypographyDefaults(): TypographyDefaults {
 }
 
 // ─── Pagination Hook Result ────────────────────────────────────────────────
-
-export interface PaginationResult {
-  pages: PageOutput[];
-  totalPages: number;
-  /** Map of page break node ID → calculated spacer height in px */
-  spacerHeights: Map<string, number>;
-  /** Usable height per page in px */
-  usableHeightPx: number;
-}
-
-/**
- * Run the full pagination engine on a document.
- * Returns page layout data and spacer heights for page breaks.
- */
-export function calculatePagination(
-  docState: DocState,
-  measureText?: (text: string, style: { fontFamily: string; fontSize: number }) => number
-): PaginationResult {
-  const geometry = buildPageGeometry(docState.settings);
-  const typography = buildTypographyDefaults();
-  const ast = tiptapToAST(docState.content);
-
-  const engine = new DocumentLayoutEngine({
-    pageGeometry: geometry,
-    typographyDefaults: typography,
-    documentAST: ast,
-    measureText,
-  });
-
-  const pages = engine.paginate();
-  const usableHeightPx = mmToPx(engine.getUsableHeight() / 2.8346456693); // pt → mm → px
-
-  // Calculate spacer heights for each page break
-  const spacerHeights = new Map<string, number>();
-
-  // For each page break node, calculate how much space remains on the current page
-  let currentPageIndex = 0;
-  for (let i = 0; i < ast.length; i++) {
-    const node = ast[i];
-    if (node.type === 'manual_page_break') {
-      // The spacer height fills the remaining space on the current page
-      if (currentPageIndex < pages.length) {
-        const page = pages[currentPageIndex];
-        let usedHeight = 0;
-        for (const block of page.renderedBlocks) {
-          usedHeight += block.endY - block.startY;
-        }
-        // Convert remaining height from pt to px
-        const remainingPt = engine.getUsableHeight() - usedHeight;
-        const remainingPx = mmToPx(remainingPt / 2.8346456693);
-        spacerHeights.set(node.id, Math.max(0, remainingPx));
-      }
-      currentPageIndex++;
-    }
-  }
-
-  return {
-    pages,
-    totalPages: pages.length,
-    spacerHeights,
-    usableHeightPx,
-  };
-}

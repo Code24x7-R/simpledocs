@@ -3,6 +3,9 @@
 import { create } from 'zustand';
 import type { Editor } from '@tiptap/react';
 import { getMRUList, addMRUEntry, removeMRUEntry } from '../utils/mru';
+import type { Page } from '../types/page';
+import { createEmptyPage } from '../types/page';
+import { splitContentIntoPages } from '../utils/pageOverflow';
 
 export interface DocSettings {
   pageFormat: 'A4' | 'Letter';
@@ -31,7 +34,8 @@ export interface DocState {
   createdAt: string;
   updatedAt: string;
   settings: DocSettings;
-  content: Record<string, unknown>;
+  /** Array of pages, each with its own Tiptap JSON content tree. */
+  pages: Page[];
 }
 
 interface DocStore {
@@ -51,11 +55,13 @@ interface DocStore {
   totalPages: number;
 
   setEditor: (editor: Editor) => void;
-  updateContent: (content: Record<string, unknown>) => void;
+  updatePageContent: (pageIndex: number, content: Record<string, unknown>) => void;
   updateSettings: (settings: Partial<DocSettings>) => void;
   updateTitle: (title: string) => void;
   newDocument: () => void;
   loadDocument: (doc: DocState) => void;
+  addPageAfter: (pageIndex: number) => void;
+  removePage: (pageIndex: number) => void;
   setZoom: (zoom: number) => void;
   setPageSetupOpen: (open: boolean) => void;
   setInsertFieldOpen: (open: boolean) => void;
@@ -104,25 +110,47 @@ const createNewDoc = (): DocState => ({
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   settings: { ...defaultSettings },
-  content: {
-    type: 'doc',
-    content: [
-      {
-        type: 'paragraph',
-      },
-    ],
-  },
+  pages: [createEmptyPage()],
 });
 
 const loadFromStorage = (): DocState | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return migrateToPages(parsed);
+    }
   } catch {
     // ignore parse errors
   }
   return null;
 };
+
+/**
+ * Migrate old-format documents (flat `content` tree) to the new paginated
+ * model (`pages[]`). Uses DocumentLayoutEngine to split content at page
+ * boundaries. This is a one-time conversion on load.
+ */
+function migrateToPages(parsed: any): DocState {
+  // Already in new format
+  if (parsed.pages && Array.isArray(parsed.pages)) {
+    return parsed as DocState;
+  }
+
+  // Old format: has `content` but no `pages`
+  if (parsed.content && !parsed.pages) {
+    const pages = splitContentIntoPages(parsed.content, parsed.settings);
+    const migrated: DocState = {
+      ...parsed,
+      pages,
+    };
+    delete (migrated as any).content;
+    return migrated;
+  }
+
+  // Fallback: empty document
+  return createNewDoc();
+}
 
 export const createInitialState = (): DocState => {
   return loadFromStorage() ?? createNewDoc();
@@ -158,11 +186,14 @@ export const useDocStore = create<DocStore>((set, get) => {
 
     setEditor: (editor) => set({ editor }),
 
-    updateContent: (content) => {
+    updatePageContent: (pageIndex, content) => {
       const state = get();
+      const pages = [...state.docState.pages];
+      if (pageIndex < 0 || pageIndex >= pages.length) return;
+      pages[pageIndex] = { ...pages[pageIndex], content };
       const updated: DocState = {
         ...state.docState,
-        content,
+        pages,
         updatedAt: new Date().toISOString(),
       };
       set({ docState: updated });
@@ -198,8 +229,36 @@ export const useDocStore = create<DocStore>((set, get) => {
     },
 
     loadDocument: (doc) => {
-      set({ docState: doc });
-      persistToStorage(doc);
+      const migrated = migrateToPages(doc);
+      set({ docState: migrated });
+      persistToStorage(migrated);
+    },
+
+    addPageAfter: (pageIndex) => {
+      const state = get();
+      const pages = [...state.docState.pages];
+      const newPage = createEmptyPage();
+      pages.splice(pageIndex + 1, 0, newPage);
+      const updated: DocState = {
+        ...state.docState,
+        pages,
+        updatedAt: new Date().toISOString(),
+      };
+      set({ docState: updated });
+      persistToStorage(updated);
+    },
+
+    removePage: (pageIndex) => {
+      const state = get();
+      if (state.docState.pages.length <= 1) return;
+      const pages = state.docState.pages.filter((_, i) => i !== pageIndex);
+      const updated: DocState = {
+        ...state.docState,
+        pages,
+        updatedAt: new Date().toISOString(),
+      };
+      set({ docState: updated });
+      persistToStorage(updated);
     },
 
     setZoom: (zoom) => set({ zoom }),
@@ -226,7 +285,12 @@ export const useDocStore = create<DocStore>((set, get) => {
       set({ currentPage: Math.max(1, Math.min(Math.floor(page), totalPages)) });
     },
     setTotalPages: (pages) =>
-      set({ totalPages: Math.max(1, typeof pages === 'number' ? pages : 1) }),
+      set({
+        totalPages: Math.max(
+          1,
+          typeof pages === 'number' && !isNaN(pages) ? Math.floor(pages) : 1
+        ),
+      }),
     goToNextPage: () => {
       const { currentPage, totalPages } = get();
       if (!isNaN(currentPage) && currentPage < totalPages) {

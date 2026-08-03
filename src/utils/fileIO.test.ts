@@ -19,10 +19,15 @@ describe('fileIO', () => {
     pageGap: 24,
     showPageBackgrounds: true,
     },
-    content: {
-      type: 'doc',
-      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }],
-    },
+    pages: [
+      {
+        id: 'page-1',
+        content: {
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }],
+        },
+      },
+    ],
   };
 
   describe('saveDocument', () => {

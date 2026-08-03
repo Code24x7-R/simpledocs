@@ -49,7 +49,12 @@ export interface PageGeometryResult {
  * Used by both PaginatedViewport (for backgrounds) and PageBreakView (for spacers).
  */
 export function calculatePageGeometry(config: PageGeometryConfig): PageGeometryResult {
-  const { pageFormat, orientation, margins, header, footer, pageGap } = config;
+  const { pageFormat, orientation, margins, header, footer } = config;
+
+  // Guard against NaN from stale localStorage state
+  const pageGap = typeof config.pageGap === 'number' && !isNaN(config.pageGap)
+    ? config.pageGap
+    : 24;
 
   // Page dimensions in mm
   const fmt = pageFormat === 'A4' ? { w: 210, h: 297 } : { w: 215.9, h: 279.4 };

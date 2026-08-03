@@ -46,7 +46,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
             <div className="flex items-center justify-center gap-2 mb-2">
               <svg className="w-8 h-8" viewBox="0 0 32 32">
                 <rect width="32" height="32" rx="6" fill="#2563eb"/>
-                <text x="16" y="22" text-anchor="middle" fontSize="16" fontFamily="Arial" fontWeight="bold" fill="white">S</text>
+                <text x="16" y="22" textAnchor="middle" fontSize="16" fontFamily="Arial" fontWeight="bold" fill="white">S</text>
               </svg>
               <span className="text-xl font-bold text-gray-800">simpledocs</span>
             </div>

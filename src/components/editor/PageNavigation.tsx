@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 
 /**
@@ -14,15 +14,40 @@ import { useDocStore } from '../../store/useDocStore';
  */
 export default function PageNavigation() {
   const {
+    editor,
     currentPage,
     totalPages,
     goToNextPage,
     goToPrevPage,
     goToPage,
-    setSearchReplaceOpen,
   } = useDocStore();
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [isEditing, setIsEditing] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+
+  // Track cursor position from the active editor
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateCursorPos = () => {
+      const { selection } = editor.state;
+      const { from } = selection;
+      // Resolve the position to get the line/column
+      const resolved = editor.state.doc.resolve(from);
+      // index(0) = block index in doc (0-based) = line - 1
+      // parentOffset = offset within the block = column - 1
+      const line = resolved.index(0) + 1;
+      const col = resolved.parentOffset + 1;
+      setCursorPos({ line, col });
+    };
+
+    editor.on('selectionUpdate', updateCursorPos);
+    updateCursorPos(); // Initial value
+
+    return () => {
+      editor.off('selectionUpdate', updateCursorPos);
+    };
+  }, [editor]);
 
   // Sync input with store when page changes externally
   if (!isEditing && pageInput !== String(currentPage)) {
@@ -103,18 +128,10 @@ export default function PageNavigation() {
         <ChevronRight className="w-4 h-4" />
       </button>
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-gray-300 mx-2" />
-
-      {/* Search & Replace Button */}
-      <button
-        onClick={() => setSearchReplaceOpen(true)}
-        className="flex items-center gap-1.5 px-2 py-1 text-sm text-gray-600 hover:bg-gray-200 rounded focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-        title="Search & Replace"
-      >
-        <Search className="w-4 h-4" />
-        <span className="hidden sm:inline">Find</span>
-      </button>
+      {/* Cursor Position */}
+      <div className="ml-4 text-xs text-gray-500 border-l border-gray-300 pl-4">
+        Ln {cursorPos.line}, Col {cursorPos.col}
+      </div>
     </div>
   );
 }

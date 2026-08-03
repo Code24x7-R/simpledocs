@@ -17,7 +17,7 @@ const baseDoc = {
     pageGap: 24,
     showPageBackgrounds: true,
   },
-  content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
+  pages: [{ id: 'page-1', content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] } }],
 };
 
 describe('useDocStore', () => {
@@ -95,13 +95,13 @@ describe('useDocStore', () => {
     expect(useDocStore.getState().tableGridOpen).toBe(true);
   });
 
-  it('updates content', () => {
+  it('updates page content', () => {
     const newContent = {
       type: 'doc',
       content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }],
     };
-    useDocStore.getState().updateContent(newContent);
-    expect(useDocStore.getState().docState.content).toEqual(newContent);
+    useDocStore.getState().updatePageContent(0, newContent);
+    expect(useDocStore.getState().docState.pages[0].content).toEqual(newContent);
   });
 
   it('creates a new document', () => {
@@ -126,7 +126,7 @@ describe('useDocStore', () => {
         pageGap: 24,
         showPageBackgrounds: true,
       },
-      content: { type: 'doc', content: [] },
+      pages: [{ id: 'page-1', content: { type: 'doc', content: [] } }],
     };
     useDocStore.getState().loadDocument(doc);
     expect(useDocStore.getState().docState.title).toBe('Loaded Doc');

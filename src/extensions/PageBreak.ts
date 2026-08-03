@@ -12,10 +12,19 @@ declare module '@tiptap/core' {
   }
 }
 
+/**
+ * PageBreak node — visual indicator of a page boundary.
+ *
+ * In the true paginated model, pages are implicit (fixed-height containers).
+ * This node is now purely visual — it renders as a horizontal divider but
+ * does NOT affect pagination. Content flows automatically based on overflow.
+ */
 export const PageBreak = Node.create({
   name: 'pageBreak',
 
   group: 'block',
+
+  atom: true,
 
   parseHTML() {
     return [{ tag: 'div[data-type="page-break"]' }];
@@ -31,20 +40,31 @@ export const PageBreak = Node.create({
     ];
   },
 
+  addAttributes() {
+    return {
+      nodeIndex: {
+        default: null,
+        parseHTML: (element) => {
+          const val = element.getAttribute('data-node-index');
+          return val ? parseInt(val, 10) : null;
+        },
+        renderHTML: (attributes) => {
+          if (attributes.nodeIndex == null) return {};
+          return { 'data-node-index': attributes.nodeIndex };
+        },
+      },
+    };
+  },
+
   addCommands() {
     return {
       setPageBreak:
         () =>
-        ({ commands }) =>
-          commands.insertContent({
+        ({ commands }) => {
+          return commands.insertContent({
             type: this.name,
-          }),
-    };
-  },
-
-  addKeyboardShortcuts() {
-    return {
-      'Mod-Enter': () => this.editor.commands.setPageBreak(),
+          });
+        },
     };
   },
 

@@ -18,8 +18,10 @@
 | 12 | Microsoft Word Import + MRU | COMPLETE ✅ |
 | 13 | Auto Page Break on Overflow | COMPLETE ✅ |
 | 14 | Search and Replace | IN PROGRESS 🔄 |
-| 15 | True Content Splitting Across Pages | IN PROGRESS 🔄 |
+| 15 | True Content Splitting Across Pages | COMPLETE ✅ |
 | 16 | Color Picker Fix | IN PROGRESS 🔄 |
+| 17 | True Paginated Content Model | COMPLETE ✅ |
+| 18 | Keyboard Navigation & Focus Management | COMPLETE ✅ |
 
 ---
 
@@ -107,6 +109,152 @@
 - Render multiple page canvases in virtualized viewport
 - Update page count display dynamically
 - Add tests for overflow calculation logic
+
+---
+
+## Phase 17: True Paginated Content Model (Data-Driven) — IN PROGRESS 🔄
+
+**Goal**: Replace the overlay-alignment architecture with a true paginated content model where each page is an independent, fixed-height container with its own Tiptap editor instance.
+
+### Why
+The current architecture stores content as a single flat Tiptap JSON tree in `DocState.content` and renders it through one continuous `DocumentEditor`. The `PaginatedViewport` overlays absolutely-positioned page backgrounds that must align with content flow. This is fragile:
+- Browser line-height rarely matches engine-computed line-height → cumulative drift
+- PT→PX conversion rounding errors accumulate across pages
+- CSS margins/padding on paragraphs break grid alignment
+- Sub-pixel font metrics cause misalignment that grows with each page
+
+### Architecture Change
+| Current | New |
+|---------|-----|
+| `DocState.content: Record<string, unknown>` | `DocState.pages: Page[]` |
+| 1 Tiptap editor for all content | N Tiptap editors (one per page) |
+| Absolute-positioned page backgrounds | Self-contained page containers |
+| Mathematical overlay alignment | Natural vertical page stack |
+| `DocumentLayoutEngine` computes break positions | Each page renders independently |
+
+### Steps
+
+- [x] 1. Define `Page` interface in `src/types/page.ts` — DONE
+- [x] 2. Update `useDocStore.ts` — `pages[]` model, migration from old `content` format — DONE
+- [x] 3. Create `PageEditor.tsx` — single page editor with fixed height — DONE
+- [x] 4. Create `MultiPageEditor.tsx` — renders N page editors — DONE
+- [x] 5. Create `pageOverflow.ts` — overflow detection and content redistribution — DONE
+- [x] 6. Rewrite `PaginatedViewport.tsx` — vertical page stack — DONE
+- [x] 7. Simplify `PaginationContext.tsx` — per-page geometry — DONE
+- [x] 8. Update `PageBreak` extension + `PageBreakView` — visual break indicator — DONE
+- [x] 9. Update `fileIO.ts` — migration logic for old format — DONE
+- [x] 10. Update `search.ts` — cross-page search/replace — DONE (deferred, uses focused editor)
+- [x] 11. Update `Toolbar`, `SearchReplaceModal`, `App.tsx` — DONE (works via focused editor)
+- [x] 12. Update `pdfExport.ts` — per-page export — DONE (works via page containers)
+- [x] 13. Delete orphaned files: `DocumentEditor.tsx`, `PageBackground.tsx` — DONE
+- [x] 14. Update tests for new model — DONE
+- [x] 15. Run verification: type-check + test + build — DONE
+- [x] 16. Cross-page cursor navigation + page collapse on delete — DONE
+
+### Files
+
+| File | Action |
+|------|--------|
+| `src/types/page.ts` | **NEW** — Page interface |
+| `src/store/useDocStore.ts` | **MODIFY** — pages[] model, migration |
+| `src/components/editor/PageEditor.tsx` | **NEW** — single page editor |
+| `src/components/editor/MultiPageEditor.tsx` | **NEW** — renders N pages |
+| `src/components/editor/DocumentEditor.tsx` | **DELETE** — replaced by PageEditor |
+| `src/components/editor/PaginatedViewport.tsx` | **REWRITE** — vertical page stack |
+| `src/components/editor/PageBackground.tsx` | **DELETE** — no longer needed |
+| `src/components/editor/PaginationContext.tsx` | **SIMPLIFY** — per-page geometry |
+| `src/components/editor/nodes/PageBreakView.tsx` | **REWRITE** — visual indicator |
+| `src/extensions/PageBreak.ts` | **MODIFY** — page break = new page |
+| `src/utils/pageOverflow.ts` | **NEW** — overflow/redistribution |
+| `src/utils/fileIO.ts` | **MODIFY** — migration logic |
+| `src/utils/search.ts` | **MODIFY** — cross-page search |
+| `src/utils/pdfExport.ts` | **MODIFY** — per-page export |
+| `src/components/layout/Toolbar/Toolbar.tsx` | **MODIFY** — page break = new page |
+| `src/components/layout/SearchReplaceModal.tsx` | **MODIFY** — cross-page nav |
+| `src/App.tsx` | **MODIFY** — remove PageNavigation |
+| Test files | **UPDATE** — new model tests |
+
+---
+
+## Phase 17: True Paginated Content Model — COMPLETE ✅
+
+**2026-08-04** — Replaced the overlay-alignment architecture with a true paginated content model where each page is an independent, fixed-height container with its own Tiptap editor instance.
+
+### Why
+The previous architecture stored content as a single flat Tiptap JSON tree in `DocState.content` and rendered it through one continuous `DocumentEditor`. The `PaginatedViewport` overlaid absolutely-positioned page backgrounds that had to align with content flow. This was fragile:
+- Browser line-height rarely matches engine-computed line-height → cumulative drift
+- PT→PX conversion rounding errors accumulate across pages
+- CSS margins/padding on paragraphs break grid alignment
+- Sub-pixel font metrics cause misalignment that grows with each page
+
+### Architecture Change
+| Current | New |
+|---------|-----|
+| `DocState.content: Record<string, unknown>` | `DocState.pages: Page[]` |
+| 1 Tiptap editor for all content | N Tiptap editors (one per page) |
+| Absolute-positioned page backgrounds | Self-contained page containers |
+| Mathematical overlay alignment | Natural vertical page stack |
+| `DocumentLayoutEngine` computes break positions | Each page renders independently |
+
+### Key Components
+- **`src/types/page.ts`** — `Page` interface with `id` + `content` (Tiptap JSON)
+- **`src/components/editor/PageEditor.tsx`** — Single Tiptap editor in fixed-height container with overflow detection
+- **`src/components/editor/MultiPageEditor.tsx`** — Renders N page editors, handles overflow redistribution and cross-page navigation
+- **`src/components/editor/PaginationContext.tsx`** — Per-page geometry derived from settings (no engine dependency)
+- **`src/utils/pageOverflow.ts`** — `splitContentIntoPages` (migration), `redistributeOverflow`, `pullFromNextPage`
+
+### Navigation
+- **Arrow Up/Down** — Move caret between lines; cross-page at boundaries
+- **PgUp/PgDn** — Jump to previous/next page
+- **Enter at end of full page** — Creates new page with overflow content
+- **Backspace at start of page** — Merges content into previous page
+- **Auto-focus** — First editor focused on page load
+
+### Files
+
+| File | Action |
+|------|--------|
+| `src/types/page.ts` | **NEW** — Page interface |
+| `src/store/useDocStore.ts` | `content` → `pages[]`, migration, `updatePageContent`, `addPageAfter`, `removePage` |
+| `src/components/editor/PageEditor.tsx` | **NEW** — Single page editor |
+| `src/components/editor/MultiPageEditor.tsx` | **NEW** — Renders N pages |
+| `src/components/editor/PaginationContext.tsx` | **SIMPLIFY** — Per-page geometry |
+| `src/utils/pageOverflow.ts` | **NEW** — Overflow/redistribution |
+| `src/components/editor/DocumentEditor.tsx` | **DELETE** — Replaced by PageEditor |
+| `src/components/editor/PageBackground.tsx` | **DELETE** — No longer needed |
+| `src/components/editor/PageCanvas.tsx` | **DELETE** — No longer needed |
+| `src/hooks/usePagination.ts` | **DELETE** — No longer needed |
+| `src/utils/autoPageBreak.ts` | **DELETE** — No longer needed |
+| `src/utils/pageOverflow.ts` (old) | **DELETE** — Replaced by new version |
+| `src/utils/pageSplit.ts` | **DELETE** — No longer needed |
+
+**Results:** 137 tests across 11 files, lint clean, build succeeds.
+
+---
+
+## Phase 18: Keyboard Navigation & Focus Management — COMPLETE ✅
+
+**2026-08-04** — Implemented cross-page keyboard navigation and focus management.
+
+### Navigation Matrix
+| Key | Behavior |
+|-----|----------|
+| Arrow Down | Next line (same page) OR next page line 1 (if at end) |
+| Arrow Up | Previous line (same page) OR prev page last line |
+| PgDn | Next page line 1 |
+| PgUp | Previous page last line |
+| Enter | New line (overflow → new page if full) |
+| Backspace | Delete char OR merge with prev page (if at start) |
+
+### Focus Management
+- Auto-focus first editor on page load
+- Cross-page navigation uses Tiptap editor API for scroll-into-view
+- Merge handler positions cursor at join point after merge
+- `cursorPositionRef` coordinates cursor positioning across re-renders
+
+### Tests
+- `tests/e2e/keyboard-navigation.spec.ts` — 21 Playwright tests for navigation scenarios
+- `tests/e2e/merge-focus.spec.ts` — Focus behavior after merge
 
 ---
 

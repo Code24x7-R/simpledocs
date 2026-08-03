@@ -20,15 +20,20 @@ const mockDocState: DocState = {
     pageGap: 24,
     showPageBackgrounds: true,
   },
-  content: {
-    type: 'doc',
-    content: [
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Hello world' }],
+  pages: [
+    {
+      id: 'page-1',
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Hello world' }],
+          },
+        ],
       },
-    ],
-  },
+    },
+  ],
 };
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
@@ -36,7 +41,7 @@ const mockDocState: DocState = {
 describe('pagination utils', () => {
   describe('tiptapToAST', () => {
     it('converts a simple paragraph to AST', () => {
-      const ast = tiptapToAST(mockDocState.content);
+      const ast = tiptapToAST(mockDocState.pages[0].content);
 
       expect(ast.length).toBe(1);
       expect(ast[0].type).toBe('paragraph');

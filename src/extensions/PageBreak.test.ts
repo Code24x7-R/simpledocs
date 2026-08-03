@@ -26,10 +26,8 @@ describe('PageBreak extension', () => {
     expect(result[1]['class']).toBe('page-break');
   });
 
-  it('has keyboard shortcut Mod-Enter', () => {
+  it('has no keyboard shortcut (visual-only in paginated model)', () => {
     const shortcuts = PageBreak.config.addKeyboardShortcuts;
-    expect(shortcuts).toBeDefined();
-    const result = (shortcuts as any).call({ editor: {} });
-    expect(result).toHaveProperty('Mod-Enter');
+    expect(shortcuts).toBeUndefined();
   });
 });

@@ -21,6 +21,7 @@ import { saveDocument, openDocument } from '../../utils/fileIO';
 import { copyToClipboard, pasteFromClipboard } from '../../utils/clipboard';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
+import { splitContentIntoPages } from '../../utils/pageOverflow';
 
 const ZOOM_LEVELS = [
   { label: '75%', value: 0.75 },
@@ -64,9 +65,6 @@ export default function Navbar() {
       const doc = await openDocument(file);
       if (doc) {
         loadDocument(doc);
-        if (editor) {
-          editor.commands.setContent(doc.content);
-        }
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to open document');
@@ -126,9 +124,23 @@ export default function Navbar() {
     if (!file) return;
     try {
       const { html, messages } = await importWordDocument(file);
-      if (editor) {
-        editor.commands.setContent(html);
-      }
+      // Convert HTML to Tiptap JSON and split across pages
+      const doc = useDocStore.getState().docState;
+      const { Editor } = await import('@tiptap/core');
+      const { createExtensions } = await import('../../extensions');
+      const tempEditor = new Editor({
+        extensions: createExtensions(),
+        content: html,
+      });
+      const json = tempEditor.getJSON();
+      tempEditor.destroy();
+      const pages = splitContentIntoPages(json, doc.settings);
+      const updated = {
+        ...doc,
+        pages,
+        updatedAt: new Date().toISOString(),
+      };
+      loadDocument(updated);
       // Add to MRU
       addRecentFile(file.name, file.size);
       // Show warnings if any

@@ -20,9 +20,10 @@ export async function openDocument(file: File): Promise<DocState | null> {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const doc = JSON.parse(reader.result as string) as DocState;
-        if (doc.id && doc.settings && doc.content) {
-          resolve(doc);
+        const parsed = JSON.parse(reader.result as string);
+        // Accept both new format (pages) and legacy format (content)
+        if (parsed.id && parsed.settings && (parsed.pages || parsed.content)) {
+          resolve(parsed as DocState);
         } else {
           reject(new Error('Invalid document format'));
         }
