@@ -16,6 +16,7 @@ import {
   ClipboardPaste,
   FileUp,
   FileDown,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
@@ -352,6 +353,16 @@ export default function Navbar() {
             >
               <Info className="w-4 h-4" /> About simpledocs
             </button>
+            <div className="border-t border-gray-100 my-1" />
+            <a
+              href="https://code24x7-r.github.io/simplesheets/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setHelpMenuOpen(false)}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-green-600" /> SimpleSheet
+            </a>
           </div>
         )}
       </div>
