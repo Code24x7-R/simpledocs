@@ -165,13 +165,19 @@ function mergeNodeContent(
 ): any {
   if (!node) return node;
 
-  // If node is a text node, resolve any field patterns in the text
+  // If node is a templateField inline node, replace with resolved text
+  if (node.type === 'templateField' && node.attrs?.fieldName) {
+    const fieldName = node.attrs.fieldName;
+    const resolved = resolveField(fieldName, docState, pageIndex, customValues);
+    fieldsReplaced[fieldName] = (fieldsReplaced[fieldName] || 0) + 1;
+    return { type: 'text', text: resolved };
+  }
+
+  // If node is a text node, also resolve any {{field_name}} patterns in the text
   if (node.type === 'text' && node.text) {
-    // Check for {{field_name}} patterns in text
     const fieldPattern = /\{\{(\w+)\}\}/;
     if (fieldPattern.test(node.text)) {
       const resolved = resolveText(node.text, docState, pageIndex, customValues);
-      // Count replaced fields
       const matches = node.text.match(/\{\{(\w+)\}\}/g);
       if (matches) {
         for (const match of matches) {
@@ -179,11 +185,7 @@ function mergeNodeContent(
           fieldsReplaced[fieldName] = (fieldsReplaced[fieldName] || 0) + 1;
         }
       }
-      return {
-        ...node,
-        text: resolved,
-        marks: node.marks?.filter((mark: any) => mark.type !== 'templateField') || [],
-      };
+      return { ...node, text: resolved };
     }
   }
 
@@ -235,6 +237,11 @@ export function extractFieldNames(pages: Page[]): string[] {
 function extractFieldNamesFromNode(node: any, fieldNames: Set<string>): void {
   if (!node) return;
 
+  // Check for templateField inline nodes
+  if (node.type === 'templateField' && node.attrs?.fieldName) {
+    fieldNames.add(node.attrs.fieldName);
+  }
+
   // Check text nodes for field patterns
   if (node.type === 'text' && node.text) {
     const matches = node.text.match(/\{\{(\w+)\}\}/g);
@@ -242,15 +249,6 @@ function extractFieldNamesFromNode(node: any, fieldNames: Set<string>): void {
       for (const match of matches) {
         const fieldName = match.slice(2, -2); // Remove {{ and }}
         fieldNames.add(fieldName);
-      }
-    }
-  }
-
-  // Check marks for template fields
-  if (node.marks) {
-    for (const mark of node.marks) {
-      if (mark.type === 'templateField' && mark.attrs?.fieldName) {
-        fieldNames.add(mark.attrs.fieldName);
       }
     }
   }

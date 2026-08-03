@@ -168,7 +168,7 @@ describe('templateFields', () => {
   });
 
   describe('mergeFields', () => {
-    it('merges fields across all pages', () => {
+    it('merges templateField nodes across all pages', () => {
       const docState = createMockDocState({
         title: 'Test Doc',
         pages: [
@@ -180,7 +180,8 @@ describe('templateFields', () => {
                 {
                   type: 'paragraph',
                   content: [
-                    { type: 'text', text: 'Title: {{document_title}}' },
+                    { type: 'text', text: 'Title: ' },
+                    { type: 'templateField', attrs: { fieldName: 'document_title' } },
                   ],
                 },
               ],
@@ -194,7 +195,10 @@ describe('templateFields', () => {
                 {
                   type: 'paragraph',
                   content: [
-                    { type: 'text', text: 'Page {{page_number}} of {{total_pages}}' },
+                    { type: 'text', text: 'Page ' },
+                    { type: 'templateField', attrs: { fieldName: 'page_number' } },
+                    { type: 'text', text: ' of ' },
+                    { type: 'templateField', attrs: { fieldName: 'total_pages' } },
                   ],
                 },
               ],
@@ -206,8 +210,11 @@ describe('templateFields', () => {
       const result = mergeFields(docState.pages, docState);
 
       expect(result.replacedCount).toBe(3);
-      expect(result.pages[0].content.content[0].content[0].text).toBe('Title: Test Doc');
-      expect(result.pages[1].content.content[0].content[0].text).toBe('Page 2 of 2');
+      // Page 1: templateField replaced with text node
+      expect(result.pages[0].content.content[0].content[1]).toEqual({ type: 'text', text: 'Test Doc' });
+      // Page 2: two templateFields replaced
+      expect(result.pages[1].content.content[0].content[1]).toEqual({ type: 'text', text: '2' });
+      expect(result.pages[1].content.content[0].content[3]).toEqual({ type: 'text', text: '2' });
     });
 
     it('handles custom fields with values', () => {
@@ -221,7 +228,8 @@ describe('templateFields', () => {
                 {
                   type: 'paragraph',
                   content: [
-                    { type: 'text', text: 'Hello {{name}}' },
+                    { type: 'text', text: 'Hello ' },
+                    { type: 'templateField', attrs: { fieldName: 'name' } },
                   ],
                 },
               ],
@@ -231,12 +239,12 @@ describe('templateFields', () => {
       });
 
       const result = mergeFields(docState.pages, docState, { name: 'World' });
-      expect(result.pages[0].content.content[0].content[0].text).toBe('Hello World');
+      expect(result.pages[0].content.content[0].content[1]).toEqual({ type: 'text', text: 'World' });
     });
   });
 
   describe('extractFieldNames', () => {
-    it('extracts field names from text content', () => {
+    it('extracts field names from templateField nodes', () => {
       const pages = [
         {
           id: 'p1',
@@ -246,7 +254,9 @@ describe('templateFields', () => {
               {
                 type: 'paragraph',
                 content: [
-                  { type: 'text', text: '{{document_title}} and {{current_date}}' },
+                  { type: 'templateField', attrs: { fieldName: 'document_title' } },
+                  { type: 'text', text: ' ' },
+                  { type: 'templateField', attrs: { fieldName: 'current_date' } },
                 ],
               },
             ],
@@ -260,7 +270,9 @@ describe('templateFields', () => {
               {
                 type: 'paragraph',
                 content: [
-                  { type: 'text', text: '{{page_number}} of {{total_pages}}' },
+                  { type: 'templateField', attrs: { fieldName: 'page_number' } },
+                  { type: 'text', text: ' of ' },
+                  { type: 'templateField', attrs: { fieldName: 'total_pages' } },
                 ],
               },
             ],
@@ -304,7 +316,9 @@ describe('templateFields', () => {
               {
                 type: 'paragraph',
                 content: [
-                  { type: 'text', text: '{{name}} and {{name}}' },
+                  { type: 'templateField', attrs: { fieldName: 'name' } },
+                  { type: 'text', text: ' and ' },
+                  { type: 'templateField', attrs: { fieldName: 'name' } },
                 ],
               },
             ],
