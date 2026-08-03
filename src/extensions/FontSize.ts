@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { Mark } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
+import '@tiptap/extension-text-style';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -18,51 +19,39 @@ declare module '@tiptap/core' {
 }
 
 /**
- * FontSize mark - sets font size on selected text.
+ * FontSize extension - adds fontSize attribute to the textStyle mark.
  *
  * IMPORTANT: The line height is fixed at 28 lines per page. Increasing
  * font size will cause text to wrap to more lines, potentially causing
  * overflow to additional pages. This is expected behavior - larger text
  * requires more space.
  *
- * Font size is applied as an inline style on a mark.
+ * This extends the textStyle mark to include fontSize, so it works
+ * alongside font family and color.
  */
-export const FontSize = Mark.create({
+export const FontSize = Extension.create({
   name: 'fontSize',
 
-  addAttributes() {
-    return {
-      fontSize: {
-        default: null,
-        parseHTML: (element) => element.style.fontSize || null,
-        renderHTML: (attributes) => {
-          if (!attributes.fontSize) {
-            return {};
-          }
-          return {
-            style: `font-size: ${attributes.fontSize}; line-height: inherit`,
-          };
-        },
-      },
-    };
-  },
-
-  parseHTML() {
+  addGlobalAttributes() {
     return [
       {
-        style: 'font-size',
-        getAttrs: (value) => {
-          if (typeof value === 'string' && value) {
-            return { fontSize: value };
-          }
-          return false;
+        types: ['textStyle'],
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (element) => element.style.fontSize || null,
+            renderHTML: (attributes) => {
+              if (!attributes.fontSize) {
+                return {};
+              }
+              return {
+                style: `font-size: ${attributes.fontSize}; line-height: inherit`,
+              };
+            },
+          },
         },
       },
     ];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ['span', HTMLAttributes, 0];
   },
 
   addCommands() {
@@ -70,11 +59,11 @@ export const FontSize = Mark.create({
       setFontSize:
         (fontSize: string) =>
         ({ chain }) =>
-          chain().focus().setMark('fontSize', { fontSize }).run(),
+          chain().focus().setMark('textStyle', { fontSize }).run(),
       unsetFontSize:
         () =>
         ({ chain }) =>
-          chain().focus().unsetMark('fontSize').run(),
+          chain().focus().unsetMark('textStyle').run(),
     };
   },
 });

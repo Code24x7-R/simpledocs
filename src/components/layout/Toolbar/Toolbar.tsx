@@ -83,12 +83,12 @@ export default function Toolbar() {
   const getFontSize = (): string | null => {
     const { selection } = editor.state;
     if (selection.empty) return null;
-    // Walk through the selection to find font size
+    // Walk through the selection to find font size in textStyle marks
     let fontSize: string | null = null;
     editor.state.doc.nodesBetween(selection.from, selection.to, (node: any) => {
       if (node.type.name === 'text' && node.marks) {
         for (const mark of node.marks) {
-          if (mark.type.name === 'fontSize' && mark.attrs.fontSize) {
+          if (mark.type.name === 'textStyle' && mark.attrs.fontSize) {
             if (fontSize === null) {
               fontSize = mark.attrs.fontSize;
             } else if (fontSize !== mark.attrs.fontSize) {
