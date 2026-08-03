@@ -75,4 +75,14 @@ describe('wordImport', () => {
       'Invalid docx file'
     );
   });
+
+  it('preserves Word page breaks from mammoth', async () => {
+    (mammoth.convertToHtml as any).mockResolvedValue({
+      value: '<h1>Title</h1><div data-type="page-break"></div><p>Next page</p>',
+      messages: [],
+    });
+
+    const result = await importWordDocument(createMockFile('pagebreaks.docx'));
+    expect(result.html).toContain('data-type="page-break"');
+  });
 });

@@ -22,7 +22,6 @@ export interface DocSettings {
     showPageNumbers: boolean;
   };
   pageGap: number;
-  showPageBackgrounds: boolean;
   /** Minimum lines at bottom of page before a break (default: 2) */
   orphans: number;
   /** Minimum lines at top of next page after a break (default: 2) */
@@ -104,7 +103,6 @@ const defaultSettings: DocSettings = {
     showPageNumbers: true,
   },
   pageGap: 24,
-  showPageBackgrounds: true,
   orphans: 2,
   widows: 2,
 };

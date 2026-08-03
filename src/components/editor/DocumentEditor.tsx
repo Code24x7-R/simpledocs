@@ -37,11 +37,14 @@ export default function DocumentEditor() {
     onUpdate: ({ editor: ed }) => {
       updateContent(ed.getJSON());
     },
-    onFocus: () => {
-      if (editor) setEditor(editor);
-    },
-    onBlur: () => {},
   });
+
+  // Expose editor to store on creation and when it changes
+  useEffect(() => {
+    if (editor) {
+      setEditor(editor);
+    }
+  }, [editor, setEditor]);
 
   // Sync external content changes (e.g., from search/replace or migration)
   useEffect(() => {

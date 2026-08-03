@@ -5,9 +5,9 @@
 SimpleDocs uses a **CSS-driven pagination** approach (the "Google Docs method"):
 
 - **One continuous document** — Content flows naturally without forced page breaks
-- **Visual page guides** — Page backgrounds rendered at fixed intervals in the scroll container
+- **No visual page backgrounds** — Content scrolls continuously; pagination happens at print/PDF time
 - **CSS page breaks** — `break-after: page` handles print/PDF pagination
-- **Dynamic page count** — Computed from `contentHeight / pageHeight`
+- **Dynamic page count** — Computed from `contentHeight / pageHeight` for navigation only
 
 ---
 
@@ -37,28 +37,7 @@ Usable area:
 pageCount = ceil(contentScrollHeight / (pageHeightPx + pageGapPx))
 ```
 
-Where `pageGapPx` is the visual gap between page canvases (default 24px).
-
----
-
-## Page Background Rendering
-
-The `PaginatedViewport.tsx` renders visual page backgrounds at fixed intervals:
-
-```tsx
-// Pseudocode
-const pageCount = Math.ceil(contentHeight / (pageHeightPx + pageGapPx));
-
-for (let i = 0; i < pageCount; i++) {
-  const top = i * (pageHeightPx + pageGapPx);
-  renderPageBackground(top, pageWidthPx, pageHeightPx, margins);
-}
-```
-
-Each page background is a positioned `div` with:
-- Fixed `width` and `height` matching page dimensions
-- White background with subtle shadow
-- Margin offsets for header/footer areas
+Where `pageGapPx` is the visual gap between pages (default 24px).
 
 ---
 
@@ -207,6 +186,7 @@ container.scrollTo({ top: targetScroll, behavior: 'smooth' });
 | Content model | `pages[]` array | Single `content` tree |
 | Page breaks | Content splitting | CSS `break-after` |
 | Page count | Array length | Computed from height |
+| Visual backgrounds | Fixed page canvases | None (continuous scroll) |
 | Overflow detection | Manual scrollHeight checks | None needed |
 | Cursor management | Cross-page sync | Native Tiptap |
 | Search/replace | Per-page iteration | Single content tree |
@@ -217,7 +197,6 @@ container.scrollTo({ top: targetScroll, behavior: 'smooth' });
 
 ## Future Enhancements
 
-- **Widow/orphan control** — CSS `widows` and `orphans` properties (limited browser support)
 - **Column layouts** — CSS `column-count` for multi-column pages
 - **Section breaks** — Different page formats/orientations within one document
 - **Table of contents** — Auto-generated from heading nodes in content tree

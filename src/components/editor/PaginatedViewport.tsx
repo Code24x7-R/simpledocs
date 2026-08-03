@@ -9,13 +9,12 @@ import {
 } from './PaginationContext';
 
 /**
- * Paginated Viewport — Google Docs style.
+ * Paginated Viewport — continuous scroll editor.
  *
  * Architecture:
  * - Single Tiptap editor renders all content in natural flow
- * - Page backgrounds are visual guides rendered behind the editor
- * - Page boundaries computed from content height / page height
- * - No content splitting, no overflow detection, no redistribution
+ * - No visual page backgrounds — pagination happens at print/PDF time
+ * - Page count computed from content height for navigation only
  */
 function PaginatedViewportInner() {
   const {
@@ -40,24 +39,26 @@ function PaginatedViewportInner() {
   const contentRef = useRef<HTMLDivElement>(null);
   const isNavigatingRef = useRef(false);
   const [pageCount, setPageCount] = useState(1);
-  const [contentHeight, setContentHeight] = useState(0);
 
-  // Compute page count from content height
+  // Compute page count from content height and page breaks
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
 
     const measure = () => {
       const height = el.scrollHeight;
-      setContentHeight(height);
       const stride = pageHeightPx + pageGapPx;
-      const count = Math.max(1, Math.ceil(height / stride));
+      // Base estimate from content height
+      const heightBasedCount = Math.max(1, Math.ceil(height / stride));
+      // Count actual page break markers in the content
+      const pageBreakCount = el.querySelectorAll('[data-type="page-break"]').length;
+      // Actual page count is at least the number of page breaks + 1
+      const count = Math.max(heightBasedCount, pageBreakCount + 1);
       setPageCount(count);
     };
 
     measure();
 
-    // Observe content size changes
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
@@ -115,12 +116,6 @@ function PaginatedViewportInner() {
     []
   );
 
-  // Generate page background elements
-  const pages = Array.from({ length: pageCount }, (_, i) => {
-    const top = i * (pageHeightPx + pageGapPx);
-    return { index: i, top };
-  });
-
   return (
     <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
       <div
@@ -135,88 +130,20 @@ function PaginatedViewportInner() {
             transformOrigin: 'top center',
           }}
         >
-          {/* Page backgrounds (visual guides) */}
-          {docState.settings.showPageBackgrounds && (
-            <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ height: contentHeight }}>
-              {pages.map((page) => (
-                <div
-                  key={page.index}
-                  className="page-background absolute left-1/2 -translate-x-1/2"
-                  data-testid="page-canvas"
-                  style={{
-                    top: page.top,
-                    width: pageWidthPx,
-                    height: pageHeightPx,
-                    background: 'white',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    borderRadius: '2px',
-                  }}
-                >
-                  {/* Header area */}
-                  {docState.settings.header.enabled && (
-                    <div
-                      className="page-header absolute"
-                      style={{
-                        top: marginTopPx,
-                        left: marginLeftPx,
-                        right: marginRightPx,
-                        height: headerHeightPx,
-                        borderBottom: '1px solid #e5e7eb',
-                        display: 'flex',
-                        alignItems: 'center',
-                        paddingLeft: '8px',
-                        fontSize: '12px',
-                        color: '#6b7280',
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      {docState.settings.header.content || docState.title}
-                    </div>
-                  )}
-
-                  {/* Footer area */}
-                  {docState.settings.footer.enabled && (
-                    <div
-                      className="page-footer absolute"
-                      style={{
-                        bottom: 0,
-                        left: marginLeftPx,
-                        right: marginRightPx,
-                        height: footerHeightPx,
-                        borderTop: '1px solid #e5e7eb',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: docState.settings.footer.showPageNumbers
-                          ? 'flex-end'
-                          : 'center',
-                        paddingRight: '8px',
-                        fontSize: '12px',
-                        color: '#6b7280',
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      {docState.settings.footer.showPageNumbers && (
-                        <span>{page.index + 1}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Editor content (renders on top of backgrounds) */}
+          {/* Editor content */}
           <div
             ref={contentRef}
-            className="document-content relative"
+            className="document-content relative bg-white mx-auto"
             style={{
               maxWidth: pageWidthPx,
-              margin: '0 auto',
+              marginTop: '24px',
+              marginBottom: '24px',
               paddingTop: marginTopPx + headerHeightPx,
               paddingBottom: footerHeightPx,
               paddingLeft: marginLeftPx,
               paddingRight: marginRightPx,
-              minHeight: pageHeightPx,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              borderRadius: '2px',
               // CSS custom properties for widow/orphan control
               ['--orphans' as string]: docState.settings.orphans,
               ['--widows' as string]: docState.settings.widows,

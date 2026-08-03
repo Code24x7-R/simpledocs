@@ -15,7 +15,7 @@ export default function PageBreakView(_props: NodeViewProps) {
       data-type="page-break"
       style={{ breakAfter: 'page' }}
     >
-      <div className="flex items-center gap-2 py-2 pointer-events-none">
+      <div className="flex items-center gap-2 py-0.5 pointer-events-none">
         <div className="flex-1 border-t border-dashed border-gray-300" />
         <span className="text-[10px] text-gray-400 select-none whitespace-nowrap">
           Page Break

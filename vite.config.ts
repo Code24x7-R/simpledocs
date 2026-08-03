@@ -22,6 +22,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['html2pdf.js', 'zustand', 'react-dom/client', 'lucide-react'],
+  },
   define: {
     __GIT_COMMIT_HASH__: JSON.stringify(GIT_COMMIT_HASH),
     __BUILD_TIMESTAMP__: JSON.stringify(BUILD_TIMESTAMP),

@@ -17,9 +17,12 @@ export async function importWordDocument(file: File): Promise<WordImportResult> 
         "p[style-name='Heading 2'] => h2:fresh",
         "p[style-name='Heading 3'] => h3:fresh",
         "p[style-name='Subtitle'] => h3:fresh",
+        // Convert Word page breaks to our page break marker
+        'br[type=page] => div[data-type=page-break]:fresh',
       ],
     }
   );
+
   return {
     html: result.value,
     messages: result.messages,
