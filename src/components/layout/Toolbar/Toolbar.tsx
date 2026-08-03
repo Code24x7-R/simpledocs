@@ -88,7 +88,7 @@ export default function Toolbar() {
     editor.state.doc.nodesBetween(selection.from, selection.to, (node: any) => {
       if (node.type.name === 'text' && node.marks) {
         for (const mark of node.marks) {
-          if (mark.type.name === 'textStyle' && mark.attrs.fontSize) {
+          if (mark.type.name === 'fontSize' && mark.attrs.fontSize) {
             if (fontSize === null) {
               fontSize = mark.attrs.fontSize;
             } else if (fontSize !== mark.attrs.fontSize) {
