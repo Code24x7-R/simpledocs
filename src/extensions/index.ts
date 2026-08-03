@@ -10,7 +10,7 @@ import FontFamily from '@tiptap/extension-font-family';
 import { FontSize } from './FontSize';
 import Color from '@tiptap/extension-color';
 import TextAlign from '@tiptap/extension-text-align';
-import Highlight from '@tiptap/extension-highlight';
+import { CustomHighlight } from './CustomHighlight';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { TemplateField } from './TemplateField';
@@ -28,7 +28,7 @@ export function createExtensions() {
     TextAlign.configure({
       types: ['heading', 'paragraph'],
     }),
-    Highlight.configure({
+    CustomHighlight.configure({
       multicolor: true,
     }),
     TaskList,
