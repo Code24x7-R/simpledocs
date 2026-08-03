@@ -145,6 +145,41 @@ describe('htmlToMarkdown', () => {
     });
   });
 
+  describe('element separation', () => {
+    it('separates hr from following header with newlines', () => {
+      const input = `<hr><h2>Document Overview</h2>`;
+      const result = htmlToMarkdown(input);
+      // Should NOT produce ---## Document Overview
+      expect(result).not.toContain('---##');
+      // Should have --- on its own line followed by header
+      expect(result).toContain('---\n\n## Document Overview');
+    });
+
+    it('separates consecutive headers with blank lines', () => {
+      const input = `<h1>Title</h1><h2>Subtitle</h2>`;
+      const result = htmlToMarkdown(input);
+      expect(result).toContain('# Title\n\n## Subtitle');
+    });
+
+    it('separates header from paragraph', () => {
+      const input = `<h2>Section</h2><p>Content here.</p>`;
+      const result = htmlToMarkdown(input);
+      expect(result).toContain('## Section\n\nContent here.');
+    });
+
+    it('separates list from paragraph', () => {
+      const input = `<ul><li>Item</li></ul><p>After list.</p>`;
+      const result = htmlToMarkdown(input);
+      expect(result).toContain('* Item\n\nAfter list.');
+    });
+
+    it('separates blockquote from paragraph', () => {
+      const input = `<blockquote><p>Quote</p></blockquote><p>After quote.</p>`;
+      const result = htmlToMarkdown(input);
+      expect(result).toContain('> Quote\n\nAfter quote.');
+    });
+  });
+
   describe('HTML entity unescaping', () => {
     it('unescapes &amp;', () => {
       expect(htmlToMarkdown('<p>Tom &amp; Jerry</p>')).toBe('Tom & Jerry');

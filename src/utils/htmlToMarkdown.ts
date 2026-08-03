@@ -40,7 +40,7 @@ export function htmlToMarkdown(html: string): string {
       const language = lang || '';
       // Unescape HTML entities in code
       const unescaped = unescapeHtml(code.trim());
-      return `\`\`\`${language}\n${unescaped}\n\`\`\``;
+      return `\n\n\`\`\`${language}\n${unescaped}\n\`\`\`\n\n`;
     }
   );
 
@@ -56,7 +56,7 @@ export function htmlToMarkdown(html: string): string {
     const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'g');
     result = result.replace(regex, (_match, text: string) => {
       const inner = stripTagsInline(text).trim();
-      return `${hashes} ${inner}`;
+      return `\n\n${hashes} ${inner}\n\n`;
     });
   }
 
@@ -80,12 +80,12 @@ export function htmlToMarkdown(html: string): string {
 
   // Unordered lists: <ul><li>item</li>...</ul>
   result = result.replace(/<ul>([\s\S]*?)<\/ul>/g, (_match, items: string) => {
-    return convertListItems(items, 'unordered');
+    return '\n\n' + convertListItems(items, 'unordered') + '\n\n';
   });
 
   // Ordered lists: <ol><li>item</li>...</ol>
   result = result.replace(/<ol>([\s\S]*?)<\/ol>/g, (_match, items: string) => {
-    return convertListItems(items, 'ordered');
+    return '\n\n' + convertListItems(items, 'ordered') + '\n\n';
   });
 
   // Blockquotes: <blockquote><p>text</p></blockquote>
@@ -93,11 +93,11 @@ export function htmlToMarkdown(html: string): string {
     const text = stripTagsInline(content).trim();
     // Handle multi-line blockquotes
     const lines = text.split('\n');
-    return lines.map((line) => `> ${line.trim()}`).join('\n');
+    return '\n\n' + lines.map((line) => `> ${line.trim()}`).join('\n') + '\n\n';
   });
 
   // Horizontal rules: <hr>
-  result = result.replace(/<hr\s*\/?>/g, '---');
+  result = result.replace(/<hr\s*\/?>/g, '\n\n---\n\n');
 
   // Paragraphs: <p>text</p>
   result = result.replace(/<p>([\s\S]*?)<\/p>/g, (_match, text: string) => {
