@@ -202,26 +202,6 @@ function mergeNodeContent(
   return node;
 }
 
-/** Count template fields in a content tree */
-function countFields(node: any): number {
-  if (!node) return 0;
-  let count = 0;
-
-  // Check if this node has template field marks
-  if (node.marks) {
-    count += node.marks.filter((mark: any) => mark.type === 'templateField').length;
-  }
-
-  // Recursively count in children
-  if (node.content && Array.isArray(node.content)) {
-    for (const child of node.content) {
-      count += countFields(child);
-    }
-  }
-
-  return count;
-}
-
 /** Extract all unique field names from a document */
 export function extractFieldNames(pages: Page[]): string[] {
   const fieldNames = new Set<string>();

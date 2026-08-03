@@ -211,10 +211,12 @@ describe('templateFields', () => {
 
       expect(result.replacedCount).toBe(3);
       // Page 1: templateField replaced with text node
-      expect(result.pages[0].content.content[0].content[1]).toEqual({ type: 'text', text: 'Test Doc' });
+      const page1Content = result.pages[0].content as any;
+      expect(page1Content.content[0].content[1]).toEqual({ type: 'text', text: 'Test Doc' });
       // Page 2: two templateFields replaced
-      expect(result.pages[1].content.content[0].content[1]).toEqual({ type: 'text', text: '2' });
-      expect(result.pages[1].content.content[0].content[3]).toEqual({ type: 'text', text: '2' });
+      const page2Content = result.pages[1].content as any;
+      expect(page2Content.content[0].content[1]).toEqual({ type: 'text', text: '2' });
+      expect(page2Content.content[0].content[3]).toEqual({ type: 'text', text: '2' });
     });
 
     it('handles custom fields with values', () => {
@@ -239,7 +241,8 @@ describe('templateFields', () => {
       });
 
       const result = mergeFields(docState.pages, docState, { name: 'World' });
-      expect(result.pages[0].content.content[0].content[1]).toEqual({ type: 'text', text: 'World' });
+      const pageContent = result.pages[0].content as any;
+      expect(pageContent.content[0].content[1]).toEqual({ type: 'text', text: 'World' });
     });
   });
 

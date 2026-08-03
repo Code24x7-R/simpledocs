@@ -7,6 +7,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TextStyle } from '@tiptap/extension-text-style';
 import FontFamily from '@tiptap/extension-font-family';
+import { FontSize } from './FontSize';
 import Color from '@tiptap/extension-color';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
@@ -22,6 +23,7 @@ export function createExtensions() {
     }),
     TextStyle,
     FontFamily,
+    FontSize,
     Color,
     TextAlign.configure({
       types: ['heading', 'paragraph'],
