@@ -2,12 +2,15 @@
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useDocStore, createInitialState } from './useDocStore';
+import type { Editor } from '@tiptap/core';
+import type { DocState } from './useDocStore';
 
 const baseDoc = {
   id: 'test-id',
   title: 'Test Document',
   createdAt: '2026-08-02T00:00:00Z',
   updatedAt: '2026-08-02T00:00:00Z',
+  totalPages: 1,
   settings: {
     pageFormat: 'A4' as const,
     orientation: 'portrait' as const,
@@ -17,7 +20,7 @@ const baseDoc = {
     pageGap: 24,
     showPageBackgrounds: true,
   },
-  pages: [{ id: 'page-1', content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] } }],
+  content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
 };
 
 describe('useDocStore', () => {
@@ -95,13 +98,13 @@ describe('useDocStore', () => {
     expect(useDocStore.getState().tableGridOpen).toBe(true);
   });
 
-  it('updates page content', () => {
+  it('updates document content', () => {
     const newContent = {
       type: 'doc',
       content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }],
     };
-    useDocStore.getState().updatePageContent(0, newContent);
-    expect(useDocStore.getState().docState.pages[0].content).toEqual(newContent);
+    useDocStore.getState().updateContent(newContent);
+    expect(useDocStore.getState().docState.content).toEqual(newContent);
   });
 
   it('creates a new document', () => {
@@ -117,6 +120,7 @@ describe('useDocStore', () => {
       title: 'Loaded Doc',
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',
+      totalPages: 1,
       settings: {
         pageFormat: 'Letter' as const,
         orientation: 'landscape' as const,
@@ -126,7 +130,7 @@ describe('useDocStore', () => {
         pageGap: 24,
         showPageBackgrounds: true,
       },
-      pages: [{ id: 'page-1', content: { type: 'doc', content: [] } }],
+      content: { type: 'doc', content: [] },
     };
     useDocStore.getState().loadDocument(doc);
     expect(useDocStore.getState().docState.title).toBe('Loaded Doc');
@@ -161,7 +165,6 @@ describe('useDocStore', () => {
   describe('localStorage branch coverage', () => {
     it('covers the null storage path (no data in localStorage)', () => {
       localStorage.clear();
-      // newDocument calls createNewDoc which simulates "no stored data" path
       useDocStore.getState().newDocument();
       const state = useDocStore.getState();
       expect(state.docState.title).toBe('Untitled Document');
@@ -169,9 +172,7 @@ describe('useDocStore', () => {
     });
 
     it('covers the JSON parse error catch block', () => {
-      // Store invalid JSON to trigger the catch block
       localStorage.setItem('SIMPLEDOCS_STATE', '{ invalid json !!');
-      // Mock JSON.parse to throw for our invalid input
       const originalParse = JSON.parse;
       JSON.parse = vi.fn((str: string) => {
         if (str === '{ invalid json !!') {
@@ -180,7 +181,6 @@ describe('useDocStore', () => {
         return originalParse(str);
       }) as typeof JSON.parse;
 
-      // newDocument should still work (creates fresh doc)
       useDocStore.getState().newDocument();
       const state = useDocStore.getState();
       expect(state.docState.title).toBe('Untitled Document');
@@ -194,7 +194,6 @@ describe('useDocStore', () => {
         title: 'Previously Saved',
       };
       localStorage.setItem('SIMPLEDOCS_STATE', JSON.stringify(savedDoc));
-      // Simulate page reload by creating a new document after checking storage
       const raw = localStorage.getItem('SIMPLEDOCS_STATE');
       const loaded = JSON.parse(raw!);
       useDocStore.getState().loadDocument(loaded);
@@ -230,7 +229,7 @@ describe('useDocStore', () => {
     });
 
     it('sets editor instance', () => {
-      const mockEditor = { chain: vi.fn() } as any;
+      const mockEditor = { chain: vi.fn() } as unknown as Editor;
       useDocStore.getState().setEditor(mockEditor);
       expect(useDocStore.getState().editor).toBe(mockEditor);
     });
@@ -261,7 +260,6 @@ describe('useDocStore', () => {
         margins: { top: '50mm', bottom: '50mm', left: '50mm', right: '50mm' },
       });
       const settings = useDocStore.getState().docState.settings;
-      // Other settings should be preserved
       expect(settings.pageFormat).toBe('A4');
       expect(settings.orientation).toBe('portrait');
       expect(settings.header.enabled).toBe(true);
@@ -295,6 +293,50 @@ describe('useDocStore', () => {
       localStorage.setItem('SIMPLEDOCS_STATE', 'null');
       const result = createInitialState();
       expect(result.title).toBe('Untitled Document');
+    });
+  });
+
+  // Migration from old pages[] format
+  describe('migration', () => {
+    it('merges pages[] into single content on load', () => {
+      const oldFormatDoc = {
+        id: 'old-doc',
+        title: 'Old Doc',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+        settings: baseDoc.settings,
+        pages: [
+          {
+            id: 'p1',
+            content: {
+              type: 'doc',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Page 1' }] }],
+            },
+          },
+          {
+            id: 'p2',
+            content: {
+              type: 'doc',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Page 2' }] }],
+            },
+          },
+        ],
+      };
+      useDocStore.getState().loadDocument(oldFormatDoc as unknown as DocState);
+      const state = useDocStore.getState();
+      expect(state.docState.content).toBeDefined();
+      expect((state.docState.content as Record<string, unknown>).content).toHaveLength(2);
+      expect((state.docState as unknown as Record<string, unknown>).pages).toBeUndefined();
+    });
+
+    it('loads modern format directly', () => {
+      const modernDoc = {
+        ...baseDoc,
+        content: { type: 'doc', content: [{ type: 'paragraph' }] },
+      };
+      useDocStore.getState().loadDocument(modernDoc);
+      const state = useDocStore.getState();
+      expect(state.docState.content).toEqual(modernDoc.content);
     });
   });
 });

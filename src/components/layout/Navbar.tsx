@@ -21,7 +21,6 @@ import { saveDocument, openDocument } from '../../utils/fileIO';
 import { copyToClipboard, pasteFromClipboard } from '../../utils/clipboard';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
-import { splitContentIntoPages } from '../../utils/pageOverflow';
 
 const ZOOM_LEVELS = [
   { label: '75%', value: 0.75 },
@@ -125,26 +124,21 @@ export default function Navbar() {
     if (!file) return;
     try {
       const { html, messages } = await importWordDocument(file);
-      // Convert HTML to Tiptap JSON and split across pages
-      const doc = useDocStore.getState().docState;
       const { Editor } = await import('@tiptap/core');
       const { createExtensions } = await import('../../extensions');
       const tempEditor = new Editor({
         extensions: createExtensions(),
         content: html,
       });
-      const json = tempEditor.getJSON();
+      const content = tempEditor.getJSON();
       tempEditor.destroy();
-      const pages = splitContentIntoPages(json, doc.settings);
       const updated = {
-        ...doc,
-        pages,
+        ...useDocStore.getState().docState,
+        content,
         updatedAt: new Date().toISOString(),
       };
       loadDocument(updated);
-      // Add to MRU
       addRecentFile(file.name, file.size);
-      // Show warnings if any
       if (messages.length > 0) {
         console.warn('Word import warnings:', messages);
       }

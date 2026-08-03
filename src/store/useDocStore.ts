@@ -3,9 +3,6 @@
 import { create } from 'zustand';
 import type { Editor } from '@tiptap/react';
 import { getMRUList, addMRUEntry, removeMRUEntry } from '../utils/mru';
-import type { Page } from '../types/page';
-import { createEmptyPage } from '../types/page';
-import { splitContentIntoPages } from '../utils/pageOverflow';
 
 export interface DocSettings {
   pageFormat: 'A4' | 'Letter';
@@ -34,8 +31,10 @@ export interface DocState {
   createdAt: string;
   updatedAt: string;
   settings: DocSettings;
-  /** Array of pages, each with its own Tiptap JSON content tree. */
-  pages: Page[];
+  /** Single Tiptap JSON content tree for the entire document. */
+  content: Record<string, unknown>;
+  /** Total page count (computed from content height / page height). */
+  totalPages: number;
 }
 
 interface DocStore {
@@ -56,13 +55,11 @@ interface DocStore {
   totalPages: number;
 
   setEditor: (editor: Editor) => void;
-  updatePageContent: (pageIndex: number, content: Record<string, unknown>) => void;
+  updateContent: (content: Record<string, unknown>) => void;
   updateSettings: (settings: Partial<DocSettings>) => void;
   updateTitle: (title: string) => void;
   newDocument: () => void;
   loadDocument: (doc: DocState) => void;
-  addPageAfter: (pageIndex: number) => void;
-  removePage: (pageIndex: number) => void;
   setZoom: (zoom: number) => void;
   setPageSetupOpen: (open: boolean) => void;
   setInsertFieldOpen: (open: boolean) => void;
@@ -111,8 +108,12 @@ const createNewDoc = (): DocState => ({
   title: 'Untitled Document',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  totalPages: 1,
   settings: { ...defaultSettings },
-  pages: [createEmptyPage()],
+  content: {
+    type: 'doc',
+    content: [{ type: 'paragraph' }],
+  },
 });
 
 const loadFromStorage = (): DocState | null => {
@@ -120,7 +121,7 @@ const loadFromStorage = (): DocState | null => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return migrateToPages(parsed);
+      return migrateToContent(parsed);
     }
   } catch {
     // ignore parse errors
@@ -129,25 +130,43 @@ const loadFromStorage = (): DocState | null => {
 };
 
 /**
- * Migrate old-format documents (flat `content` tree) to the new paginated
- * model (`pages[]`). Uses DocumentLayoutEngine to split content at page
- * boundaries. This is a one-time conversion on load.
+ * Migrate old paginated-format documents (with `pages[]`) back to the
+ * single-content model. Merges all page content trees into one.
  */
-function migrateToPages(parsed: any): DocState {
+function migrateToContent(parsed: Record<string, unknown>): DocState {
   // Already in new format
-  if (parsed.pages && Array.isArray(parsed.pages)) {
-    return parsed as DocState;
+  if (parsed.content && !parsed.pages) {
+    return parsed as unknown as DocState;
   }
 
-  // Old format: has `content` but no `pages`
-  if (parsed.content && !parsed.pages) {
-    const pages = splitContentIntoPages(parsed.content, parsed.settings);
-    const migrated: DocState = {
-      ...parsed,
-      pages,
+  // Old format: has `pages[]` — merge into single content
+  if (parsed.pages && Array.isArray(parsed.pages)) {
+    const mergedContent: Record<string, unknown> = {
+      type: 'doc',
+      content: [],
     };
-    delete (migrated as any).content;
-    return migrated;
+
+    for (const page of parsed.pages) {
+      if (page && typeof page === 'object' && 'content' in page) {
+        const pageContent = (page as Record<string, unknown>).content as Record<string, unknown> | undefined;
+        const blocks = pageContent?.content as unknown[] | undefined;
+        if (blocks) {
+          (mergedContent.content as unknown[]).push(...blocks);
+        }
+      }
+    }
+
+    // Ensure at least one paragraph
+    if ((mergedContent.content as unknown[]).length === 0) {
+      (mergedContent.content as unknown[]).push({ type: 'paragraph' });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { pages: _pages, ...rest } = parsed;
+    return {
+      ...rest,
+      content: mergedContent,
+    } as unknown as DocState;
   }
 
   // Fallback: empty document
@@ -189,14 +208,11 @@ export const useDocStore = create<DocStore>((set, get) => {
 
     setEditor: (editor) => set({ editor }),
 
-    updatePageContent: (pageIndex, content) => {
+    updateContent: (content) => {
       const state = get();
-      const pages = [...state.docState.pages];
-      if (pageIndex < 0 || pageIndex >= pages.length) return;
-      pages[pageIndex] = { ...pages[pageIndex], content };
       const updated: DocState = {
         ...state.docState,
-        pages,
+        content,
         updatedAt: new Date().toISOString(),
       };
       set({ docState: updated });
@@ -231,37 +247,10 @@ export const useDocStore = create<DocStore>((set, get) => {
       persistToStorage(doc);
     },
 
-    loadDocument: (doc) => {
-      const migrated = migrateToPages(doc);
+    loadDocument: (doc: DocState) => {
+      const migrated = migrateToContent(doc as unknown as Record<string, unknown>);
       set({ docState: migrated });
       persistToStorage(migrated);
-    },
-
-    addPageAfter: (pageIndex) => {
-      const state = get();
-      const pages = [...state.docState.pages];
-      const newPage = createEmptyPage();
-      pages.splice(pageIndex + 1, 0, newPage);
-      const updated: DocState = {
-        ...state.docState,
-        pages,
-        updatedAt: new Date().toISOString(),
-      };
-      set({ docState: updated });
-      persistToStorage(updated);
-    },
-
-    removePage: (pageIndex) => {
-      const state = get();
-      if (state.docState.pages.length <= 1) return;
-      const pages = state.docState.pages.filter((_, i) => i !== pageIndex);
-      const updated: DocState = {
-        ...state.docState,
-        pages,
-        updatedAt: new Date().toISOString(),
-      };
-      set({ docState: updated });
-      persistToStorage(updated);
     },
 
     setZoom: (zoom) => set({ zoom }),

@@ -30,7 +30,7 @@ export async function exportToPdf(
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
   };
 
-  // Create a container with all pages
+  // Create a container with all page elements
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.left = '-9999px';

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect } from 'vitest';
-import { tiptapToAST, buildPageGeometry, buildTypographyDefaults } from './pagination';
+import { buildPageGeometry, buildTypographyDefaults, extractText } from './pagination';
 import type { DocState } from '../store/useDocStore';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────
@@ -11,6 +11,7 @@ const mockDocState: DocState = {
   title: 'Test Doc',
   createdAt: '2024-01-01',
   updatedAt: '2024-01-01',
+  totalPages: 1,
   settings: {
     pageFormat: 'A4',
     orientation: 'portrait',
@@ -20,104 +21,39 @@ const mockDocState: DocState = {
     pageGap: 24,
     showPageBackgrounds: true,
   },
-  pages: [
-    {
-      id: 'page-1',
-      content: {
-        type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            content: [{ type: 'text', text: 'Hello world' }],
-          },
-        ],
+  content: {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Hello world' }],
       },
-    },
-  ],
+    ],
+  },
 };
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
 
 describe('pagination utils', () => {
-  describe('tiptapToAST', () => {
-    it('converts a simple paragraph to AST', () => {
-      const ast = tiptapToAST(mockDocState.pages[0].content);
-
-      expect(ast.length).toBe(1);
-      expect(ast[0].type).toBe('paragraph');
-      expect(ast[0].text).toBe('Hello world');
+  describe('extractText', () => {
+    it('extracts text from a simple paragraph', () => {
+      const text = extractText(mockDocState.content);
+      expect(text).toBe('Hello world');
     });
 
-    it('extracts page breaks as manual_page_break nodes', () => {
-      const docWithBreak = {
-        type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            content: [{ type: 'text', text: 'Before' }],
-          },
-          { type: 'pageBreak' },
-          {
-            type: 'paragraph',
-            content: [{ type: 'text', text: 'After' }],
-          },
-        ],
+    it('extracts text from nested nodes', () => {
+      const node = {
+        type: 'heading',
+        content: [{ type: 'text', text: 'Title' }],
       };
-
-      const ast = tiptapToAST(docWithBreak);
-
-      expect(ast.length).toBe(3);
-      expect(ast[0].text).toBe('Before');
-      expect(ast[1].type).toBe('manual_page_break');
-      expect(ast[2].text).toBe('After');
+      const text = extractText(node);
+      expect(text).toBe('Title');
     });
 
-    it('handles nested text in headings', () => {
-      const docWithHeading = {
-        type: 'doc',
-        content: [
-          {
-            type: 'heading',
-            attrs: { level: 1 },
-            content: [{ type: 'text', text: 'Title' }],
-          },
-        ],
-      };
-
-      const ast = tiptapToAST(docWithHeading);
-
-      expect(ast.length).toBe(1);
-      expect(ast[0].text).toBe('Title');
-      expect(ast[0].paginationRules?.keepWithNext).toBe(true);
-    });
-
-    it('handles empty document', () => {
-      const emptyDoc = { type: 'doc', content: [] };
-      const ast = tiptapToAST(emptyDoc);
-
-      expect(ast).toEqual([]);
-    });
-
-    it('handles blockquotes and other block types', () => {
-      const docWithBlocks = {
-        type: 'doc',
-        content: [
-          {
-            type: 'blockquote',
-            content: [
-              {
-                type: 'paragraph',
-                content: [{ type: 'text', text: 'Quoted text' }],
-              },
-            ],
-          },
-        ],
-      };
-
-      const ast = tiptapToAST(docWithBlocks);
-
-      expect(ast.length).toBeGreaterThan(0);
-      expect(ast[0].text).toContain('Quoted text');
+    it('returns empty string for empty content', () => {
+      const node = { type: 'paragraph' };
+      const text = extractText(node);
+      expect(text).toBe('');
     });
   });
 

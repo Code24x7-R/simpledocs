@@ -13,11 +13,10 @@ declare module '@tiptap/core' {
 }
 
 /**
- * PageBreak node — visual indicator of a page boundary.
+ * PageBreak node — visual page break indicator.
  *
- * In the true paginated model, pages are implicit (fixed-height containers).
- * This node is now purely visual — it renders as a horizontal divider but
- * does NOT affect pagination. Content flows automatically based on overflow.
+ * In the single-editor model, this is purely visual. It renders as a
+ * horizontal divider with CSS `break-after: page` for print/PDF.
  */
 export const PageBreak = Node.create({
   name: 'pageBreak',

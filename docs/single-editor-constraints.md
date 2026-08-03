@@ -1,87 +1,119 @@
-# Single-Editor Constraints — Audit & Fixes
+# Single-Editor Architecture — Technical Reference
 
-## Summary
+## Overview
 
-The old architecture had a single `DocumentEditor` with one Tiptap instance. The store's `editor` referenced this single instance. With the new multi-page architecture, each page has its own editor instance. This audit identifies all places that assumed a single editor and documents the fix status.
-
----
-
-## Constraint Inventory
-
-### 1. Search & Replace (`SearchReplaceModal.tsx`)
-**Status:** ✅ FIXED
-
-**Problem:** Used `editor` from store (single instance). Only searched/replaced on the currently focused page.
-
-**Fix:**
-- `handleFind()` — Builds combined text from all pages via `buildCombinedText()`, finds matches across all pages, navigates to the correct page on match
-- `handleFindNext()` / `handleFindPrev()` — Uses `findPageForIndex()` to determine which page contains the match, focuses that page's editor
-- `handleReplace()` — Iterates over `docState.pages`, applies `replaceAllPreservingStyles()` to each page's JSON, updates all pages via `loadDocument()`
-- `scrollMatchIntoView()` — Updated to accept a page editor parameter
-
-**New helpers:**
-- `getEditorForPage(pageIndex)` — Queries DOM for page editor instance
-- `buildCombinedText()` — Returns `{ pageIndex, offset, text }[]` for all pages
-- `findPageForIndex(globalIndex, pages)` — Maps global text index to `{ pageIndex, localIndex }`
+SimpleDocs uses a **single Tiptap editor instance** for the entire document. Pages are visual guides computed from content height, not separate content containers. This is the "Google Docs method" — one continuous document with CSS-driven page visualization.
 
 ---
 
-### 2. Toolbar (`Toolbar/Toolbar.tsx`)
-**Status:** ✅ NO CHANGE NEEDED
+## Core Principles
 
-**Analysis:** Uses `editor` from store for `isActive()` checks and formatting actions. The store's `editor` is updated via `setEditor()` when a page's `onFocus` fires. The Toolbar re-renders when `editor` changes (Zustand subscription).
-
-**Behavior:** Toolbar operates on the currently focused page. This is correct — formatting should apply to the page the user is editing.
-
----
-
-### 3. Navbar — Copy/Cut/Paste/Undo/Redo (`Navbar.tsx`)
-**Status:** ✅ NO CHANGE NEEDED
-
-**Analysis:** Uses `editor` from store. Same as Toolbar — operates on the currently focused page.
-
-**Additional fix:** Added null-safety with `editor?.can()?.undo()` and `editor?.can()?.redo()` to prevent crashes when `editor` is null (e.g., after loading a new document before clicking into a page).
+1. **One editor instance** — `useEditor()` is called once in `DocumentEditor.tsx`
+2. **Single content tree** — `DocState.content: Record<string, unknown>` holds the full Tiptap JSON
+3. **Pages are visual** — Page backgrounds rendered at fixed intervals; page count = `ceil(contentHeight / pageHeight)`
+4. **No content redistribution** — Content flows naturally; CSS `break-after: page` handles print/PDF breaks
+5. **Migration on load** — Old `pages[]` format auto-migrates via `migrateToContent()`
 
 ---
 
-### 4. Insert Field Modal (`InsertFieldModal.tsx`)
-**Status:** ✅ NO CHANGE NEEDED
+## Data Flow
 
-**Analysis:** Uses `editor` from store. Inserts template field into the currently focused page. Correct behavior.
-
----
-
-### 5. Page Navigation — Cursor Position (`PageNavigation.tsx`)
-**Status:** ✅ NO CHANGE NEEDED
-
-**Analysis:** Subscribes to `editor.on('selectionUpdate')` from the store's editor. Tracks cursor position for the currently focused page. Correct behavior.
+```
+User types → Tiptap transaction → editor.on('update') → Zustand store → localStorage (debounced)
+                                                                        → PaginationContext (recomputes page count)
+                                                                        → PaginatedViewport (re-renders page backgrounds)
+```
 
 ---
 
-### 6. PgUp/PgDn (`PaginatedViewport.tsx`)
-**Status:** ✅ FIXED (previously)
+## Component Responsibilities
 
-**Analysis:** Added keydown listener in capture phase that intercepts PgUp/PgDn. Uses `getEditorForPage()` to find page editors via DOM queries, not the store's single `editor`.
+### `DocumentEditor.tsx`
+- Creates the single Tiptap `useEditor()` instance
+- Configures all extensions (StarterKit, Table, FontSize, Color, Highlight, PageBreak, TemplateField)
+- Exposes editor to store via `setEditor()`
+- Handles `Ctrl+Enter` for page break insertion
+
+### `PaginatedViewport.tsx`
+- Renders the editor inside a scrollable container
+- Computes page count from `contentHeight / pageHeight`
+- Renders visual page backgrounds at fixed `pageHeightPx + pageGapPx` intervals
+- Handles scroll-to-page for navigation
+
+### `PaginationContext.tsx`
+- Computes page geometry from `docState.settings` (page format, orientation, margins, header/footer heights)
+- Provides `pageHeightPx`, `pageWidthPx`, `marginTopPx`, etc. to child components
+- No longer needs a layout engine — geometry is straightforward math
+
+### `PageNavigation.tsx`
+- Tracks cursor position within the single editor
+- Computes current page from cursor Y position relative to page height
+- Handles prev/next page navigation via scroll
+
+### `SearchReplaceModal.tsx`
+- Operates on the single content tree
+- Uses `editor.commands.findAll()` or similar for search
+- No cross-page logic needed
+
+### `FieldMergeModal.tsx`
+- Calls `mergeFields(docState.content, docState, pageIndex, customValues)`
+- Updates content via `updateContent()` — no per-page updates needed
 
 ---
 
-### 7. Cross-Page Navigation (`MultiPageEditor.tsx`)
-**Status:** ✅ FIXED (previously)
+## Migration from Multi-Page Format
 
-**Analysis:** All navigation handlers (`handleFocusNextPage`, `handleFocusPrevPage`, `handleMergeWithPrevPage`, overflow handler) use DOM queries to find page editors, not the store's `editor`.
+The `migrateToContent()` function in `useDocStore.ts` handles old documents:
+
+```typescript
+function migrateToContent(parsed: Record<string, unknown>): DocState {
+  // Already in new format
+  if (parsed.content && !parsed.pages) {
+    return parsed as unknown as DocState;
+  }
+
+  // Old format: merge all page.content trees into single doc
+  if (parsed.pages && Array.isArray(parsed.pages)) {
+    const mergedContent = {
+      type: 'doc',
+      content: parsed.pages.flatMap(page => page.content?.content || []),
+    };
+    const { pages: _, ...rest } = parsed;
+    return { ...rest, content: mergedContent } as unknown as DocState;
+  }
+
+  // Fallback: empty document
+  return createNewDoc();
+}
+```
 
 ---
 
-## Architecture Pattern
+## What Was Removed
 
-The store's `editor` is now a "currently focused page" reference, updated via `setEditor()` in each PageEditor's `onFocus` callback. Components that need to operate on all pages use DOM queries (`document.querySelector('[data-page-editor="N"] .tiptap')`) to find specific page editors.
-
-**Key principle:** Single-page operations (formatting, insert, undo/redo) use the store's `editor`. Multi-page operations (search/replace, PgUp/PgDn) query the DOM for specific page editors.
+| Removed File | Reason |
+|--------------|--------|
+| `PageEditor.tsx` | No per-page editors needed |
+| `MultiPageEditor.tsx` | No multi-editor coordination needed |
+| `pageOverflow.ts` | No overflow detection needed |
+| `DocumentLayoutEngine.ts` | No AST-based pagination needed |
+| `types/page.ts` | No `Page` type needed |
 
 ---
 
-## Test Coverage
+## Testing Implications
 
-- `tests/e2e/keyboard-navigation.spec.ts` — Cross-page keyboard navigation
-- `tests/e2e/merge-focus.spec.ts` — Focus behavior after merge
-- `tests/e2e/SearchReplaceModal.test.ts` — TODO: Cross-page search/replace
+- **Single editor** — Tests use `editor` from store directly, no DOM queries for page editors
+- **No cross-page navigation** — Keyboard tests simplified to single-editor cursor movement
+- **Content assertions** — Check `docState.content` directly, no page indexing
+- **Migration tests** — Verify old format loads and merges correctly
+
+---
+
+## Benefits of Single-Editor Architecture
+
+1. **Simpler mental model** — One content tree, one editor
+2. **No sync bugs** — Eliminated 19+ bugfixes from multi-editor sync issues
+3. **Better performance** — One editor instance, no per-page re-renders
+4. **Native Tiptap behavior** — Cursor, selection, undo/redo work as designed
+5. **Cleaner print/PDF** — CSS page breaks work with browser's native rendering

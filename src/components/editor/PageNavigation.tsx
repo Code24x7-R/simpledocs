@@ -25,24 +25,21 @@ export default function PageNavigation() {
   const [isEditing, setIsEditing] = useState(false);
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
 
-  // Track cursor position from the active editor
+  // Track cursor position from the editor
   useEffect(() => {
     if (!editor) return;
 
     const updateCursorPos = () => {
       const { selection } = editor.state;
       const { from } = selection;
-      // Resolve the position to get the line/column
       const resolved = editor.state.doc.resolve(from);
-      // index(0) = block index in doc (0-based) = line - 1
-      // parentOffset = offset within the block = column - 1
       const line = resolved.index(0) + 1;
       const col = resolved.parentOffset + 1;
       setCursorPos({ line, col });
     };
 
     editor.on('selectionUpdate', updateCursorPos);
-    updateCursorPos(); // Initial value
+    updateCursorPos();
 
     return () => {
       editor.off('selectionUpdate', updateCursorPos);
@@ -60,7 +57,6 @@ export default function PageNavigation() {
     if (trimmed && !isNaN(page) && page >= 1) {
       goToPage(page);
     } else {
-      // Reset to current page on invalid input
       setPageInput(String(currentPage));
     }
     setIsEditing(false);
@@ -96,7 +92,6 @@ export default function PageNavigation() {
             pattern="[0-9]*"
             value={pageInput}
             onChange={(e) => {
-              // Only allow numeric input
               const val = e.target.value.replace(/[^0-9]/g, '');
               setPageInput(val);
             }}

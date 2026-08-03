@@ -23,14 +23,14 @@
   min-height: 100%;
 }
 
-/* Search match highlight - yellow background */
+/* Text selection - light blue background */
 .tiptap ::selection {
-  background-color: #fef08a;
+  background-color: #bfdbfe;
   color: inherit;
 }
 
 .tiptap ::-moz-selection {
-  background-color: #fef08a;
+  background-color: #bfdbfe;
   color: inherit;
 }
 

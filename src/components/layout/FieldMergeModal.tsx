@@ -19,13 +19,13 @@ interface FieldMergeModalProps {
  * - Merge all fields into plain text
  */
 export default function FieldMergeModal({ isOpen, onClose }: FieldMergeModalProps) {
-  const { docState, loadDocument } = useDocStore();
+  const { docState, updateContent } = useDocStore();
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [merged, setMerged] = useState(false);
   const [mergeResult, setMergeResult] = useState<{ count: number; fields: Record<string, number> } | null>(null);
 
   // Extract all unique field names from the document
-  const fieldNames = useMemo(() => extractFieldNames(docState.pages), [docState.pages]);
+  const fieldNames = useMemo(() => extractFieldNames(docState.content), [docState.content]);
 
   // Separate standard and custom fields
   const standardFields = fieldNames.filter((name) => {
@@ -41,12 +41,8 @@ export default function FieldMergeModal({ isOpen, onClose }: FieldMergeModalProp
   };
 
   const handleMerge = () => {
-    const result = mergeFields(docState.pages, docState, customValues);
-    loadDocument({
-      ...docState,
-      pages: result.pages,
-      updatedAt: new Date().toISOString(),
-    });
+    const result = mergeFields(docState.content, docState, 0, customValues);
+    updateContent(result.content);
     setMerged(true);
     setMergeResult({ count: result.replacedCount, fields: result.fieldsReplaced });
   };

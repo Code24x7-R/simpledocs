@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 /**
- * PaginationContext — shares per-page geometry data with rendering components.
+ * PaginationContext — shares page geometry data with rendering components.
  *
- * In the true paginated model, each page is a self-contained fixed-height
- * container. The context computes geometry directly from document settings
- * (no layout engine needed for rendering).
- *
- * Geometry:
- *   usableHeightPx = pageHeightPx - marginTop - marginBottom - headerHeight - footerHeight
- *   lineHeightPx   = fixed grid line height (derived from usableHeight / linesPerPage)
+ * In the single-editor model, pages are visual guides. Geometry is computed
+ * directly from document settings. Page count is derived from content height.
  */
 
 import { createContext, useContext, useMemo } from 'react';
@@ -18,8 +13,6 @@ import { buildPageGeometry } from '../../utils/pagination';
 import { mmToPx } from '../../utils/unitConversion';
 
 export interface PaginationContextValue {
-  /** Total number of pages (derived from pages array length) */
-  totalPages: number;
   /** Fixed line height in px */
   lineHeightPx: number;
   /** Lines per page (fixed grid) */
@@ -44,7 +37,7 @@ export interface PaginationContextValue {
   contentWidthPx: number;
   /** Page width in px */
   pageWidthPx: number;
-  /** Page gap in px (vertical space between pages) */
+  /** Page gap in px (vertical space between page visuals) */
   pageGapPx: number;
 }
 
@@ -72,13 +65,12 @@ export function PaginationProvider({ children }: { children: React.ReactNode }) 
       pageHeightPx - marginTopPx - marginBottomPx - headerHeightPx - footerHeightPx;
     const lineHeightPx = usableHeightPx / linesPerPage;
 
-    // Page gap = 10 lines of spacing
-    const pageGapPx = lineHeightPx * 10;
+    // Page gap = 24px (visual spacing between page cards)
+    const pageGapPx = docState.settings.pageGap || 24;
 
     const contentWidthPx = pageWidthPx - marginLeftPx - marginRightPx;
 
     return {
-      totalPages: docState.pages.length,
       lineHeightPx,
       linesPerPage,
       usableHeightPx,
@@ -93,7 +85,7 @@ export function PaginationProvider({ children }: { children: React.ReactNode }) 
       pageWidthPx,
       pageGapPx,
     };
-  }, [docState.settings, docState.pages.length]);
+  }, [docState.settings]);
 
   return <PaginationContext.Provider value={value}>{children}</PaginationContext.Provider>;
 }

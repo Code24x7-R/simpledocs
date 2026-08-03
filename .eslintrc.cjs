@@ -1,6 +1,6 @@
-import { defineConfig } from 'eslint-define-config';
-
-export default defineConfig({
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
+module.exports = {
   root: true,
   env: { browser: true, es2020: true },
   extends: [
@@ -18,4 +18,4 @@ export default defineConfig({
     ],
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
   },
-});
+};

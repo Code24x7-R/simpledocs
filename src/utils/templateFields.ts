@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import type { Page } from '../types/page';
 import type { DocState } from '../store/useDocStore';
 
 /**
@@ -82,7 +81,7 @@ export function resolveField(
       return pageIndex !== undefined ? String(pageIndex + 1) : '?';
 
     case 'total_pages':
-      return String(docState.pages.length);
+      return String(docState.totalPages);
 
     case 'custom':
     default:
@@ -117,39 +116,30 @@ export function resolveText(
 
 /** Result of a merge operation */
 export interface MergeResult {
-  pages: Page[];
+  content: Record<string, unknown>;
   replacedCount: number;
   fieldsReplaced: Record<string, number>;
 }
 
 /**
  * Merge all template fields in a document, replacing them with resolved values.
- * Returns a new pages array with fields replaced by their values.
+ * Returns new content with fields replaced by their values.
  */
 export function mergeFields(
-  pages: Page[],
+  content: Record<string, unknown>,
   docState: DocState,
+  pageIndex: number = 0,
   customValues?: Record<string, string>
 ): MergeResult {
   const fieldsReplaced: Record<string, number> = {};
 
-  const mergedPages = pages.map((page, pageIndex) => {
-    const content = page.content as any;
-    if (!content || !content.content) return page;
-
-    const mergedContent = mergeNodeContent(content, docState, pageIndex, customValues, fieldsReplaced);
-
-    return {
-      ...page,
-      content: mergedContent,
-    };
-  });
+  const mergedContent = mergeNodeContent(content, docState, pageIndex, customValues, fieldsReplaced);
 
   // Sum up all replaced fields
   const totalReplaced = Object.values(fieldsReplaced).reduce((sum, count) => sum + count, 0);
 
   return {
-    pages: mergedPages,
+    content: mergedContent,
     replacedCount: totalReplaced,
     fieldsReplaced,
   };
@@ -157,17 +147,17 @@ export function mergeFields(
 
 /** Recursively merge fields in a content node */
 function mergeNodeContent(
-  node: any,
+  node: Record<string, unknown>,
   docState: DocState,
   pageIndex: number,
   customValues: Record<string, string> | undefined,
   fieldsReplaced: Record<string, number>
-): any {
+): Record<string, unknown> {
   if (!node) return node;
 
   // If node is a templateField inline node, replace with resolved text
-  if (node.type === 'templateField' && node.attrs?.fieldName) {
-    const fieldName = node.attrs.fieldName;
+  if (node.type === 'templateField' && (node.attrs as Record<string, unknown>)?.fieldName) {
+    const fieldName = (node.attrs as Record<string, unknown>).fieldName as string;
     const resolved = resolveField(fieldName, docState, pageIndex, customValues);
     fieldsReplaced[fieldName] = (fieldsReplaced[fieldName] || 0) + 1;
     return { type: 'text', text: resolved };
@@ -176,9 +166,9 @@ function mergeNodeContent(
   // If node is a text node, also resolve any {{field_name}} patterns in the text
   if (node.type === 'text' && node.text) {
     const fieldPattern = /\{\{(\w+)\}\}/;
-    if (fieldPattern.test(node.text)) {
-      const resolved = resolveText(node.text, docState, pageIndex, customValues);
-      const matches = node.text.match(/\{\{(\w+)\}\}/g);
+    if (fieldPattern.test(node.text as string)) {
+      const resolved = resolveText(node.text as string, docState, pageIndex, customValues);
+      const matches = (node.text as string).match(/\{\{(\w+)\}\}/g);
       if (matches) {
         for (const match of matches) {
           const fieldName = match.slice(2, -2);
@@ -193,7 +183,7 @@ function mergeNodeContent(
   if (node.content && Array.isArray(node.content)) {
     return {
       ...node,
-      content: node.content.map((child: any) =>
+      content: node.content.map((child: Record<string, unknown>) =>
         mergeNodeContent(child, docState, pageIndex, customValues, fieldsReplaced)
       ),
     };
@@ -202,29 +192,25 @@ function mergeNodeContent(
   return node;
 }
 
-/** Extract all unique field names from a document */
-export function extractFieldNames(pages: Page[]): string[] {
+/** Extract all unique field names from document content */
+export function extractFieldNames(content: Record<string, unknown>): string[] {
   const fieldNames = new Set<string>();
-
-  for (const page of pages) {
-    extractFieldNamesFromNode(page.content, fieldNames);
-  }
-
+  extractFieldNamesFromNode(content, fieldNames);
   return Array.from(fieldNames).sort();
 }
 
 /** Recursively extract field names from a content node */
-function extractFieldNamesFromNode(node: any, fieldNames: Set<string>): void {
+function extractFieldNamesFromNode(node: Record<string, unknown>, fieldNames: Set<string>): void {
   if (!node) return;
 
   // Check for templateField inline nodes
-  if (node.type === 'templateField' && node.attrs?.fieldName) {
-    fieldNames.add(node.attrs.fieldName);
+  if (node.type === 'templateField' && (node.attrs as Record<string, unknown>)?.fieldName) {
+    fieldNames.add((node.attrs as Record<string, unknown>).fieldName as string);
   }
 
   // Check text nodes for field patterns
   if (node.type === 'text' && node.text) {
-    const matches = node.text.match(/\{\{(\w+)\}\}/g);
+    const matches = (node.text as string).match(/\{\{(\w+)\}\}/g);
     if (matches) {
       for (const match of matches) {
         const fieldName = match.slice(2, -2); // Remove {{ and }}
@@ -236,7 +222,7 @@ function extractFieldNamesFromNode(node: any, fieldNames: Set<string>): void {
   // Recursively process children
   if (node.content && Array.isArray(node.content)) {
     for (const child of node.content) {
-      extractFieldNamesFromNode(child, fieldNames);
+      extractFieldNamesFromNode(child as Record<string, unknown>, fieldNames);
     }
   }
 }

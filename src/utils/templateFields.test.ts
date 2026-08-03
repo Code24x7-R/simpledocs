@@ -17,6 +17,7 @@ const createMockDocState = (overrides?: Partial<DocState>): DocState => ({
   title: 'Test Document',
   createdAt: '2026-08-04T00:00:00Z',
   updatedAt: '2026-08-04T00:00:00Z',
+  totalPages: 3,
   settings: {
     pageFormat: 'A4',
     orientation: 'portrait',
@@ -26,7 +27,10 @@ const createMockDocState = (overrides?: Partial<DocState>): DocState => ({
     pageGap: 24,
     showPageBackgrounds: true,
   },
-  pages: [],
+  content: {
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [] }],
+  },
   ...overrides,
 });
 
@@ -80,13 +84,7 @@ describe('templateFields', () => {
   });
 
   describe('resolveField', () => {
-    const docState = createMockDocState({
-      pages: [
-        { id: 'p1', content: { type: 'doc', content: [] } },
-        { id: 'p2', content: { type: 'doc', content: [] } },
-        { id: 'p3', content: { type: 'doc', content: [] } },
-      ],
-    });
+    const docState = createMockDocState({ totalPages: 3 });
 
     it('resolves current_date to a date string', () => {
       const result = resolveField('current_date', docState);
@@ -168,122 +166,90 @@ describe('templateFields', () => {
   });
 
   describe('mergeFields', () => {
-    it('merges templateField nodes across all pages', () => {
+    it('merges templateField nodes in content', () => {
       const docState = createMockDocState({
         title: 'Test Doc',
-        pages: [
-          {
-            id: 'p1',
-            content: {
-              type: 'doc',
+        content: {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
               content: [
-                {
-                  type: 'paragraph',
-                  content: [
-                    { type: 'text', text: 'Title: ' },
-                    { type: 'templateField', attrs: { fieldName: 'document_title' } },
-                  ],
-                },
+                { type: 'text', text: 'Title: ' },
+                { type: 'templateField', attrs: { fieldName: 'document_title' } },
               ],
             },
-          },
-          {
-            id: 'p2',
-            content: {
-              type: 'doc',
+            {
+              type: 'paragraph',
               content: [
-                {
-                  type: 'paragraph',
-                  content: [
-                    { type: 'text', text: 'Page ' },
-                    { type: 'templateField', attrs: { fieldName: 'page_number' } },
-                    { type: 'text', text: ' of ' },
-                    { type: 'templateField', attrs: { fieldName: 'total_pages' } },
-                  ],
-                },
+                { type: 'text', text: 'Page ' },
+                { type: 'templateField', attrs: { fieldName: 'page_number' } },
+                { type: 'text', text: ' of ' },
+                { type: 'templateField', attrs: { fieldName: 'total_pages' } },
               ],
             },
-          },
-        ],
+          ],
+        },
       });
 
-      const result = mergeFields(docState.pages, docState);
+      const result = mergeFields(docState.content, docState);
 
       expect(result.replacedCount).toBe(3);
-      // Page 1: templateField replaced with text node
-      const page1Content = result.pages[0].content as any;
-      expect(page1Content.content[0].content[1]).toEqual({ type: 'text', text: 'Test Doc' });
-      // Page 2: two templateFields replaced
-      const page2Content = result.pages[1].content as any;
-      expect(page2Content.content[0].content[1]).toEqual({ type: 'text', text: '2' });
-      expect(page2Content.content[0].content[3]).toEqual({ type: 'text', text: '2' });
+      const content = result.content as Record<string, unknown>;
+      const contentArr = content.content as unknown[];
+      expect((contentArr[0] as Record<string, unknown>).content).toEqual(expect.arrayContaining([{ type: 'text', text: 'Test Doc' }]));
     });
 
     it('handles custom fields with values', () => {
       const docState = createMockDocState({
-        pages: [
-          {
-            id: 'p1',
-            content: {
-              type: 'doc',
+        content: {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
               content: [
-                {
-                  type: 'paragraph',
-                  content: [
-                    { type: 'text', text: 'Hello ' },
-                    { type: 'templateField', attrs: { fieldName: 'name' } },
-                  ],
-                },
+                { type: 'text', text: 'Hello ' },
+                { type: 'templateField', attrs: { fieldName: 'name' } },
               ],
             },
-          },
-        ],
+          ],
+        },
       });
 
-      const result = mergeFields(docState.pages, docState, { name: 'World' });
-      const pageContent = result.pages[0].content as any;
-      expect(pageContent.content[0].content[1]).toEqual({ type: 'text', text: 'World' });
+      const result = mergeFields(docState.content, docState, 0, { name: 'World' });
+      const content = result.content as Record<string, unknown>;
+      const contentArr = content.content as unknown[];
+      expect((contentArr[0] as Record<string, unknown>).content).toEqual(
+        expect.arrayContaining([{ type: 'text', text: 'World' }])
+      );
     });
   });
 
   describe('extractFieldNames', () => {
     it('extracts field names from templateField nodes', () => {
-      const pages = [
-        {
-          id: 'p1',
-          content: {
-            type: 'doc',
+      const content = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
             content: [
-              {
-                type: 'paragraph',
-                content: [
-                  { type: 'templateField', attrs: { fieldName: 'document_title' } },
-                  { type: 'text', text: ' ' },
-                  { type: 'templateField', attrs: { fieldName: 'current_date' } },
-                ],
-              },
+              { type: 'templateField', attrs: { fieldName: 'document_title' } },
+              { type: 'text', text: ' ' },
+              { type: 'templateField', attrs: { fieldName: 'current_date' } },
             ],
           },
-        },
-        {
-          id: 'p2',
-          content: {
-            type: 'doc',
+          {
+            type: 'paragraph',
             content: [
-              {
-                type: 'paragraph',
-                content: [
-                  { type: 'templateField', attrs: { fieldName: 'page_number' } },
-                  { type: 'text', text: ' of ' },
-                  { type: 'templateField', attrs: { fieldName: 'total_pages' } },
-                ],
-              },
+              { type: 'templateField', attrs: { fieldName: 'page_number' } },
+              { type: 'text', text: ' of ' },
+              { type: 'templateField', attrs: { fieldName: 'total_pages' } },
             ],
           },
-        },
-      ];
+        ],
+      };
 
-      const fields = extractFieldNames(pages);
+      const fields = extractFieldNames(content);
       expect(fields).toContain('document_title');
       expect(fields).toContain('current_date');
       expect(fields).toContain('page_number');
@@ -291,45 +257,35 @@ describe('templateFields', () => {
     });
 
     it('returns empty array for documents without fields', () => {
-      const pages = [
-        {
-          id: 'p1',
-          content: {
-            type: 'doc',
-            content: [
-              {
-                type: 'paragraph',
-                content: [{ type: 'text', text: 'Plain text' }],
-              },
-            ],
+      const content = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Plain text' }],
           },
-        },
-      ];
+        ],
+      };
 
-      expect(extractFieldNames(pages)).toEqual([]);
+      expect(extractFieldNames(content)).toEqual([]);
     });
 
     it('deduplicates field names', () => {
-      const pages = [
-        {
-          id: 'p1',
-          content: {
-            type: 'doc',
+      const content = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
             content: [
-              {
-                type: 'paragraph',
-                content: [
-                  { type: 'templateField', attrs: { fieldName: 'name' } },
-                  { type: 'text', text: ' and ' },
-                  { type: 'templateField', attrs: { fieldName: 'name' } },
-                ],
-              },
+              { type: 'templateField', attrs: { fieldName: 'name' } },
+              { type: 'text', text: ' and ' },
+              { type: 'templateField', attrs: { fieldName: 'name' } },
             ],
           },
-        },
-      ];
+        ],
+      };
 
-      expect(extractFieldNames(pages)).toEqual(['name']);
+      expect(extractFieldNames(content)).toEqual(['name']);
     });
   });
 });

@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDocStore } from '../../store/useDocStore';
-import MultiPageEditor from './MultiPageEditor';
+import DocumentEditor from './DocumentEditor';
 import {
   PaginationProvider,
   usePaginationContext,
 } from './PaginationContext';
 
 /**
- * Paginated Viewport — Vertical Page Stack
+ * Paginated Viewport — Google Docs style.
  *
  * Architecture:
- * - Each page is a self-contained fixed-height container
- * - One Tiptap editor per page
- * - Natural vertical flow — no overlay alignment needed
- * - Page backgrounds are the page containers themselves
- * - Navigation scrolls to page containers
+ * - Single Tiptap editor renders all content in natural flow
+ * - Page backgrounds are visual guides rendered behind the editor
+ * - Page boundaries computed from content height / page height
+ * - No content splitting, no overflow detection, no redistribution
  */
 function PaginatedViewportInner() {
   const {
@@ -24,39 +23,71 @@ function PaginatedViewportInner() {
     currentPage,
     setCurrentPage,
     setTotalPages,
+    docState,
   } = useDocStore();
-  const { totalPages, pageHeightPx, pageGapPx } = usePaginationContext();
+  const {
+    pageHeightPx,
+    pageGapPx,
+    marginTopPx,
+    marginLeftPx,
+    marginRightPx,
+    headerHeightPx,
+    footerHeightPx,
+    pageWidthPx,
+  } = usePaginationContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const isNavigatingRef = useRef(false);
+  const [pageCount, setPageCount] = useState(1);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  // Compute page count from content height
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const height = el.scrollHeight;
+      setContentHeight(height);
+      const stride = pageHeightPx + pageGapPx;
+      const count = Math.max(1, Math.ceil(height / stride));
+      setPageCount(count);
+    };
+
+    measure();
+
+    // Observe content size changes
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pageHeightPx, pageGapPx, docState.content]);
 
   // Sync total pages to store
   useEffect(() => {
-    if (totalPages > 0) {
-      setTotalPages(totalPages);
-    }
-  }, [totalPages, setTotalPages]);
+    setTotalPages(pageCount);
+  }, [pageCount, setTotalPages]);
 
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
     if (!containerRef.current || isNavigatingRef.current) return;
 
     const scrollTop = containerRef.current.scrollTop;
-    const pageStride = pageHeightPx + pageGapPx;
-    const pageIndex = Math.floor(scrollTop / pageStride) + 1;
-    const clampedPage = Math.max(1, Math.min(pageIndex, totalPages));
+    const stride = pageHeightPx + pageGapPx;
+    const pageIndex = Math.floor(scrollTop / stride) + 1;
+    const clampedPage = Math.max(1, Math.min(pageIndex, pageCount));
 
     if (clampedPage !== currentPage) {
       setCurrentPage(clampedPage);
     }
-  }, [currentPage, pageHeightPx, pageGapPx, totalPages, setCurrentPage]);
+  }, [currentPage, pageHeightPx, pageGapPx, pageCount, setCurrentPage]);
 
   // Scroll to current page when it changes via navigation controls
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const pageStride = pageHeightPx + pageGapPx;
-    const targetScroll = (currentPage - 1) * pageStride;
+    const stride = pageHeightPx + pageGapPx;
+    const targetScroll = (currentPage - 1) * stride;
     const currentScroll = containerRef.current.scrollTop;
 
     if (Math.abs(currentScroll - targetScroll) > 5) {
@@ -66,15 +97,14 @@ function PaginatedViewportInner() {
         behavior: 'smooth',
       });
 
-      let scrollTimeout: ReturnType<typeof setTimeout>;
       const onScrollEnd = () => {
         isNavigatingRef.current = false;
-        if (scrollTimeout) clearTimeout(scrollTimeout);
+        clearTimeout(scrollTimeout);
         containerRef.current?.removeEventListener('scrollend', onScrollEnd);
       };
 
+      const scrollTimeout: ReturnType<typeof setTimeout> = setTimeout(onScrollEnd, 1500);
       containerRef.current.addEventListener('scrollend', onScrollEnd, { once: true });
-      scrollTimeout = setTimeout(onScrollEnd, 1500);
     }
   }, [currentPage, pageHeightPx, pageGapPx]);
 
@@ -85,58 +115,11 @@ function PaginatedViewportInner() {
     []
   );
 
-  // Handle PgUp/PgDn to move caret between pages
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'PageDown' && e.key !== 'PageUp') return;
-
-      const focused = document.activeElement;
-      if (!focused?.classList.contains('tiptap')) return;
-
-      // Find current page index
-      const wrapper = focused.closest('[data-page-editor]');
-      const currentIdx = wrapper
-        ? parseInt(wrapper.getAttribute('data-page-editor') || '0', 10)
-        : 0;
-
-      let targetIdx: number;
-      if (e.key === 'PageDown') {
-        targetIdx = currentIdx + 1;
-      } else {
-        targetIdx = currentIdx - 1;
-      }
-
-      // Bounds check
-      if (targetIdx < 0 || targetIdx >= totalPages) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Focus target page
-      setTimeout(() => {
-        const targetEditor = document.querySelector<HTMLElement>(
-          `[data-page-editor="${targetIdx}"] .tiptap`
-        );
-        if (targetEditor) {
-          const editor = (targetEditor as any)?.editor;
-          if (editor) {
-            editor.commands.focus();
-            if (e.key === 'PageDown') {
-              editor.commands.setTextSelection(1); // Start of page
-            } else {
-              editor.commands.selectTextblockEnd(); // End of page
-            }
-          }
-        }
-      }, 10);
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('keydown', handleKeyDown, true); // Capture phase
-      return () => container.removeEventListener('keydown', handleKeyDown, true);
-    }
-  }, [totalPages]);
+  // Generate page background elements
+  const pages = Array.from({ length: pageCount }, (_, i) => {
+    const top = i * (pageHeightPx + pageGapPx);
+    return { index: i, top };
+  });
 
   return (
     <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
@@ -152,7 +135,92 @@ function PaginatedViewportInner() {
             transformOrigin: 'top center',
           }}
         >
-          <MultiPageEditor />
+          {/* Page backgrounds (visual guides) */}
+          {docState.settings.showPageBackgrounds && (
+            <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ height: contentHeight }}>
+              {pages.map((page) => (
+                <div
+                  key={page.index}
+                  className="page-background absolute left-1/2 -translate-x-1/2"
+                  data-testid="page-canvas"
+                  style={{
+                    top: page.top,
+                    width: pageWidthPx,
+                    height: pageHeightPx,
+                    background: 'white',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    borderRadius: '2px',
+                  }}
+                >
+                  {/* Header area */}
+                  {docState.settings.header.enabled && (
+                    <div
+                      className="page-header absolute"
+                      style={{
+                        top: marginTopPx,
+                        left: marginLeftPx,
+                        right: marginRightPx,
+                        height: headerHeightPx,
+                        borderBottom: '1px solid #e5e7eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '8px',
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {docState.settings.header.content || docState.title}
+                    </div>
+                  )}
+
+                  {/* Footer area */}
+                  {docState.settings.footer.enabled && (
+                    <div
+                      className="page-footer absolute"
+                      style={{
+                        bottom: 0,
+                        left: marginLeftPx,
+                        right: marginRightPx,
+                        height: footerHeightPx,
+                        borderTop: '1px solid #e5e7eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: docState.settings.footer.showPageNumbers
+                          ? 'flex-end'
+                          : 'center',
+                        paddingRight: '8px',
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {docState.settings.footer.showPageNumbers && (
+                        <span>{page.index + 1}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Editor content (renders on top of backgrounds) */}
+          <div
+            ref={contentRef}
+            className="document-content relative"
+            style={{
+              maxWidth: pageWidthPx,
+              margin: '0 auto',
+              paddingTop: marginTopPx + headerHeightPx,
+              paddingBottom: footerHeightPx,
+              paddingLeft: marginLeftPx,
+              paddingRight: marginRightPx,
+              minHeight: pageHeightPx,
+            }}
+          >
+            <DocumentEditor />
+          </div>
         </div>
       </div>
     </div>

@@ -13,21 +13,47 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'I'], description: 'Italic' },
     { keys: ['Ctrl', 'U'], description: 'Underline' },
     { keys: ['Ctrl', 'Shift', 'X'], description: 'Strikethrough' },
+    { keys: ['Ctrl', 'E'], description: 'Inline code' },
+    { keys: ['Ctrl', 'Shift', 'H'], description: 'Highlight' },
+  ]},
+  { category: 'Headings', items: [
+    { keys: ['Ctrl', 'Alt', '1'], description: 'Heading 1' },
+    { keys: ['Ctrl', 'Alt', '2'], description: 'Heading 2' },
+    { keys: ['Ctrl', 'Alt', '3'], description: 'Heading 3' },
+  ]},
+  { category: 'Paragraph Styles', items: [
+    { keys: ['Ctrl', 'Shift', 'B'], description: 'Blockquote' },
+    { keys: ['Ctrl', 'Alt', 'C'], description: 'Code block' },
+    { keys: ['Ctrl', 'Shift', '8'], description: 'Bullet list' },
+    { keys: ['Ctrl', 'Shift', '7'], description: 'Numbered list' },
+    { keys: ['Ctrl', 'Shift', '9'], description: 'Task list' },
+    { keys: ['Ctrl', 'Shift', 'L'], description: 'Align left' },
+    { keys: ['Ctrl', 'Shift', 'E'], description: 'Align center' },
+    { keys: ['Ctrl', 'Shift', 'R'], description: 'Align right' },
+    { keys: ['Ctrl', 'Shift', 'J'], description: 'Justify' },
   ]},
   { category: 'Editing', items: [
     { keys: ['Ctrl', 'Z'], description: 'Undo' },
     { keys: ['Ctrl', 'Y'], description: 'Redo' },
     { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo (alternate)' },
-  ]},
-  { category: 'Selection', items: [
     { keys: ['Ctrl', 'A'], description: 'Select all' },
     { keys: ['Ctrl', 'C'], description: 'Copy' },
     { keys: ['Ctrl', 'V'], description: 'Paste' },
     { keys: ['Ctrl', 'X'], description: 'Cut' },
+    { keys: ['Enter'], description: 'New line / split block' },
+    { keys: ['Shift', 'Enter'], description: 'Line break (soft return)' },
+    { keys: ['Backspace'], description: 'Delete / merge with previous page' },
+    { keys: ['Delete'], description: 'Delete forward' },
+  ]},
+  { category: 'Page Navigation', items: [
+    { keys: ['Arrow Down'], description: 'Next line (or next page at end)' },
+    { keys: ['Arrow Up'], description: 'Previous line (or prev page at start)' },
+    { keys: ['PageDown'], description: 'Jump to next page' },
+    { keys: ['PageUp'], description: 'Jump to previous page' },
+    { keys: ['Ctrl', 'Enter'], description: 'Insert page break' },
   ]},
   { category: 'Document', items: [
-    { keys: ['Ctrl', 'Enter'], description: 'Insert page break' },
-    { keys: ['Ctrl', 'S'], description: 'Save (browser)' },
+    { keys: ['Ctrl', 'S'], description: 'Save (browser default)' },
     { keys: ['Ctrl', 'P'], description: 'Print' },
   ]},
 ];
@@ -37,7 +63,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[80vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-[520px] max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold">Keyboard Shortcuts</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
@@ -56,7 +82,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
                     <div className="flex items-center gap-1">
                       {shortcut.keys.map((key, idx) => (
                         <span key={idx} className="flex items-center gap-1">
-                          <kbd className="px-2 py-0.5 text-xs font-mono bg-gray-100 border border-gray-300 rounded shadow-sm">
+                          <kbd className="px-2 py-0.5 text-xs font-mono bg-gray-100 border border-gray-300 rounded shadow-sm min-w-[1.5rem] text-center">
                             {key}
                           </kbd>
                           {idx < shortcut.keys.length - 1 && (

@@ -10,6 +10,7 @@ describe('fileIO', () => {
     title: 'Test Document',
     createdAt: '2026-08-02T00:00:00Z',
     updatedAt: '2026-08-02T00:00:00Z',
+    totalPages: 1,
     settings: {
       pageFormat: 'A4',
       orientation: 'portrait',
@@ -19,15 +20,10 @@ describe('fileIO', () => {
     pageGap: 24,
     showPageBackgrounds: true,
     },
-    pages: [
-      {
-        id: 'page-1',
-        content: {
-          type: 'doc',
-          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }],
-        },
-      },
-    ],
+    content: {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }],
+    },
   };
 
   describe('saveDocument', () => {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { X, Search, Replace, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { findAllOccurrences, replaceAllPreservingStyles, SearchOptions } from '../../utils/search';
@@ -13,11 +13,10 @@ interface SearchReplaceModalProps {
 /**
  * Search & Replace Panel
  *
- * Positioned at top-right so it doesn't obscure document content.
- * Non-modal - user can interact with document while searching.
+ * Single-editor model: operates on the entire document content tree.
  */
 export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceModalProps) {
-  const { editor, docState, loadDocument, setSearchReplaceOpen } = useDocStore();
+  const { editor, docState, updateContent, setSearchReplaceOpen } = useDocStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [replaceTerm, setReplaceTerm] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -26,169 +25,115 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(-1);
   const [replaceResult, setReplaceResult] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
-  const matchesRef = useRef<{ index: number; text: string; end: number }[]>([]);
 
   const getSearchOptions = useCallback((): SearchOptions => {
     return { caseSensitive, wholeWord };
   }, [caseSensitive, wholeWord]);
 
-  const scrollMatchIntoViewOnPage = (pageEditor: any, from: number, to: number) => {
-    if (!pageEditor) return;
+  const scrollMatchIntoView = (from: number, to: number) => {
+    if (!editor) return;
 
-    // Use double requestAnimationFrame to ensure selection is rendered
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        // Get coordinates of the selection
-        const startCoords = pageEditor.view.coordsAtPos(from);
-        const endCoords = pageEditor.view.coordsAtPos(to);
+        const startCoords = editor.view.coordsAtPos(from);
+        const endCoords = editor.view.coordsAtPos(to);
 
         if (!startCoords || !endCoords) return;
 
-        // Find the scrollable container
         const scrollContainer = document.getElementById('paginated-viewport');
         if (!scrollContainer) return;
 
-        const scrollInner = scrollContainer.querySelector('.overflow-y-auto') as HTMLElement;
-        if (!scrollInner) return;
-
-        // Always scroll to center the match in the viewport
         const midY = (startCoords.top + endCoords.bottom) / 2;
-        const containerRect = scrollInner.getBoundingClientRect();
-        const targetScroll = scrollInner.scrollTop + (midY - containerRect.top - containerRect.height / 2);
-        scrollInner.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const targetScroll = scrollContainer.scrollTop + (midY - containerRect.top - containerRect.height / 2);
+        scrollContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
       });
     });
   };
 
-  // Get the editor instance for a specific page
-  const getEditorForPage = (pageIndex: number) => {
-    const el = document.querySelector<HTMLElement>(
-      `[data-page-editor="${pageIndex}"] .tiptap`
-    );
-    return el ? (el as any)?.editor : null;
-  };
-
-  // Build a combined text map: { pageIndex, offset, text }
-  const buildCombinedText = () => {
-    const pages: { pageIndex: number; offset: number; text: string }[] = [];
-    let offset = 0;
-    for (let i = 0; i < docState.pages.length; i++) {
-      const pageEditor = getEditorForPage(i);
-      const text = pageEditor ? pageEditor.getText() : '';
-      pages.push({ pageIndex: i, offset, text });
-      offset += text.length + 1; // +1 for page separator
-    }
-    return pages;
-  };
-
-  // Find which page a global index belongs to
-  const findPageForIndex = (globalIndex: number, pages: { pageIndex: number; offset: number; text: string }[]) => {
-    for (let i = pages.length - 1; i >= 0; i--) {
-      if (globalIndex >= pages[i].offset) {
-        return {
-          pageIndex: pages[i].pageIndex,
-          localIndex: globalIndex - pages[i].offset,
-        };
-      }
-    }
-    return { pageIndex: 0, localIndex: globalIndex };
-  };
-
   const handleFind = () => {
-    if (!searchTerm) {
+    if (!searchTerm || !editor) {
       setMatchCount(null);
-      matchesRef.current = [];
       setCurrentMatchIndex(-1);
       return;
     }
 
-    // Build combined text from all pages
-    const pageTexts = buildCombinedText();
-    const combinedText = pageTexts.map(p => p.text).join('\n');
-    const results = findAllOccurrences(combinedText, searchTerm, getSearchOptions());
-    matchesRef.current = results;
+    const text = editor.getText();
+    const results = findAllOccurrences(text, searchTerm, getSearchOptions());
     setMatchCount(results.length);
 
     if (results.length > 0) {
-      // Move to next match (or first match if at end)
       const nextIndex = currentMatchIndex >= results.length - 1 ? 0 : currentMatchIndex + 1;
       setCurrentMatchIndex(nextIndex);
 
-      // Navigate to the page containing this match
       const match = results[nextIndex];
-      const { pageIndex, localIndex } = findPageForIndex(match.index, pageTexts);
-      const pageEditor = getEditorForPage(pageIndex);
-      if (pageEditor) {
-        pageEditor.commands.focus();
-        const from = localIndex + 1;
-        const to = localIndex + match.text.length + 1;
-        pageEditor.commands.setTextSelection({ from, to });
-        scrollMatchIntoViewOnPage(pageEditor, from, to);
-      }
+      const from = match.index + 1;
+      const to = match.index + match.text.length + 1;
+      editor.commands.setTextSelection({ from, to });
+      editor.commands.focus();
+      scrollMatchIntoView(from, to);
     }
 
     setReplaceResult(null);
   };
 
   const handleFindNext = () => {
-    if (matchesRef.current.length === 0) {
+    if (!editor) return;
+
+    if (matchCount === null || matchCount === 0) {
       handleFind();
       return;
     }
 
-    const nextIndex = currentMatchIndex >= matchesRef.current.length - 1 ? 0 : currentMatchIndex + 1;
+    const text = editor.getText();
+    const results = findAllOccurrences(text, searchTerm, getSearchOptions());
+
+    if (results.length === 0) return;
+
+    const nextIndex = currentMatchIndex >= results.length - 1 ? 0 : currentMatchIndex + 1;
     setCurrentMatchIndex(nextIndex);
 
-    const match = matchesRef.current[nextIndex];
-    const pageTexts = buildCombinedText();
-    const { pageIndex, localIndex } = findPageForIndex(match.index, pageTexts);
-    const pageEditor = getEditorForPage(pageIndex);
-    if (pageEditor) {
-      pageEditor.commands.focus();
-      const from = localIndex + 1;
-      const to = localIndex + match.text.length + 1;
-      pageEditor.commands.setTextSelection({ from, to });
-      scrollMatchIntoViewOnPage(pageEditor, from, to);
-    }
+    const match = results[nextIndex];
+    const from = match.index + 1;
+    const to = match.index + match.text.length + 1;
+    editor.commands.setTextSelection({ from, to });
+    editor.commands.focus();
+    scrollMatchIntoView(from, to);
   };
 
   const handleFindPrev = () => {
-    if (matchesRef.current.length === 0) {
+    if (!editor) return;
+
+    if (matchCount === null || matchCount === 0) {
       handleFind();
       return;
     }
 
-    const prevIndex = currentMatchIndex <= 0 ? matchesRef.current.length - 1 : currentMatchIndex - 1;
+    const text = editor.getText();
+    const results = findAllOccurrences(text, searchTerm, getSearchOptions());
+
+    if (results.length === 0) return;
+
+    const prevIndex = currentMatchIndex <= 0 ? results.length - 1 : currentMatchIndex - 1;
     setCurrentMatchIndex(prevIndex);
 
-    const match = matchesRef.current[prevIndex];
-    const pageTexts = buildCombinedText();
-    const { pageIndex, localIndex } = findPageForIndex(match.index, pageTexts);
-    const pageEditor = getEditorForPage(pageIndex);
-    if (pageEditor) {
-      pageEditor.commands.focus();
-      const from = localIndex + 1;
-      const to = localIndex + match.text.length + 1;
-      pageEditor.commands.setTextSelection({ from, to });
-      scrollMatchIntoViewOnPage(pageEditor, from, to);
-    }
+    const match = results[prevIndex];
+    const from = match.index + 1;
+    const to = match.index + match.text.length + 1;
+    editor.commands.setTextSelection({ from, to });
+    editor.commands.focus();
+    scrollMatchIntoView(from, to);
   };
 
   const handleReplace = () => {
     if (!searchTerm) return;
-    // Replace across all pages
-    let totalReplaced = 0;
-    const updatedPages = docState.pages.map((page) => {
-      const result = replaceAllPreservingStyles(page.content, searchTerm, replaceTerm, getSearchOptions());
-      totalReplaced += result.count;
-      return { ...page, content: result.doc };
-    });
 
-    if (totalReplaced > 0) {
-      loadDocument({ ...docState, pages: updatedPages, updatedAt: new Date().toISOString() });
-      setReplaceResult(`Replaced ${totalReplaced} occurrence${totalReplaced > 1 ? 's' : ''}`);
+    const result = replaceAllPreservingStyles(docState.content, searchTerm, replaceTerm, getSearchOptions());
+
+    if (result.count > 0) {
+      updateContent(result.doc);
+      setReplaceResult(`Replaced ${result.count} occurrence${result.count > 1 ? 's' : ''}`);
       setMatchCount(0);
-      matchesRef.current = [];
       setCurrentMatchIndex(-1);
     } else {
       setReplaceResult('No matches found');
@@ -225,7 +170,6 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   });
 
   const handleClose = () => {
-    // Clear selection when closing
     if (editor) {
       editor.commands.setTextSelection({ from: editor.state.selection.to, to: editor.state.selection.to });
     }
