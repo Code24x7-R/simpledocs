@@ -12,11 +12,12 @@ import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import SearchReplaceModal from './components/layout/SearchReplaceModal';
 import FieldMergeModal from './components/layout/FieldMergeModal';
+import ChatPanel from './components/layout/ChatPanel';
 import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, chatOpen, setChatOpen } = useDocStore();
   const pageElementsRef = useRef<HTMLElement[]>([]);
 
   useEffect(() => {
@@ -42,7 +43,10 @@ export default function App() {
       <Navbar />
       <Toolbar />
       <PageNavigation />
-      <PaginatedViewport />
+      <div className="flex-1 flex min-h-0">
+        <PaginatedViewport />
+        <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+      </div>
       <PageSetupModal />
       <TableGridModal />
       <InsertFieldModal />

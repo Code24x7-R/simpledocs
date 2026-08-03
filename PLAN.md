@@ -25,6 +25,8 @@
 | 19 | Template Field Display, Merge & Common Use Cases | COMPLETE ✅ |
 | 20 | Font Size Extension (canonical spec) | COMPLETE ✅ |
 | 21 | Code Deduplication & Dead Code Cleanup | COMPLETE ✅ |
+| 22 | Chatbot Integration (LM Studio) | COMPLETE ✅ |
+| 23 | Markdown Export | COMPLETE ✅ |
 
 ---
 
@@ -348,6 +350,76 @@ Template fields are inline placeholders (`{{field_name}}`) that don't resolve to
 | `src/utils/pageOverflow.ts` | Imports `extractText` from `pagination.ts` |
 
 **Results:** 172 tests, type-check clean, build succeeds.
+
+---
+
+## Phase 22: Chatbot Integration (LM Studio) — COMPLETE ✅
+
+**2026-08-04** — Integrated an AI chatbot sidebar powered by LM Studio's OpenAI-compatible API.
+
+### Features
+| Feature | Description |
+|---------|-------------|
+| Model selector | Dropdown populated from `/v1/models` endpoint |
+| Connection status | Live healthcheck indicator (WiFi icon) |
+| Session memory | Full conversation history persisted to localStorage |
+| Context window | Up to 65535 tokens with automatic trimming |
+| Bi-directional text | Send editor selection ↔ insert AI response at cursor |
+| Prompt templates | 3 pre-populated + custom templates (persisted) |
+| MD ↔ HTML conversion | Markdown-to-HTML for editor insertion, HTML-to-Markdown for export |
+
+### Architecture
+| File | Purpose |
+|------|--------|
+| `src/types/chat.ts` | ChatMessage, ModelInfo, ChatConfig interfaces |
+| `src/utils/chatService.ts` | API client (`/v1/chat/completions`, `/v1/models`) |
+| `src/store/useChatStore.ts` | Zustand store with localStorage persistence |
+| `src/components/layout/ChatPanel.tsx` | Sidebar UI with settings, templates, bidirectional button |
+| `src/utils/markdownToHtml.ts` | MD→HTML converter (no external deps) |
+| `src/utils/htmlToMarkdown.ts` | HTML→Markdown converter (round-trip support) |
+| `src/types/promptTemplate.ts` | PromptTemplate interface |
+| `src/utils/promptTemplates.ts` | Template storage with 3 pre-populated templates |
+
+### Default Configuration
+| Setting | Value |
+|---------|-------|
+| Default model | `google/gemma-4-e2b` |
+| Base URL | `http://localhost:1234` |
+| Max context | 65535 tokens |
+| Selection limit | 200 chars (bidirectional) |
+
+**Results:** 293 tests across 18 files, type-check clean, build succeeds.
+
+---
+
+## Phase 23: Markdown Export — COMPLETE ✅
+
+**2026-08-04** — Added Export Markdown option to File menu that converts the editor HTML to Markdown and downloads it as a `.md` file.
+
+### Implementation
+| File | Change |
+|------|--------|
+| `src/utils/fileIO.ts` | Added `exportToMarkdown(html, filename)` function |
+| `src/components/layout/Navbar.tsx` | Added "Export Markdown" menu item (between Export PDF and Print) |
+| `src/utils/htmlToMarkdown.ts` | Converts TipTap HTML → Markdown (reverses markdownToHtml) |
+| `src/utils/htmlToMarkdown.test.ts` | 23 tests covering headers, formatting, lists, code, links, entities |
+
+### Conversion Coverage
+| HTML Element | Markdown Output |
+|-------------|-----------------|
+| `<h1>`–`<h6>` | `#`–`######` |
+| `<strong>`, `<b>` | `**bold**` |
+| `<em>`, `<i>` | `*italic*` |
+| `<code>` | `` `code` `` |
+| `<pre><code>` | Fenced code block |
+| `<ul><li>` | `* item` |
+| `<ol><li>` | `1. item` |
+| `<blockquote>` | `> quote` |
+| `<a href="url">` | `[text](url)` |
+| `<hr>` | `---` |
+| `<p>` | Paragraph with blank line separator |
+
+**Results:** 293 tests, type-check clean, build succeeds.
 
 ---
 

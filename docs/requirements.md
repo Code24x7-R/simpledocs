@@ -130,11 +130,12 @@ All document metadata and content serialize to/from the following JSON schema:
 src/
 ├── components/
 │   ├── layout/
-│   │   ├── Navbar.tsx             # File operations & Title
+│   │   ├── Navbar.tsx             # File operations, MD Export & Title
 │   │   ├── Toolbar/               # Formatting controls & dropdowns
 │   │   ├── PageSetupModal.tsx     # Margin, Size, Orientation options
 │   │   ├── SearchReplaceModal.tsx # Single-editor search/replace
-│   │   └── FieldMergeModal.tsx    # Template field merge dialog
+│   │   ├── FieldMergeModal.tsx    # Template field merge dialog
+│   │   └── ChatPanel.tsx          # AI chatbot sidebar
 │   ├── editor/
 │   │   ├── DocumentEditor.tsx     # Single Tiptap instance for entire document
 │   │   ├── PaginatedViewport.tsx  # Visual page overlays at fixed intervals
@@ -143,12 +144,41 @@ src/
 │   │   └── nodes/                 # Custom Node Views (PageBreak, TemplateField)
 │   └── ui/                        # Reusable Radix / Tailwind UI primitives
 ├── extensions/                    # Custom Tiptap extensions (PageBreak, TemplateField, FontSize)
-├── store/                         # Zustand state manager for DocState
-├── utils/                         # PDF export, unit conversion, template fields, search
+├── store/                         # Zustand state manager for DocState + ChatState
+├── utils/                         # PDF export, MD/HTML conversion, template fields, search, chat
 └── App.tsx
 ```
 
-## 6. Verification & Test Suite Requirements
+## 6. AI Chatbot Integration
+
+### FR-7: Chatbot Sidebar
+- **Panel Layout:** Collapsible sidebar (right side) with chat interface
+- **Model Selection:** Dropdown populated from LM Studio `/v1/models` endpoint
+- **Connection Status:** Live healthcheck indicator
+- **Session Memory:** Conversation history persisted to localStorage (key: `SIMPLEDOCS_CHAT_STATE`)
+- **Context Window:** Up to 65535 tokens with automatic trimming
+- **System Prompt Templates:** Pre-populated + custom templates (persisted to `SIMPLEDOCS_CHAT_TEMPLATES`)
+- **Bidirectional Text Flow:**
+  - If editor has selection (≤200 chars) → paste into chat input
+  - Else → insert last AI response at cursor (with MD→HTML conversion)
+- **Settings:** Base URL, temperature, active system prompt
+
+### FR-8: Markdown ↔ HTML Conversion
+- **MD→HTML:** Convert markdown to HTML for TipTap editor insertion (headers, bold, italic, code, lists, blockquotes, links, HR)
+- **HTML→MD:** Convert TipTap editor HTML to Markdown for file export (round-trip support)
+- **No External Dependencies:** Built-in lightweight converters
+
+## 7. Markdown Export
+
+### FR-9: Export to Markdown File
+- **File Menu:** "Export Markdown" option in the Navbar File menu
+- **Conversion:** Convert entire editor HTML buffer to Markdown
+- **Download:** Trigger file download as `<document-title>.md`
+- **Uses:** TipTap `editor.getHTML()` → `htmlToMarkdown()` → file download
+
+---
+
+## 8. Verification & Test Suite Requirements
 
 ### 6.1 Unit Tests (vitest)
 

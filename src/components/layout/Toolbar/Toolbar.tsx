@@ -26,6 +26,7 @@ import {
   ClipboardPaste,
   Scissors,
   Search,
+  MessageSquare,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
 import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';
@@ -66,7 +67,7 @@ const HIGHLIGHT_COLORS = [
 ];
 
 export default function Toolbar() {
-  const { editor, setTableGridOpen, setInsertFieldOpen, setSearchReplaceOpen } = useDocStore();
+  const { editor, setTableGridOpen, setInsertFieldOpen, setSearchReplaceOpen, setChatOpen, chatOpen } = useDocStore();
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
@@ -468,6 +469,15 @@ export default function Toolbar() {
       {/* Search & Replace */}
       <Button onClick={() => setSearchReplaceOpen(true)} title="Search & Replace">
         <Search className="w-4 h-4" />
+      </Button>
+
+      {/* Chat */}
+      <Button
+        onClick={() => setChatOpen(!chatOpen)}
+        active={chatOpen}
+        title="Toggle Chat"
+      >
+        <MessageSquare className="w-4 h-4" />
       </Button>
     </div>
   );

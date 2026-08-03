@@ -15,9 +15,10 @@ import {
   Scissors,
   ClipboardPaste,
   FileUp,
+  FileDown,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
-import { saveDocument, openDocument } from '../../utils/fileIO';
+import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
 import { copyToClipboard, pasteFromClipboard } from '../../utils/clipboard';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
@@ -75,6 +76,21 @@ export default function Navbar() {
   const handleExportPdf = () => {
     // Triggered via custom event - App listens for this
     window.dispatchEvent(new CustomEvent('simpledocs:export-pdf'));
+  };
+
+  const handleExportMarkdown = () => {
+    if (!editor) {
+      alert('Editor not available');
+      return;
+    }
+    const html = editor.getHTML();
+    if (!html || html === '<p></p>' || html === '<p>\n</p>') {
+      alert('Document is empty');
+      return;
+    }
+    // Use the document title for the filename
+    const filename = docState.title || 'document';
+    exportToMarkdown(html, filename);
   };
 
   const handlePrint = () => {
@@ -210,6 +226,12 @@ export default function Navbar() {
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <Download className="w-4 h-4" /> Export PDF
+            </button>
+            <button
+              onClick={() => { handleExportMarkdown(); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <FileDown className="w-4 h-4" /> Export Markdown
             </button>
             <button
               onClick={() => { handlePrint(); setFileMenuOpen(false); }}
