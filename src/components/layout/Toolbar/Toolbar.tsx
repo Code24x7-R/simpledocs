@@ -27,6 +27,9 @@ import {
   Scissors,
   Search,
   MessageSquare,
+  Undo,
+  Redo,
+  RemoveFormatting,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
 import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';
@@ -47,7 +50,6 @@ const HEADING_STYLES = [
   { label: 'Heading 1', value: 'h1' },
   { label: 'Heading 2', value: 'h2' },
   { label: 'Heading 3', value: 'h3' },
-  { label: 'Subtitle', value: 'subtitle' },
 ];
 
 const TEXT_COLORS = [
@@ -73,34 +75,25 @@ export default function Toolbar() {
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [textColorDropdownOpen, setTextColorDropdownOpen] = useState(false);
   const [highlightColorDropdownOpen, setHighlightColorDropdownOpen] = useState(false);
-  const [currentFontSize, setCurrentFontSize] = useState<string | null>(null);
 
   if (!editor) return null;
 
   const isActive = (mark: string) => editor.isActive(mark);
   const isHeading = (level: number) => editor.isActive('heading', { level });
 
-  // Get the font size from the current selection (returns bare number for display)
-  const getFontSize = (): string | null => {
-    const { selection } = editor.state;
-    if (selection.empty) return null;
-    // Walk through the selection to find font size in textStyle marks
-    const foundSizes = new Set<string>();
-    editor.state.doc.nodesBetween(selection.from, selection.to, (node: any) => {
-      if (node.type.name === 'text' && node.marks) {
-        for (const mark of node.marks) {
-          if (mark.type.name === 'textStyle' && mark.attrs.fontSize) {
-            foundSizes.add(mark.attrs.fontSize);
-            if (foundSizes.size > 1) return false; // Mixed sizes
-          }
-        }
-      }
-    });
-    if (foundSizes.size === 1) {
-      const size = foundSizes.values().next().value as string;
-      return size.replace(/px$/, '');
+  // Get the font size from the current selection using Tiptap's isActive
+  const getActiveFontSize = (): string | null => {
+    const foundSize = editor.getAttributes('textStyle').fontSize;
+    if (foundSize) {
+      return foundSize.replace(/px$/, '');
     }
     return null;
+  };
+
+  // Get the font family from the current selection using Tiptap's isActive
+  const getActiveFontFamily = (): string | null => {
+    const foundFont = editor.getAttributes('textStyle').fontFamily;
+    return foundFont || null;
   };
 
   // Clipboard handlers
@@ -179,8 +172,6 @@ export default function Toolbar() {
                 onClick={() => {
                   if (style.value === 'paragraph') {
                     editor.chain().focus().setParagraph().run();
-                  } else if (style.value === 'subtitle') {
-                    editor.chain().focus().setParagraph().run();
                   } else {
                     editor.chain().focus().toggleHeading({ level: parseInt(style.value[1]) as 1 | 2 | 3 }).run();
                   }
@@ -209,25 +200,41 @@ export default function Toolbar() {
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 min-w-[120px]"
         >
           <Type className="w-3 h-3" />
-          <span className="truncate">Font</span>
+          <span className="truncate">{getActiveFontFamily() || 'Font'}</span>
           <ChevronDown className="w-3 h-3" />
         </button>
         {fontDropdownOpen && (
           <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-            {FONT_FAMILIES.map((font) => (
-              <button
-                key={font}
-                onClick={() => {
-                  // Tiptap doesn't have native font family in StarterKit; use textStyle
-                  editor.chain().focus().setFontFamily(font).run();
-                  setFontDropdownOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                style={{ fontFamily: font }}
-              >
-                {font}
-              </button>
-            ))}
+            {/* Default option */}
+            <button
+              onClick={() => {
+                editor.chain().focus().unsetFontFamily().run();
+                setFontDropdownOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 ${
+                !getActiveFontFamily() ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500'
+              }`}
+            >
+              Default
+            </button>
+            {FONT_FAMILIES.map((font) => {
+              const isFontActive = editor.isActive('textStyle', { fontFamily: font });
+              return (
+                <button
+                  key={font}
+                  onClick={() => {
+                    editor.chain().focus().setFontFamily(font).run();
+                    setFontDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                    isFontActive ? 'bg-blue-100 text-blue-700 font-medium' : ''
+                  }`}
+                  style={{ fontFamily: font }}
+                >
+                  {font}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -235,13 +242,10 @@ export default function Toolbar() {
       {/* Font Size */}
       <div className="relative">
         <button
-          onClick={() => {
-            setCurrentFontSize(getFontSize());
-            setSizeDropdownOpen(!sizeDropdownOpen);
-          }}
+          onClick={() => setSizeDropdownOpen(!sizeDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 min-w-[60px]"
         >
-          {currentFontSize || 'Size'} <ChevronDown className="w-3 h-3" />
+          {getActiveFontSize() || 'Size'} <ChevronDown className="w-3 h-3" />
         </button>
         {sizeDropdownOpen && (
           <div className="absolute top-full left-0 mt-1 w-20 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto">
@@ -249,23 +253,21 @@ export default function Toolbar() {
             <button
               onClick={() => {
                 editor.chain().focus().unsetFontSize().run();
-                setCurrentFontSize(null);
                 setSizeDropdownOpen(false);
               }}
               className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 ${
-                !currentFontSize ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500'
+                !getActiveFontSize() ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500'
               }`}
             >
               Default
             </button>
             {FONT_SIZES.map((size) => {
-              const isActive = currentFontSize === size;
+              const isActive = editor.isActive('textStyle', { fontSize: `${size}px` });
               return (
                 <button
                   key={size}
                   onClick={() => {
                     editor.chain().focus().setFontSize(`${size}px`).run();
-                    setCurrentFontSize(size);
                     setSizeDropdownOpen(false);
                   }}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
@@ -294,6 +296,19 @@ export default function Toolbar() {
       </Button>
       <Button onClick={() => editor.chain().focus().toggleStrike().run()} active={isActive('strike')} title="Strikethrough">
         <Strikethrough className="w-4 h-4" />
+      </Button>
+
+      {/* Undo / Redo */}
+      <Button onClick={() => editor.chain().focus().undo().run()} title="Undo (Ctrl+Z)">
+        <Undo className="w-4 h-4" />
+      </Button>
+      <Button onClick={() => editor.chain().focus().redo().run()} title="Redo (Ctrl+Y)">
+        <Redo className="w-4 h-4" />
+      </Button>
+
+      {/* Clear Formatting */}
+      <Button onClick={() => editor.chain().focus().unsetAllMarks().run()} title="Clear Formatting">
+        <RemoveFormatting className="w-4 h-4" />
       </Button>
 
       {/* Clipboard */}
