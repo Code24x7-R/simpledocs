@@ -274,7 +274,7 @@ export default function Navbar() {
       <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={() => editor?.commands.undo()}
-          disabled={!editor?.can().undo()}
+          disabled={!editor?.can()?.undo()}
           className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
           title="Undo"
         >
@@ -282,7 +282,7 @@ export default function Navbar() {
         </button>
         <button
           onClick={() => editor?.commands.redo()}
-          disabled={!editor?.can().redo()}
+          disabled={!editor?.can()?.redo()}
           className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
           title="Redo"
         >
