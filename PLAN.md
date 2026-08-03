@@ -27,7 +27,8 @@
 | 21 | Code Deduplication & Dead Code Cleanup | COMPLETE ✅ |
 | 22 | Chatbot Integration (LM Studio) | COMPLETE ✅ |
 | 23 | Markdown Export | COMPLETE ✅ |
-| 24 | Search & Replace Enhancements | IN PROGRESS 🔄 |
+| 24 | Search & Replace Enhancements | COMPLETE ✅ |
+| 25 | Table Cell Operations | IN PROGRESS 🔄 |
 
 ---
 
@@ -459,10 +460,45 @@ Template fields are inline placeholders (`{{field_name}}`) that don't resolve to
 
 ---
 
+## Phase 25: Table Cell Operations — COMPLETE ✅
+
+**2026-08-04** — Added right-click context menu for table cell operations.
+
+### Operations
+| Operation | Description |
+|-----------|-------------|
+| Add Row Above | Inserts a row before the current row |
+| Add Row Below | Inserts a row after the current row |
+| Delete Row | Removes the current row |
+| Add Column Left | Inserts a column before the current column |
+| Add Column Right | Inserts a column after the current column |
+| Delete Column | Removes the current column |
+| Merge Cells | Merges selected cells into one |
+| Split Cell | Splits a merged cell back into individual cells |
+| Toggle Header Row | Toggles header formatting for the first row |
+| Toggle Header Column | Toggles header formatting for the first column |
+
+### Implementation
+| File | Action |
+|------|--------|
+| `src/components/editor/TableContextMenu.tsx` | **NEW** — Right-click context menu with all table operations |
+| `src/components/editor/TableContextMenu.test.tsx` | **NEW** — 16 tests |
+| `src/components/editor/DocumentEditor.tsx` | Added `contextmenu` handler to show menu in tables |
+
+### UX Details
+- Context menu appears on right-click when cursor is inside a table
+- Menu auto-positions to stay within viewport
+- Disabled state for operations that aren't applicable (e.g., merge needs multi-select)
+- Keyboard: Escape closes the menu
+- Click outside closes the menu
+
+**Results:** 349 tests across 20 files, type-check clean, build succeeds.
+
+---
+
 ## Future Enhancements (Not Yet Planned)
 
 - [ ] Multi-page content splitting (automatic overflow to next page)
-- [ ] Table cell operations (add/delete rows/columns, merge/split)
 - [ ] Table formatting (border thickness, cell background color)
 - [ ] Custom margins in inches (currently only mm display)
 - [ ] Drag-and-drop JSON import (currently file input only)

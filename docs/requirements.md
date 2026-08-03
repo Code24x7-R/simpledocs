@@ -197,7 +197,30 @@ src/
 - **Zero-length match protection**: Prevents infinite loops on empty matches
 - **Position resolution**: Accurate Tiptap position mapping for navigation
 
-## 9. Verification & Test Suite Requirements
+## 9. Table Cell Operations
+
+### FR-12: Table Context Menu
+- **Trigger**: Right-click inside a table cell
+- **Positioning**: Auto-adjusts to stay within viewport
+- **Close**: Escape key, click outside, or after any operation
+
+### FR-13: Table Operations
+| Operation | Description |
+|-----------|-------------|
+| Add Row Above/Below | Insert row relative to current cell |
+| Add Column Left/Right | Insert column relative to current cell |
+| Delete Row/Column | Remove current row or column |
+| Merge Cells | Combine selected cells (requires multi-select) |
+| Split Cell | Restore merged cell to individual cells |
+| Toggle Header Row/Column | Toggle header formatting |
+
+### FR-14: Table Operation Availability
+- Operations are disabled when not applicable
+- Merge requires multiple cells selected
+- Split only works on merged cells
+- Delete row/column disabled when it would remove the last row/column
+
+## 10. Verification & Test Suite Requirements
 
 ### 6.1 Unit Tests (vitest)
 
