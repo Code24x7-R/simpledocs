@@ -111,25 +111,12 @@ function estimateBlockLines(block: Record<string, unknown>): number {
 }
 
 /**
- * Estimate lines per page from document settings.
- * Default: 28 lines for A4 portrait.
+ * Lines per page. Must match PaginationContext.tsx which uses a fixed
+ * 28-line grid. Keeping these in sync ensures content is split at the
+ * same boundaries where it will actually overflow during rendering.
  */
-function estimateLinesPerPage(settings: DocSettings | undefined): number {
-  if (!settings) return 28;
-
-  const pageHeightMm = settings.pageFormat === 'Letter' ? 279.4 : 297; // A4 height in mm
-  const marginTopMm = parseFloat(settings.margins.top) || 20;
-  const marginBottomMm = parseFloat(settings.margins.bottom) || 20;
-  const headerHeightMm = settings.header.enabled ? 10 : 0;
-  const footerHeightMm = settings.footer.enabled ? 10 : 0;
-
-  const usableMm = pageHeightMm - marginTopMm - marginBottomMm - headerHeightMm - footerHeightMm;
-  // MM→PT: 1mm = 2.8346456693pt
-  const usablePt = usableMm * 2.8346456693;
-
-  // Standard line height ~1.2 × 12pt font = 14.4pt
-  const lineHeightPt = 14.4;
-  return Math.max(1, Math.floor(usablePt / lineHeightPt));
+function estimateLinesPerPage(_settings: DocSettings | undefined): number {
+  return 28;
 }
 
 /**
