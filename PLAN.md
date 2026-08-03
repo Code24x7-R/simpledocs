@@ -22,7 +22,9 @@
 | 16 | Color Picker Fix | IN PROGRESS 🔄 |
 | 17 | True Paginated Content Model | COMPLETE ✅ |
 | 18 | Keyboard Navigation & Focus Management | COMPLETE ✅ |
-| 19 | Template Field Display, Merge & Common Use Cases | IN PROGRESS 🔄 |
+| 19 | Template Field Display, Merge & Common Use Cases | COMPLETE ✅ |
+| 20 | Font Size Extension (canonical spec) | COMPLETE ✅ |
+| 21 | Code Deduplication & Dead Code Cleanup | COMPLETE ✅ |
 
 ---
 
@@ -310,6 +312,42 @@ Template fields are inline placeholders (`{{field_name}}`) that don't resolve to
 ### Tests
 - `src/utils/templateFields.test.ts` — Unit tests for resolution logic
 - `tests/e2e/template-fields.spec.ts` — E2E tests for display and merge
+
+---
+
+## Phase 20: Font Size Extension — COMPLETE ✅
+
+**2026-08-03** — Aligned the FontSize extension with the canonical Tiptap specification from `tiptap.dev/docs/editor/extensions/functionality/fontsize`.
+
+### Changes
+| File | Change |
+|------|--------|
+| `src/extensions/FontSize.ts` | `parseHTML` strips quotes per spec; `renderHTML` removes erroneous `line-height: inherit`; `unsetFontSize` uses `setMark + removeEmptyTextStyle` instead of `unsetMark` (which destroyed font-family and color) |
+| `src/components/layout/Toolbar/Toolbar.tsx` | Passes `"12px"` (with units) instead of bare `"12"`; added "Default" dropdown option to unset font size; refactored `getFontSize()` with `Set<string>` for mixed-size detection |
+| `src/extensions/FontSize.test.tsx` | **NEW** — 8 tests covering apply, unset, color preservation, empty-span cleanup, no line-height leakage, isActive |
+
+**Results:** 172 tests, type-check clean, build succeeds.
+
+---
+
+## Phase 21: Code Deduplication & Dead Code Cleanup — COMPLETE ✅
+
+**2026-08-03** — Removed dead code and deduplicated shared functions.
+
+### Removed
+| What | Reason |
+|------|--------|
+| `src/utils/pageGeometry.ts` (entire file) | Dead — `calculatePageGeometry` never imported; `PaginationContext` uses `buildPageGeometry` from `pagination.ts` |
+| `detectOverflow` from `pageOverflow.ts` | Dead — exported but never imported |
+| `extractText` from `pageOverflow.ts` | Duplicate of identical function in `pagination.ts` |
+
+### Changed
+| File | Change |
+|------|--------|
+| `src/utils/pagination.ts` | `extractText` now `export`ed |
+| `src/utils/pageOverflow.ts` | Imports `extractText` from `pagination.ts` |
+
+**Results:** 172 tests, type-check clean, build succeeds.
 
 ---
 

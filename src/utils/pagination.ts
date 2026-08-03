@@ -80,7 +80,7 @@ export function tiptapToAST(tiptapDoc: Record<string, unknown>): ASTNode[] {
 }
 
 /** Recursively extract all text content from a Tiptap node */
-function extractText(node: Record<string, unknown>): string {
+export function extractText(node: Record<string, unknown>): string {
   if (node.text) return node.text as string;
 
   const content = node.content as Record<string, unknown>[] | undefined;

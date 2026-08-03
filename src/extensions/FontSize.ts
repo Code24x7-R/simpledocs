@@ -39,13 +39,13 @@ export const FontSize = Extension.create({
         attributes: {
           fontSize: {
             default: null,
-            parseHTML: (element) => element.style.fontSize || null,
+            parseHTML: (element) => element.style.fontSize.replace(/['"]+/g, ''),
             renderHTML: (attributes) => {
               if (!attributes.fontSize) {
                 return {};
               }
               return {
-                style: `font-size: ${attributes.fontSize}; line-height: inherit`,
+                style: `font-size: ${attributes.fontSize}`,
               };
             },
           },
@@ -63,7 +63,11 @@ export const FontSize = Extension.create({
       unsetFontSize:
         () =>
         ({ chain }) =>
-          chain().focus().unsetMark('textStyle').run(),
+          chain()
+            .focus()
+            .setMark('textStyle', { fontSize: null })
+            .removeEmptyTextStyle()
+            .run(),
     };
   },
 });

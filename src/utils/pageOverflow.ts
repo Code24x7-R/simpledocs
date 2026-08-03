@@ -3,6 +3,7 @@
 import type { Page } from '../types/page';
 import { createEmptyPage, createPageFromContent } from '../types/page';
 import type { DocSettings } from '../store/useDocStore';
+import { extractText } from './pagination';
 
 /**
  * Page overflow detection and content redistribution.
@@ -14,8 +15,8 @@ import type { DocSettings } from '../store/useDocStore';
  *
  * This module provides utilities for:
  * 1. Splitting a flat content tree into pages (for migration)
- * 2. Detecting overflow in a page's content
- * 3. Redistributing content between adjacent pages
+ * 2. Redistributing overflow content to the next page
+ * 3. Pulling content back from the next page when space is available
  */
 
 /**
@@ -135,40 +136,6 @@ function estimateTextLines(text: string): number {
  */
 function estimateLinesPerPage(_settings: DocSettings | undefined): number {
   return 28;
-}
-
-/**
- * Extract all text content from a node recursively.
- */
-function extractText(node: Record<string, unknown>): string {
-  if (node.text) return node.text as string;
-  if (Array.isArray(node.content)) {
-    return (node.content as Record<string, unknown>[]).map(extractText).join('\n');
-  }
-  return '';
-}
-
-/**
- * Detect if a page's content exceeds the usable body height.
- * Returns true if overflow exists.
- *
- * Note: This is a lightweight heuristic based on block count and estimated
- * line heights. The actual DOM measurement happens in PageEditor via
- * scrollHeight comparison.
- */
-export function detectOverflow(
-  pageContent: Record<string, unknown>,
-  usableHeightPx: number,
-  lineHeightPx: number
-): boolean {
-  const blocks = (pageContent as any).content as Record<string, unknown>[] | undefined;
-  if (!blocks) return false;
-
-  const estimatedHeight = blocks.reduce((sum, block) => {
-    return sum + estimateBlockLines(block) * lineHeightPx;
-  }, 0);
-
-  return estimatedHeight > usableHeightPx;
 }
 
 /**

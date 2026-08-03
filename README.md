@@ -221,6 +221,7 @@ simpledocs/
 │   │   │   └── InsertFieldModal.tsx
 │   │   └── ui/                  # Reusable primitives
 │   ├── extensions/              # Tiptap extensions
+│   │   ├── FontSize.ts
 │   │   ├── TemplateField.ts
 │   │   ├── PageBreak.ts
 │   │   └── index.ts
@@ -232,7 +233,9 @@ simpledocs/
 │   │   ├── unitConversion.ts
 │   │   ├── fileIO.ts
 │   │   ├── pdfExport.ts
-│   │   └── pageOverflow.ts
+│   │   ├── pageOverflow.ts
+│   │   ├── pagination.ts
+│   │   └── DocumentLayoutEngine.ts
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css

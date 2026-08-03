@@ -83,3 +83,24 @@
 | Mock anchor not real DOM node | Mocked `appendChild`/`removeChild` too |
 | `setContent(content, false)` type error in v3 | Changed to `setContent(content, { emitUpdate: false })` |
 | Playwright tests picked up by vitest | Added `include: ['src/**/*.{test,spec}.{ts,tsx}']` to vitest config |
+
+## 2026-08-03 — Font Size Extension (Canonical Spec)
+
+### FontSize Extension Fixes
+- Aligned `FontSize.ts` with official Tiptap spec from tiptap.dev
+- `parseHTML` now strips quotes from `element.style.fontSize` (`replace(/['"]+/g, '')`)
+- `renderHTML` no longer adds erroneous `; line-height: inherit`
+- `unsetFontSize` uses `setMark('textStyle', { fontSize: null }).removeEmptyTextStyle()` instead of `unsetMark('textStyle')` which destroyed font-family and color attributes
+- Toolbar passes `"12px"` (with units) instead of bare `"12"` to `setFontSize`
+- Added "Default" option to font size dropdown to unset size
+- Refactored `getFontSize()` to use `Set<string>` for cleaner mixed-size detection
+- Added 8 new unit tests in `src/extensions/FontSize.test.tsx`
+
+### Code Deduplication & Dead Code Cleanup
+- Deleted `src/utils/pageGeometry.ts` — `calculatePageGeometry` was never imported (dead code)
+- Removed `detectOverflow` from `pageOverflow.ts` — exported but never imported
+- Removed duplicate `extractText` from `pageOverflow.ts` — now imports from `pagination.ts`
+- Made `extractText` exported in `pagination.ts`
+- Cleaned up accidental `nul` file from filesystem
+
+**Results:** 172 tests pass, type-check clean, build succeeds. |

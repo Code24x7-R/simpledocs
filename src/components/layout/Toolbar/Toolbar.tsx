@@ -79,27 +79,27 @@ export default function Toolbar() {
   const isActive = (mark: string) => editor.isActive(mark);
   const isHeading = (level: number) => editor.isActive('heading', { level });
 
-  // Get the font size from the current selection
+  // Get the font size from the current selection (returns bare number for display)
   const getFontSize = (): string | null => {
     const { selection } = editor.state;
     if (selection.empty) return null;
     // Walk through the selection to find font size in textStyle marks
-    let fontSize: string | null = null;
+    const foundSizes = new Set<string>();
     editor.state.doc.nodesBetween(selection.from, selection.to, (node: any) => {
       if (node.type.name === 'text' && node.marks) {
         for (const mark of node.marks) {
           if (mark.type.name === 'textStyle' && mark.attrs.fontSize) {
-            if (fontSize === null) {
-              fontSize = mark.attrs.fontSize;
-            } else if (fontSize !== mark.attrs.fontSize) {
-              // Mixed sizes in selection
-              return false;
-            }
+            foundSizes.add(mark.attrs.fontSize);
+            if (foundSizes.size > 1) return false; // Mixed sizes
           }
         }
       }
     });
-    return fontSize;
+    if (foundSizes.size === 1) {
+      const size = foundSizes.values().next().value as string;
+      return size.replace(/px$/, '');
+    }
+    return null;
   };
 
   // Clipboard handlers
@@ -244,13 +244,26 @@ export default function Toolbar() {
         </button>
         {sizeDropdownOpen && (
           <div className="absolute top-full left-0 mt-1 w-20 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto">
+            {/* Default option to unset font size */}
+            <button
+              onClick={() => {
+                editor.chain().focus().unsetFontSize().run();
+                setCurrentFontSize(null);
+                setSizeDropdownOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 ${
+                !currentFontSize ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500'
+              }`}
+            >
+              Default
+            </button>
             {FONT_SIZES.map((size) => {
               const isActive = currentFontSize === size;
               return (
                 <button
                   key={size}
                   onClick={() => {
-                    editor.chain().focus().setFontSize(size).run();
+                    editor.chain().focus().setFontSize(`${size}px`).run();
                     setCurrentFontSize(size);
                     setSizeDropdownOpen(false);
                   }}
