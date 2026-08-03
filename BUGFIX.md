@@ -16,6 +16,16 @@
 
 *No active bugs.*
 
+## Features
+
+### 2026-08-03
+
+| Feature | Description |
+|---------|-------------|
+| Widow/Orphan Control | Added CSS-based widow/orphan control for print/PDF output. Configurable via Page Setup modal (Widows: 1-10, Orphans: 1-10, default: 2 each). Uses CSS `orphans`, `widows`, and `break-inside: avoid` properties. |
+
+*No active bugs.*
+
 ## Fixed Bugs
 
 ### 2026-08-03

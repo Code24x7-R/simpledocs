@@ -20,6 +20,8 @@ const mockDocState: DocState = {
     footer: { enabled: true, showPageNumbers: true },
     pageGap: 24,
     showPageBackgrounds: true,
+    orphans: 2,
+    widows: 2,
   },
   content: {
     type: 'doc',

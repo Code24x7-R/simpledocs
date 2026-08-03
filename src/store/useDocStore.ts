@@ -23,6 +23,10 @@ export interface DocSettings {
   };
   pageGap: number;
   showPageBackgrounds: boolean;
+  /** Minimum lines at bottom of page before a break (default: 2) */
+  orphans: number;
+  /** Minimum lines at top of next page after a break (default: 2) */
+  widows: number;
 }
 
 export interface DocState {
@@ -101,6 +105,8 @@ const defaultSettings: DocSettings = {
   },
   pageGap: 24,
   showPageBackgrounds: true,
+  orphans: 2,
+  widows: 2,
 };
 
 const createNewDoc = (): DocState => ({

@@ -19,6 +19,8 @@ const baseDoc = {
     footer: { enabled: true, showPageNumbers: true },
     pageGap: 24,
     showPageBackgrounds: true,
+    orphans: 2,
+    widows: 2,
   },
   content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
 };
@@ -129,6 +131,8 @@ describe('useDocStore', () => {
         footer: { enabled: false, showPageNumbers: false },
         pageGap: 24,
         showPageBackgrounds: true,
+        orphans: 2,
+        widows: 2,
       },
       content: { type: 'doc', content: [] },
     };
@@ -253,6 +257,22 @@ describe('useDocStore', () => {
       const settings = useDocStore.getState().docState.settings;
       expect(settings.footer.enabled).toBe(false);
       expect(settings.footer.showPageNumbers).toBe(false);
+    });
+
+    it('updates widow/orphan control settings', () => {
+      useDocStore.getState().updateSettings({
+        widows: 3,
+        orphans: 4,
+      });
+      const settings = useDocStore.getState().docState.settings;
+      expect(settings.widows).toBe(3);
+      expect(settings.orphans).toBe(4);
+    });
+
+    it('defaults widows and orphans to 2', () => {
+      const settings = useDocStore.getState().docState.settings;
+      expect(settings.widows).toBe(2);
+      expect(settings.orphans).toBe(2);
     });
 
     it('partial settings merge preserves other fields', () => {

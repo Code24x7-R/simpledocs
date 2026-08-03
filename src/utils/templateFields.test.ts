@@ -26,6 +26,8 @@ const createMockDocState = (overrides?: Partial<DocState>): DocState => ({
     footer: { enabled: false, showPageNumbers: false },
     pageGap: 24,
     showPageBackgrounds: true,
+    orphans: 2,
+    widows: 2,
   },
   content: {
     type: 'doc',

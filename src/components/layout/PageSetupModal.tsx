@@ -19,6 +19,8 @@ export default function PageSetupModal() {
     headerContent: settings.header.content,
     footerEnabled: settings.footer.enabled,
     showPageNumbers: settings.footer.showPageNumbers,
+    orphans: settings.orphans,
+    widows: settings.widows,
   });
 
   if (!pageSetupOpen) return null;
@@ -41,6 +43,8 @@ export default function PageSetupModal() {
         enabled: formData.footerEnabled,
         showPageNumbers: formData.showPageNumbers,
       },
+      orphans: formData.orphans,
+      widows: formData.widows,
     });
     setPageSetupOpen(false);
   };
@@ -183,6 +187,36 @@ export default function PageSetupModal() {
                 Show page numbers
               </label>
             )}
+          </div>
+
+          {/* Typography — Widow/Orphan Control */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Widow/Orphan Control</label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-gray-500">Widows</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={formData.widows}
+                  onChange={(e) => setFormData({ ...formData, widows: Math.max(1, parseInt(e.target.value) || 1) })}
+                  className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Orphans</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={formData.orphans}
+                  onChange={(e) => setFormData({ ...formData, orphans: Math.max(1, parseInt(e.target.value) || 1) })}
+                  className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Minimum lines to keep together at page breaks (print/PDF)</p>
           </div>
         </div>
 

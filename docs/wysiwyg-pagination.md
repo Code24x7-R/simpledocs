@@ -96,6 +96,73 @@ For print and PDF export, CSS page breaks ensure content flows correctly across 
 
 ---
 
+## Widow/Orphan Control
+
+Widows and orphans occur when a single line of a paragraph is separated from the rest of its paragraph at a page break:
+
+- **Orphan:** First line of a paragraph left alone at the bottom of a page
+- **Widow:** Last line of a paragraph carried over to the top of the next page
+
+### CSS Properties
+
+SimpleDocs uses three CSS properties to control this behavior:
+
+```css
+.tiptap p,
+.tiptap h1, .tiptap h2, .tiptap h3 {
+  orphans: var(--orphans, 2);
+  widows: var(--widows, 2);
+  break-inside: avoid;
+}
+```
+
+- `orphans: N` — Minimum lines that must remain at the bottom of a page
+- `widows: N` — Minimum lines that must be carried to the next page
+- `break-inside: avoid` — Prevents splitting an element across pages
+
+### User Settings
+
+Configurable via **Page Setup → Widow/Orphan Control**:
+
+- **Widows** (1-10, default: 2) — Controls the `widows` CSS property
+- **Orphans** (1-10, default: 2) — Controls the `orphans` CSS property
+
+### CSS Custom Properties
+
+Values are applied as CSS custom properties on the content container:
+
+```tsx
+<div
+  style={{
+    ['--orphans' as string]: docState.settings.orphans,
+    ['--widows' as string]: docState.settings.widows,
+  }}
+>
+```
+
+### Print/PDF Behavior
+
+These properties take effect during print and PDF export. The `@media print` block ensures they apply:
+
+```css
+@media print {
+  .tiptap p,
+  .tiptap h1, .tiptap h2, .tiptap h3 {
+    orphans: var(--orphans, 2);
+    widows: var(--widows, 2);
+    break-inside: avoid;
+  }
+}
+```
+
+### Limitations
+
+- CSS `orphans`/`widows` only affect paged media (print/PDF), not continuous scroll views
+- `break-inside: avoid` may cause issues with paragraphs taller than one page
+- PDF export uses `pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }` which complements widow/orphan control
+
+---
+
 ## Headers & Footers
 
 Headers and footers are rendered within the page background's margin area:

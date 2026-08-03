@@ -217,6 +217,9 @@ function PaginatedViewportInner() {
               paddingLeft: marginLeftPx,
               paddingRight: marginRightPx,
               minHeight: pageHeightPx,
+              // CSS custom properties for widow/orphan control
+              ['--orphans' as string]: docState.settings.orphans,
+              ['--widows' as string]: docState.settings.widows,
             }}
           >
             <DocumentEditor />
