@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { X, Search, Replace, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { findAllOccurrences, replaceAllPreservingStyles, SearchOptions } from '../../utils/search';
@@ -35,31 +35,28 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   const scrollMatchIntoViewOnPage = (pageEditor: any, from: number, to: number) => {
     if (!pageEditor) return;
 
-    // Use requestAnimationFrame to wait for the selection to render
+    // Use double requestAnimationFrame to ensure selection is rendered
     requestAnimationFrame(() => {
-      // Get coordinates of the selection
-      const startCoords = pageEditor.view.coordsAtPos(from);
-      const endCoords = pageEditor.view.coordsAtPos(to);
+      requestAnimationFrame(() => {
+        // Get coordinates of the selection
+        const startCoords = pageEditor.view.coordsAtPos(from);
+        const endCoords = pageEditor.view.coordsAtPos(to);
 
-      if (!startCoords || !endCoords) return;
+        if (!startCoords || !endCoords) return;
 
-      // Find the scrollable container
-      const scrollContainer = document.getElementById('paginated-viewport');
-      if (!scrollContainer) return;
+        // Find the scrollable container
+        const scrollContainer = document.getElementById('paginated-viewport');
+        if (!scrollContainer) return;
 
-      const scrollInner = scrollContainer.querySelector('.overflow-y-auto') as HTMLElement;
-      if (!scrollInner) return;
+        const scrollInner = scrollContainer.querySelector('.overflow-y-auto') as HTMLElement;
+        if (!scrollInner) return;
 
-      // Calculate the middle of the selection relative to viewport
-      const midY = (startCoords.top + endCoords.bottom) / 2;
-      const containerRect = scrollInner.getBoundingClientRect();
-
-      // Check if selection is outside visible area
-      if (midY < containerRect.top + 60 || midY > containerRect.bottom - 60) {
-        // Calculate scroll offset to center the selection
+        // Always scroll to center the match in the viewport
+        const midY = (startCoords.top + endCoords.bottom) / 2;
+        const containerRect = scrollInner.getBoundingClientRect();
         const targetScroll = scrollInner.scrollTop + (midY - containerRect.top - containerRect.height / 2);
         scrollInner.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-      }
+      });
     });
   };
 
@@ -198,6 +195,22 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     }
   };
 
+  // Keyboard shortcuts: F3 = find next, Shift+F3 = find prev
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F3') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleFindPrev();
+        } else {
+          handleFindNext();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
   const handleClose = () => {
     // Clear selection when closing
     if (editor) {
@@ -210,7 +223,7 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-16 right-4 z-50 w-[380px]">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[420px]">
       <div className="bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -318,9 +331,9 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
                   <span className="text-red-600">No matches found</span>
                 ) : (
                   <span className="text-gray-700">
-                    <span className="font-medium text-blue-700">{currentMatchIndex + 1}</span>
+                    <span className="font-bold text-blue-700">{currentMatchIndex + 1}</span>
                     <span className="text-gray-500"> of </span>
-                    <span className="font-medium">{matchCount}</span>
+                    <span className="font-bold">{matchCount}</span>
                     <span className="text-gray-500"> matches</span>
                   </span>
                 )}
