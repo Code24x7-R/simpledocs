@@ -266,63 +266,96 @@ export default function Toolbar() {
         </button>
       </div>
 
-      {/* Text Color */}
+      {/* Text Colour */}
       <div className="relative">
         <button
           onClick={() => setTextColorDropdownOpen(!textColorDropdownOpen)}
           className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5"
-          title="Text Color"
+          title="Text Colour"
         >
           <Palette className="w-4 h-4" />
           <div className="w-3 h-0.5 bg-red-500 rounded" />
         </button>
         {textColorDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 grid grid-cols-10 gap-0.5 p-2 bg-white border border-gray-200 rounded shadow-lg z-50 w-[220px]">
-            {TEXT_COLORS.map((color) => (
-              <button
-                key={color}
-                onClick={() => {
-                  editor.chain().focus().setColor(color).run();
-                  setTextColorDropdownOpen(false);
-                }}
-                className="w-4 h-4 rounded border border-gray-200 hover:scale-125 transition-transform"
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
+          <div className="absolute top-full left-0 mt-1 p-3 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-[280px]">
+            {/* Default option */}
+            <button
+              onClick={() => {
+                editor.chain().focus().unsetColor().run();
+                setTextColorDropdownOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
+              title="Default (no colour)"
+            >
+              <span className="w-6 h-6 rounded border border-gray-300 bg-white" />
+              <span>Default</span>
+            </button>
+            <div className="grid grid-cols-7 gap-1.5">
+              {TEXT_COLORS.map((color) => {
+                const isActive = editor.isActive('textStyle', { color });
+                return (
+                  <button
+                    key={color}
+                    onClick={() => {
+                      editor.chain().focus().setColor(color).run();
+                      setTextColorDropdownOpen(false);
+                    }}
+                    className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
+                      isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Highlight Color */}
+      {/* Highlight Colour */}
       <div className="relative">
         <button
           onClick={() => setHighlightColorDropdownOpen(!highlightColorDropdownOpen)}
           className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5"
-          title="Highlight Color"
+          title="Highlight Colour"
         >
           <Highlighter className="w-4 h-4" />
           <div className="w-3 h-0.5 bg-yellow-400 rounded" />
         </button>
         {highlightColorDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 grid grid-cols-7 gap-1.5 p-3 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-[280px]">
-            {HIGHLIGHT_COLORS.map((color) => {
-              const isActive = editor.isActive('highlight', { color });
-              return (
-                <button
-                  key={color}
-                  onClick={() => {
-                    editor.chain().focus().toggleHighlight({ color }).run();
-                    setHighlightColorDropdownOpen(false);
-                  }}
-                  className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
-                    isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              );
-            })}
+          <div className="absolute top-full left-0 mt-1 p-3 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-[280px]">
+            {/* None option */}
+            <button
+              onClick={() => {
+                editor.chain().focus().unsetHighlight().run();
+                setHighlightColorDropdownOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
+              title="None (remove highlight)"
+            >
+              <span className="w-6 h-6 rounded border border-gray-300 bg-white flex items-center justify-center text-gray-400 text-xs">✕</span>
+              <span>None</span>
+            </button>
+            <div className="grid grid-cols-7 gap-1.5">
+              {HIGHLIGHT_COLORS.map((color) => {
+                const isActive = editor.isActive('highlight', { color });
+                return (
+                  <button
+                    key={color}
+                    onClick={() => {
+                      editor.chain().focus().toggleHighlight({ color }).run();
+                      setHighlightColorDropdownOpen(false);
+                    }}
+                    className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
+                      isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
