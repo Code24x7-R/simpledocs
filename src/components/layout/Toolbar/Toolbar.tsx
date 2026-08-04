@@ -17,9 +17,6 @@ import {
   Code,
   Minus,
   Type,
-  Palette,
-  Table,
-  Sparkles,
   ChevronDown,
   Copy,
   ClipboardPaste,
@@ -29,8 +26,7 @@ import {
   Undo,
   Redo,
   RemoveFormatting,
-  Image,
-  Link,
+  Paintbrush,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
 import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';
@@ -69,20 +65,16 @@ const HIGHLIGHT_COLORS = [
   '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', // Oranges
 ];
 
-const COLOR_PICKER_TAB = {
-  TEXT: 'text',
-  HIGHLIGHT: 'highlight',
-} as const;
 
-type ColorPickerTab = (typeof COLOR_PICKER_TAB)[keyof typeof COLOR_PICKER_TAB];
 
 export default function Toolbar() {
-  const { editor, setTableGridOpen, setInsertFieldOpen, setSearchReplaceOpen, setChatOpen, chatOpen, setLinkOpen, setImageOpen } = useDocStore();
+  const { editor, setSearchReplaceOpen, setChatOpen, chatOpen } = useDocStore();
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [colorPickerTab, setColorPickerTab] = useState<ColorPickerTab>(COLOR_PICKER_TAB.TEXT);
+  const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+
+
 
   if (!editor) return null;
 
@@ -290,162 +282,143 @@ export default function Toolbar() {
         )}
       </div>
 
-      <div className="w-px h-6 bg-gray-200 mx-1" />
-
-      {/* Text Formatting */}
-      <Button onClick={() => editor.chain().focus().toggleBold().run()} active={isActive('bold')} title="Bold">
-        <Bold className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().toggleItalic().run()} active={isActive('italic')} title="Italic">
-        <Italic className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().toggleUnderline().run()} active={isActive('underline')} title="Underline">
-        <Underline className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().toggleStrike().run()} active={isActive('strike')} title="Strikethrough">
-        <Strikethrough className="w-4 h-4" />
-      </Button>
-
-      {/* Undo / Redo */}
-      <Button onClick={() => editor.chain().focus().undo().run()} title="Undo (Ctrl+Z)">
-        <Undo className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().redo().run()} title="Redo (Ctrl+Y)">
-        <Redo className="w-4 h-4" />
-      </Button>
-
-      {/* Clear Formatting */}
-      <Button onClick={() => editor.chain().focus().unsetAllMarks().run()} title="Clear Formatting">
-        <RemoveFormatting className="w-4 h-4" />
-      </Button>
-
-      {/* Clipboard */}
-      <div className="relative group">
-        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Copy" onClick={handleCopy}>
-          <Copy className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="relative group">
-        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Cut" onClick={handleCut}>
-          <Scissors className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="relative group">
-        <button className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5" title="Paste" onClick={handlePaste}>
-          <ClipboardPaste className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Combined Colour Picker (Text + Highlight) */}
+      {/* Format Menu */}
       <div className="relative">
         <button
-          onClick={() => setColorPickerOpen(!colorPickerOpen)}
-          className="p-1.5 rounded hover:bg-gray-100 flex items-center gap-0.5"
-          title="Text & Highlight Colour"
+          onClick={() => setFormatMenuOpen(!formatMenuOpen)}
+          className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
         >
-          <Palette className="w-4 h-4" />
-          <div className="w-3 h-0.5 bg-red-500 rounded" />
+          <Paintbrush className="w-4 h-4" />
+          Format <ChevronDown className="w-3 h-3" />
         </button>
-        {colorPickerOpen && (
-          <div className="absolute top-full left-0 mt-1 p-3 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-[280px]">
-            {/* Tab switcher */}
-            <div className="flex gap-1 mb-3">
-              <button
-                onClick={() => setColorPickerTab(COLOR_PICKER_TAB.TEXT)}
-                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                  colorPickerTab === COLOR_PICKER_TAB.TEXT
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Text Colour
-              </button>
-              <button
-                onClick={() => setColorPickerTab(COLOR_PICKER_TAB.HIGHLIGHT)}
-                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                  colorPickerTab === COLOR_PICKER_TAB.HIGHLIGHT
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Highlight
-              </button>
+        {formatMenuOpen && (
+          <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
+            {/* Text Style */}
+            <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Text Style
             </div>
-
-            {colorPickerTab === COLOR_PICKER_TAB.TEXT && (
-              <>
-                {/* Default option */}
-                <button
-                  onClick={() => {
-                    editor.chain().focus().unsetColor().run();
-                    setColorPickerOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
-                  title="Default (no colour)"
-                >
-                  <span className="w-6 h-6 rounded border border-gray-300 bg-white" />
-                  <span>Default</span>
-                </button>
-                <div className="grid grid-cols-7 gap-1.5">
-                  {TEXT_COLORS.map((color) => {
-                    const isActive = editor.isActive('textStyle', { color });
-                    return (
-                      <button
-                        key={color}
-                        onClick={() => {
-                          editor.chain().focus().setColor(color).run();
-                          setColorPickerOpen(false);
-                        }}
-                        className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
-                          isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {colorPickerTab === COLOR_PICKER_TAB.HIGHLIGHT && (
-              <>
-                {/* None option */}
-                <button
-                  onClick={() => {
-                    editor.chain().focus().unsetBackgroundColor().run();
-                    setColorPickerOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 mb-2 text-sm"
-                  title="None (remove highlight)"
-                >
-                  <span className="w-6 h-6 rounded border border-gray-300 bg-white flex items-center justify-center text-gray-400 text-xs">✕</span>
-                  <span>None</span>
-                </button>
-                <div className="grid grid-cols-7 gap-1.5">
-                  {HIGHLIGHT_COLORS.map((color) => {
-                    const isActive = editor.isActive('textStyle', { backgroundColor: color });
-                    return (
-                      <button
-                        key={color}
-                        onClick={() => {
-                          editor.chain().focus().setBackgroundColor(color).run();
-                          setColorPickerOpen(false);
-                        }}
-                        className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-all ${
-                          isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    );
-                  })}
-                </div>
-              </>
-            )}
+            <button
+              onClick={() => { editor.chain().focus().toggleBold().run(); setFormatMenuOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
+                isActive('bold') ? 'bg-blue-50 text-blue-700 font-medium' : ''
+              }`}
+            >
+              <Bold className="w-4 h-4" /> Bold
+            </button>
+            <button
+              onClick={() => { editor.chain().focus().toggleItalic().run(); setFormatMenuOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
+                isActive('italic') ? 'bg-blue-50 text-blue-700 font-medium' : ''
+              }`}
+            >
+              <Italic className="w-4 h-4" /> Italic
+            </button>
+            <button
+              onClick={() => { editor.chain().focus().toggleUnderline().run(); setFormatMenuOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
+                isActive('underline') ? 'bg-blue-50 text-blue-700 font-medium' : ''
+              }`}
+            >
+              <Underline className="w-4 h-4" /> Underline
+            </button>
+            <button
+              onClick={() => { editor.chain().focus().toggleStrike().run(); setFormatMenuOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
+                isActive('strike') ? 'bg-blue-50 text-blue-700 font-medium' : ''
+              }`}
+            >
+              <Strikethrough className="w-4 h-4" /> Strikethrough
+            </button>
+            <button
+              onClick={() => { editor.chain().focus().unsetAllMarks().run(); setFormatMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <RemoveFormatting className="w-4 h-4" /> Clear Formatting
+            </button>
+            <div className="border-t border-gray-100 my-1" />
+            {/* Text Colour */}
+            <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Text Colour
+            </div>
+            <div className="px-3 pb-2 grid grid-cols-7 gap-1.5">
+              {TEXT_COLORS.map((color) => {
+                const isActive = editor.isActive('textStyle', { color });
+                return (
+                  <button
+                    key={color}
+                    onClick={() => {
+                      editor.chain().focus().setColor(color).run();
+                      setFormatMenuOpen(false);
+                    }}
+                    className={`w-6 h-6 rounded border-2 hover:scale-110 transition-all ${
+                      isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                );
+              })}
+            </div>
+            <button
+              onClick={() => { editor.chain().focus().unsetColor().run(); setFormatMenuOpen(false); }}
+              className="w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 text-gray-600"
+            >
+              Default (no colour)
+            </button>
+            <div className="border-t border-gray-100 my-1" />
+            {/* Highlight */}
+            <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Highlight
+            </div>
+            <div className="px-3 pb-2 grid grid-cols-7 gap-1.5">
+              {HIGHLIGHT_COLORS.map((color) => {
+                const isActive = editor.isActive('textStyle', { backgroundColor: color });
+                return (
+                  <button
+                    key={color}
+                    onClick={() => {
+                      editor.chain().focus().setBackgroundColor(color).run();
+                      setFormatMenuOpen(false);
+                    }}
+                    className={`w-6 h-6 rounded border-2 hover:scale-110 transition-all ${
+                      isActive ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                );
+              })}
+            </div>
+            <button
+              onClick={() => { editor.chain().focus().unsetBackgroundColor().run(); setFormatMenuOpen(false); }}
+              className="w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 text-gray-600"
+            >
+              None (remove highlight)
+            </button>
           </div>
         )}
       </div>
+
+      <div className="w-px h-6 bg-gray-200 mx-1" />
+
+      {/* Clipboard */}
+      <Button onClick={handleCopy} title="Copy">
+        <Copy className="w-4 h-4" />
+      </Button>
+      <Button onClick={handleCut} title="Cut">
+        <Scissors className="w-4 h-4" />
+      </Button>
+      <Button onClick={handlePaste} title="Paste">
+        <ClipboardPaste className="w-4 h-4" />
+      </Button>
+
+      {/* Undo / Redo */}
+      <Button onClick={() => editor.chain().focus().undo().run()} disabled={!editor?.can()?.undo()} title="Undo (Ctrl+Z)">
+        <Undo className="w-4 h-4" />
+      </Button>
+      <Button onClick={() => editor.chain().focus().redo().run()} disabled={!editor?.can()?.redo()} title="Redo (Ctrl+Y)">
+        <Redo className="w-4 h-4" />
+      </Button>
 
       <div className="w-px h-6 bg-gray-200 mx-1" />
 
@@ -491,47 +464,10 @@ export default function Toolbar() {
 
       <div className="w-px h-6 bg-gray-200 mx-1" />
 
-      {/* Table */}
-      <Button onClick={() => setTableGridOpen(true)} title="Insert Table">
-        <Table className="w-4 h-4" />
-      </Button>
-
-      {/* Insert Field */}
-      <Button onClick={() => setInsertFieldOpen(true)} title="Insert Field">
-        <Sparkles className="w-4 h-4" />
-      </Button>
-
-      {/* Image */}
-      <Button onClick={() => setImageOpen(true)} title="Insert Image">
-        <Image className="w-4 h-4" />
-      </Button>
-
-      {/* Link */}
-      <Button
-        onClick={() => {
-          if (editor.isActive('link')) {
-            editor.chain().focus().unsetLink().run();
-          } else {
-            setLinkOpen(true);
-          }
-        }}
-        active={editor.isActive('link')}
-        title="Insert Link (Ctrl+K)"
-      >
-        <Link className="w-4 h-4" />
-      </Button>
-
-      {/* Page Break */}
-      <Button onClick={() => editor.chain().focus().setPageBreak().run()} title="Page Break (Ctrl+Enter)">
-        <Minus className="w-4 h-4 rotate-90" />
-      </Button>
-
-      {/* Search & Replace */}
+      {/* Tools */}
       <Button onClick={() => setSearchReplaceOpen(true)} title="Search & Replace">
         <Search className="w-4 h-4" />
       </Button>
-
-      {/* Chat */}
       <Button
         onClick={() => setChatOpen(!chatOpen)}
         active={chatOpen}

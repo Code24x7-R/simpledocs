@@ -7,8 +7,6 @@ import {
   Save,
   Download,
   Printer,
-  Undo2,
-  Redo2,
   Keyboard,
   Info,
   Copy,
@@ -19,6 +17,9 @@ import {
   FileSpreadsheet,
   Image,
   Link,
+  Table,
+  Sparkles,
+  Minus,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
@@ -49,12 +50,17 @@ export default function Navbar() {
     setFieldMergeOpen,
     setLinkOpen,
     setImageOpen,
+    setTableGridOpen,
+    setInsertFieldOpen,
     mruList,
     addRecentFile,
   } = useDocStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
+  const [editMenuOpen, setEditMenuOpen] = useState(false);
+  const [insertMenuOpen, setInsertMenuOpen] = useState(false);
 
   const handleSaveJson = () => {
     saveDocument(docState);
@@ -176,27 +182,20 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-4 shrink-0 shadow-sm z-10">
+    <nav className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0 shadow-sm z-10">
       {/* Brand */}
       <div className="flex items-center gap-2 shrink-0">
         <FileText className="w-5 h-5 text-blue-600" />
         <span className="font-bold text-gray-800 text-lg">simpledocs</span>
       </div>
 
-      {/* Title */}
-      <input
-        type="text"
-        value={docState.title}
-        onChange={(e) => updateTitle(e.target.value)}
-        className="flex-1 max-w-md mx-auto text-center text-sm border border-gray-200 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
-        placeholder="Document Title"
-      />
-
-      {/* File Menu */}
-      <div className="relative shrink-0">
+      {/* Centered Menu Group */}
+      <div className="flex-1 flex items-center justify-center gap-4">
+        {/* File Menu */}
+        <div className="relative shrink-0">
         <button
           onClick={() => setFileMenuOpen(!fileMenuOpen)}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded hover:bg-gray-50 flex items-center gap-1"
+          className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
         >
           File
         </button>
@@ -245,42 +244,10 @@ export default function Navbar() {
               <Printer className="w-4 h-4" /> Print
             </button>
             <button
-              onClick={() => { setFieldMergeOpen(true); setFileMenuOpen(false); }}
+              onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
-              <FileText className="w-4 h-4" /> Merge Fields
-            </button>
-            <div className="border-t border-gray-100 my-1" />
-            <button
-              onClick={() => { setImageOpen(true); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Image className="w-4 h-4" /> Insert Image
-            </button>
-            <button
-              onClick={() => { setLinkOpen(true); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Link className="w-4 h-4" /> Insert Link
-            </button>
-            <div className="border-t border-gray-100 my-1" />
-            <button
-              onClick={() => { handleCopy(); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Copy className="w-4 h-4" /> Copy
-            </button>
-            <button
-              onClick={() => { handleCut(); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Scissors className="w-4 h-4" /> Cut
-            </button>
-            <button
-              onClick={() => { handlePaste(); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <ClipboardPaste className="w-4 h-4" /> Paste
+              Page Setup
             </button>
             {mruList.length > 0 && (
               <>
@@ -300,89 +267,167 @@ export default function Navbar() {
                 ))}
               </>
             )}
-            <div className="border-t border-gray-100 my-1" />
-            <button
-              onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              Page Setup
-            </button>
           </div>
         )}
       </div>
 
-      {/* Undo/Redo */}
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          onClick={() => editor?.commands.undo()}
-          disabled={!editor?.can()?.undo()}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
-          title="Undo"
-        >
-          <Undo2 className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => editor?.commands.redo()}
-          disabled={!editor?.can()?.redo()}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
-          title="Redo"
-        >
-          <Redo2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Zoom */}
-      <div className="flex items-center gap-1 shrink-0">
-        {ZOOM_LEVELS.map((level) => (
+        {/* Edit Menu */}
+        <div className="relative shrink-0">
           <button
-            key={level.value}
-            onClick={() => setZoom(level.value)}
-            className={`px-2 py-1 text-xs rounded ${
-              zoom === level.value
-                ? 'bg-blue-100 text-blue-700'
-                : 'hover:bg-gray-100'
-            }`}
+            onClick={() => setEditMenuOpen(!editMenuOpen)}
+            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
           >
-            {level.label}
+            Edit
           </button>
-        ))}
-      </div>
+          {editMenuOpen && (
+            <div className="absolute top-full left-0 mt-1 w-36 bg-white border border-gray-200 rounded shadow-lg z-50">
+              <button
+                onClick={() => { handleCopy(); setEditMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Copy className="w-4 h-4" /> Copy
+              </button>
+              <button
+                onClick={() => { handleCut(); setEditMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Scissors className="w-4 h-4" /> Cut
+              </button>
+              <button
+                onClick={() => { handlePaste(); setEditMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <ClipboardPaste className="w-4 h-4" /> Paste
+              </button>
+            </div>
+          )}
+        </div>
 
-      {/* Help Menu */}
-      <div className="relative shrink-0">
-        <button
-          onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded hover:bg-gray-50 flex items-center gap-1"
-        >
-          Help
-        </button>
-        {helpMenuOpen && (
-          <div className="absolute top-full right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
-            <button
-              onClick={() => { setShortcutsOpen(true); setHelpMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Keyboard className="w-4 h-4" /> Keyboard Shortcuts
-            </button>
-            <button
-              onClick={() => { setAboutOpen(true); setHelpMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Info className="w-4 h-4" /> About simpledocs
-            </button>
-            <div className="border-t border-gray-100 my-1" />
-            <a
-              href="https://code24x7-r.github.io/simplesheets/"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setHelpMenuOpen(false)}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-green-600" /> SimpleSheet
-            </a>
-          </div>
-        )}
-      </div>
+        {/* Insert Menu */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setInsertMenuOpen(!insertMenuOpen)}
+            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+          >
+            Insert
+          </button>
+          {insertMenuOpen && (
+            <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded shadow-lg z-50">
+              <button
+                onClick={() => { setImageOpen(true); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Image className="w-4 h-4" /> Image
+              </button>
+              <button
+                onClick={() => { setLinkOpen(true); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Link className="w-4 h-4" /> Link
+              </button>
+              <button
+                onClick={() => { setTableGridOpen(true); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Table className="w-4 h-4" /> Table
+              </button>
+              <button
+                onClick={() => { setInsertFieldOpen(true); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" /> Field
+              </button>
+              <button
+                onClick={() => { setFieldMergeOpen(true); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" /> Merge Fields
+              </button>
+              <button
+                onClick={() => { editor?.chain().focus().setPageBreak().run(); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Minus className="w-4 h-4 rotate-90" /> Page Break
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* View Menu */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setViewMenuOpen(!viewMenuOpen)}
+            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+          >
+            View
+          </button>
+          {viewMenuOpen && (
+            <div className="absolute top-full left-0 mt-1 w-36 bg-white border border-gray-200 rounded shadow-lg z-50">
+              <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Zoom
+              </div>
+              {ZOOM_LEVELS.map((level) => (
+                <button
+                  key={level.value}
+                  onClick={() => { setZoom(level.value); setViewMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
+                    zoom === level.value
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : ''
+                  }`}
+                >
+                  {level.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Help Menu */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+          >
+            Help
+          </button>
+          {helpMenuOpen && (
+            <div className="absolute top-full right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
+              <button
+                onClick={() => { setShortcutsOpen(true); setHelpMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Keyboard className="w-4 h-4" /> Keyboard Shortcuts
+              </button>
+              <button
+                onClick={() => { setAboutOpen(true); setHelpMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Info className="w-4 h-4" /> About simpledocs
+              </button>
+              <div className="border-t border-gray-100 my-1" />
+              <a
+                href="https://code24x7-r.github.io/simplesheets/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setHelpMenuOpen(false)}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-green-600" /> SimpleSheet
+              </a>
+            </div>
+          )}
+        </div>
+      </div>{/* End centered menu group */}
+
+      {/* Title / Filename */}
+      <input
+        type="text"
+        value={docState.title}
+        onChange={(e) => updateTitle(e.target.value)}
+        className="w-56 text-sm border border-gray-200 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
+        placeholder="Document Title"
+      />
 
       <input
         ref={fileInputRef}

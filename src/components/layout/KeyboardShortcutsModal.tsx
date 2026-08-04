@@ -12,7 +12,7 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'B'], description: 'Bold' },
     { keys: ['Ctrl', 'I'], description: 'Italic' },
     { keys: ['Ctrl', 'U'], description: 'Underline' },
-    { keys: ['Ctrl', 'Shift', 'X'], description: 'Strikethrough' },
+    { keys: ['Ctrl', 'Shift', 'S'], description: 'Strikethrough' },
     { keys: ['Ctrl', 'E'], description: 'Inline code' },
     { keys: ['Ctrl', 'K'], description: 'Insert link' },
   ]},
@@ -24,9 +24,6 @@ const SHORTCUTS = [
   { category: 'Paragraph Styles', items: [
     { keys: ['Ctrl', 'Shift', 'B'], description: 'Blockquote' },
     { keys: ['Ctrl', 'Alt', 'C'], description: 'Code block' },
-    { keys: ['Ctrl', 'Shift', '8'], description: 'Bullet list' },
-    { keys: ['Ctrl', 'Shift', '7'], description: 'Numbered list' },
-    { keys: ['Ctrl', 'Shift', '9'], description: 'Task list' },
     { keys: ['Ctrl', 'Shift', 'L'], description: 'Align left' },
     { keys: ['Ctrl', 'Shift', 'E'], description: 'Align center' },
     { keys: ['Ctrl', 'Shift', 'R'], description: 'Align right' },

@@ -52,6 +52,12 @@ A modern, browser-based paginated WYSIWYG document editor with Microsoft Word / 
 - **Restore on Load** — Your document reopens exactly as you left it
 - **Named Documents** — Create new documents anytime
 
+### UI Layout
+- **Menubar** — File, Edit, Insert, View, Help menus with grouped actions
+- **Toolbar** — Style, font, size, format (bold/italic/underline/strikethrough/colors), clipboard, alignment, lists, blocks, and tools
+- **Format Menu** — Text style and color controls in a single dropdown
+- **Insert Menu** — Image, link, table, field, merge fields, page break
+
 ### View Controls
 - **Zoom** — 75%, 100%, 125% zoom levels
 - **Virtualized Rendering** — Smooth scrolling via @tanstack/react-virtual
@@ -166,20 +172,57 @@ npm run build
 
 ## Keyboard Shortcuts
 
+### Text Formatting
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl + B` | Bold |
 | `Ctrl + I` | Italic |
 | `Ctrl + U` | Underline |
+| `Ctrl + Shift + S` | Strikethrough |
+| `Ctrl + E` | Inline code |
+| `Ctrl + K` | Insert/edit link |
+
+### Headings
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Alt + 1` | Heading 1 |
+| `Ctrl + Alt + 2` | Heading 2 |
+| `Ctrl + Alt + 3` | Heading 3 |
+
+### Paragraph Styles
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Shift + B` | Blockquote |
+| `Ctrl + Alt + C` | Code block |
+| `Ctrl + Shift + L` | Align left |
+| `Ctrl + Shift + E` | Align center |
+| `Ctrl + Shift + R` | Align right |
+| `Ctrl + Shift + J` | Justify |
+
+### Editing
+| Shortcut | Action |
+|----------|--------|
 | `Ctrl + Z` | Undo |
 | `Ctrl + Y` / `Ctrl + Shift + Z` | Redo |
-| `Ctrl + Enter` | Insert page break |
-| `Ctrl + S` | Save (browser default) |
-| `Ctrl + P` | Print |
 | `Ctrl + A` | Select all |
 | `Ctrl + C` | Copy |
 | `Ctrl + V` | Paste |
 | `Ctrl + X` | Cut |
+
+### Insert & Navigation
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Enter` | Insert page break |
+| `Ctrl + H` | Find & Replace |
+| `Ctrl + F` | Find |
+| `F3` | Find next |
+| `Shift + F3` | Find previous |
+
+### Document
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + S` | Save (browser default) |
+| `Ctrl + P` | Print |
 
 ---
 
@@ -200,9 +243,12 @@ npm run build
 ```
 simpledocs/
 ├── docs/
-│   ├── requirements.md          # Functional specification
-│   ├── wysiwyg-pagination.md    # Pagination design doc
-│   └── BUGFIX.md                # Bug fix log
+│   ├── requirements.md              # Functional specification
+│   ├── wysiwyg-pagination.md        # Pagination design doc
+│   ├── single-editor-constraints.md # Single-editor architecture reference
+│   ├── BUGFIX.md                    # Bug fix log
+│   ├── PLAN.md                      # Project roadmap
+│   └── PROGRESS_LOG.md              # Development progress log
 ├── public/
 │   └── favicon.svg
 ├── src/
@@ -214,8 +260,11 @@ simpledocs/
 │   │   │   ├── PaginationContext.tsx # Per-page geometry
 │   │   │   └── nodes/               # Custom node views
 │   │   ├── layout/              # UI shell components
-│   │   │   ├── Navbar.tsx
+│   │   │   ├── Navbar.tsx           # Menubar (File/Edit/Insert/View/Help)
 │   │   │   ├── Toolbar/
+│   │   │   │   └── Toolbar.tsx      # Formatting/toolbar buttons
+│   │   │   ├── KeyboardShortcutsModal.tsx
+│   │   │   ├── SearchReplaceModal.tsx
 │   │   │   ├── PageSetupModal.tsx
 │   │   │   ├── TableGridModal.tsx
 │   │   │   └── InsertFieldModal.tsx
@@ -244,7 +293,6 @@ simpledocs/
 │   ├── keyboard-navigation.spec.ts
 │   └── merge-focus.spec.ts
 ├── .github/workflows/deploy.yml # GitHub Pages deploy
-├── PLAN.md                      # Project roadmap
 └── README.md
 ```
 ├── index.html
