@@ -15,7 +15,36 @@ const GIT_COMMIT_HASH = getGitCommitHash();
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'use-sync-external-store-shim',
+      resolveId(id) {
+        if (id === 'use-sync-external-store/shim/with-selector.js') {
+          return id;
+        }
+        return null;
+      },
+      load(id) {
+        if (id === 'use-sync-external-store/shim/with-selector.js') {
+          return `
+            import React from 'react';
+            export const useSyncExternalStoreWithSelector = React.useSyncExternalStore
+              ? function useSyncExternalStoreWithSelector(subscribe, getSnapshot, getServerSnapshot, selector, isEqual) {
+                  const inst = React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+                  return selector(inst);
+                }
+              : function useSyncExternalStoreWithSelector(subscribe, getSnapshot, getServerSnapshot, selector, isEqual) {
+                  let inst = getSnapshot();
+                  return selector(inst);
+                };
+            export default { useSyncExternalStoreWithSelector };
+          `;
+        }
+        return null;
+      },
+    },
+  ],
   base: process.env.GITHUB_PAGES === 'true' ? '/simpledocs/' : '/',
   resolve: {
     alias: {
@@ -23,7 +52,8 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['html2pdf.js', 'zustand', 'react-dom/client', 'lucide-react'],
+    include: ['use-sync-external-store'],
+    exclude: ['lucide-react'],
   },
   define: {
     __GIT_COMMIT_HASH__: JSON.stringify(GIT_COMMIT_HASH),

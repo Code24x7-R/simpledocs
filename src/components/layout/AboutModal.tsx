@@ -50,7 +50,8 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
               </svg>
               <span className="text-xl font-bold text-gray-800">simpledocs</span>
             </div>
-            <p className="text-sm text-gray-500">Paginated WYSIWYG Document Editor</p>
+            <p className="text-sm text-gray-500">Simple Web Apps</p>
+            <p className="text-sm text-green-600 mt-1">Work faster, keep it Simple</p>
           </div>
 
           {/* Details */}
@@ -110,6 +111,18 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
           <p className="text-xs text-gray-400 text-center pt-2">
             MIT License
           </p>
+
+          {/* Support */}
+          <div className="pt-2 text-center">
+            <a
+              href="https://sites.google.com/view/simplewebapps/home"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-500 hover:text-blue-700 underline"
+            >
+              https://sites.google.com/view/simplewebapps/home
+            </a>
+          </div>
         </div>
       </div>
     </div>

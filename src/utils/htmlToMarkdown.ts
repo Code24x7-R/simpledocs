@@ -21,6 +21,7 @@
  * - Unordered lists (- item) and ordered lists (1. item)
  * - Blockquotes (> text)
  * - Links ([text](url))
+ * - Images (![alt](src))
  * - Horizontal rules (---)
  * - Paragraphs and line breaks
  *
@@ -94,6 +95,15 @@ export function htmlToMarkdown(html: string): string {
     // Handle multi-line blockquotes
     const lines = text.split('\n');
     return '\n\n' + lines.map((line) => `> ${line.trim()}`).join('\n') + '\n\n';
+  });
+
+  // Images: <img src="url" alt="text">
+  result = result.replace(/<img\s+src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/g, (_match, src: string, alt: string) => {
+    return `\n\n![${alt || 'image'}](${src})\n\n`;
+  });
+  // Images without alt: <img src="url">
+  result = result.replace(/<img\s+src="([^"]*)"[^>]*\/?>/g, (_match, src: string) => {
+    return `\n\n![image](${src})\n\n`;
   });
 
   // Horizontal rules: <hr>

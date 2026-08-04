@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useEditor, EditorContent } from '@tiptap/react';
+import type { EditorView } from '@tiptap/pm/view';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createExtensions } from '../../extensions';
 import { useDocStore } from '../../store/useDocStore';
 import TableContextMenu from './TableContextMenu';
+import EditorBubbleMenu from './BubbleMenu';
 
 interface ContextMenuState {
   x: number;
@@ -34,7 +36,7 @@ export default function DocumentEditor() {
       attributes: {
         class: 'tiptap',
       },
-      handleKeyDown(_view: any, event: KeyboardEvent) {
+      handleKeyDown(_view: EditorView, event: KeyboardEvent) {
         // Ctrl+Enter → insert page break
         if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
           event.preventDefault();
@@ -43,10 +45,23 @@ export default function DocumentEditor() {
           }
           return true;
         }
+        // Ctrl+K → insert/edit link
+        if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          if (editor) {
+            if (editor.isActive('link')) {
+              editor.chain().focus().unsetLink().run();
+            } else {
+              // Dispatch custom event to open link modal
+              window.dispatchEvent(new CustomEvent('simpledocs:open-link'));
+            }
+          }
+          return true;
+        }
         return false;
       },
       handleDOMEvents: {
-        contextmenu(_view: any, event: MouseEvent) {
+        contextmenu(_view: EditorView, event: MouseEvent) {
           // Show context menu when right-clicking inside a table
           if (editor?.isActive('table')) {
             event.preventDefault();
@@ -90,6 +105,7 @@ export default function DocumentEditor() {
 
   return (
     <div ref={editorRef} className="document-editor">
+      <EditorBubbleMenu editor={editor} />
       <EditorContent editor={editor} />
       {contextMenu.visible && editor && (
         <TableContextMenu

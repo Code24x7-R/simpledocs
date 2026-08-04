@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useDocStore } from './store/useDocStore';
 import { exportToPdf } from './utils/pdfExport';
 import Navbar from './components/layout/Navbar';
@@ -8,6 +8,8 @@ import Toolbar from './components/layout/Toolbar/Toolbar';
 import PageSetupModal from './components/layout/PageSetupModal';
 import TableGridModal from './components/layout/TableGridModal';
 import InsertFieldModal from './components/layout/InsertFieldModal';
+import LinkModal from './components/layout/LinkModal';
+import ImageModal from './components/layout/ImageModal';
 import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import SearchReplaceModal from './components/layout/SearchReplaceModal';
@@ -17,8 +19,28 @@ import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, chatOpen, setChatOpen } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, chatOpen, setChatOpen, editor } = useDocStore();
   const pageElementsRef = useRef<HTMLElement[]>([]);
+  const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
+
+  // Link modal handler
+  const handleLinkSubmit = useCallback((url: string, _text: string) => {
+    if (!editor) return;
+    if (!url) {
+      // Remove link
+      editor.chain().focus().unsetLink().run();
+    } else {
+      editor.chain().focus().setLink({ href: url }).run();
+    }
+    setLinkOpen(false);
+  }, [editor, setLinkOpen]);
+
+  // Image modal handler
+  const handleImageSubmit = useCallback((src: string, alt: string) => {
+    if (!editor) return;
+    editor.chain().focus().setImage({ src, alt }).run();
+    setImageOpen(false);
+  }, [editor, setImageOpen]);
 
   useEffect(() => {
     const handler = async () => {
@@ -38,6 +60,23 @@ export default function App() {
     return () => window.removeEventListener('simpledocs:export-pdf', handler);
   }, [docState]);
 
+  // Listen for Ctrl+K link shortcut from editor
+  useEffect(() => {
+    const handler = () => {
+      if (editor) {
+        // Get current link URL if editing existing link
+        const attrs = editor.getAttributes('link');
+        setLinkModalState({
+          url: (attrs.href as string) || '',
+          text: '',
+        });
+      }
+      setLinkOpen(true);
+    };
+    window.addEventListener('simpledocs:open-link', handler);
+    return () => window.removeEventListener('simpledocs:open-link', handler);
+  }, [editor, setLinkOpen]);
+
   return (
     <div className="h-screen flex flex-col">
       <Navbar />
@@ -54,6 +93,18 @@ export default function App() {
       <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <SearchReplaceModal isOpen={searchReplaceOpen} onClose={() => setSearchReplaceOpen(false)} />
       <FieldMergeModal isOpen={fieldMergeOpen} onClose={() => setFieldMergeOpen(false)} />
+      <LinkModal
+        isOpen={linkOpen}
+        onClose={() => setLinkOpen(false)}
+        onSubmit={handleLinkSubmit}
+        initialUrl={linkModalState.url}
+        initialText={linkModalState.text}
+      />
+      <ImageModal
+        isOpen={imageOpen}
+        onClose={() => setImageOpen(false)}
+        onSubmit={handleImageSubmit}
+      />
     </div>
   );
 }

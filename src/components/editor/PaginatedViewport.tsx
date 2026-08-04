@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDocStore } from '../../store/useDocStore';
 import DocumentEditor from './DocumentEditor';
-import {
-  PaginationProvider,
-  usePaginationContext,
-} from './PaginationContext';
+import { PaginationProvider } from './PaginationContext';
+import { usePaginationContext } from './usePaginationContext';
 
 /**
  * Paginated Viewport — continuous scroll editor.

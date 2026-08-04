@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import { formatReadingTime } from '../../utils/textStats';
 
 /**
  * Page Navigation Controls
@@ -24,25 +25,38 @@ export default function PageNavigation() {
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [isEditing, setIsEditing] = useState(false);
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+  const [stats, setStats] = useState({ words: 0, characters: 0, readingTimeMinutes: 1 });
 
-  // Track cursor position from the editor
+  // Track cursor position and text stats from the editor
   useEffect(() => {
     if (!editor) return;
 
-    const updateCursorPos = () => {
+    const updateStats = () => {
       const { selection } = editor.state;
       const { from } = selection;
       const resolved = editor.state.doc.resolve(from);
       const line = resolved.index(0) + 1;
       const col = resolved.parentOffset + 1;
       setCursorPos({ line, col });
+
+      // Update text stats from editor storage
+      const characterCount = editor.storage.characterCount;
+      if (characterCount) {
+        setStats({
+          words: characterCount.words(),
+          characters: characterCount.characters(),
+          readingTimeMinutes: Math.max(1, Math.round(characterCount.words() / 200)),
+        });
+      }
     };
 
-    editor.on('selectionUpdate', updateCursorPos);
-    updateCursorPos();
+    editor.on('selectionUpdate', updateStats);
+    editor.on('update', updateStats);
+    updateStats();
 
     return () => {
-      editor.off('selectionUpdate', updateCursorPos);
+      editor.off('selectionUpdate', updateStats);
+      editor.off('update', updateStats);
     };
   }, [editor]);
 
@@ -126,6 +140,11 @@ export default function PageNavigation() {
       {/* Cursor Position */}
       <div className="ml-4 text-xs text-gray-500 border-l border-gray-300 pl-4">
         Ln {cursorPos.line}, Col {cursorPos.col}
+      </div>
+
+      {/* Text Stats */}
+      <div className="ml-4 text-xs text-gray-500 border-l border-gray-300 pl-4">
+        {stats.words} words · {stats.characters} chars · {formatReadingTime(stats.readingTimeMinutes)}
       </div>
     </div>
   );

@@ -17,6 +17,8 @@ import {
   FileUp,
   FileDown,
   FileSpreadsheet,
+  Image,
+  Link,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
@@ -45,6 +47,8 @@ export default function Navbar() {
     setAboutOpen,
     setShortcutsOpen,
     setFieldMergeOpen,
+    setLinkOpen,
+    setImageOpen,
     mruList,
     addRecentFile,
   } = useDocStore();
@@ -245,6 +249,19 @@ export default function Navbar() {
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <FileText className="w-4 h-4" /> Merge Fields
+            </button>
+            <div className="border-t border-gray-100 my-1" />
+            <button
+              onClick={() => { setImageOpen(true); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Image className="w-4 h-4" /> Insert Image
+            </button>
+            <button
+              onClick={() => { setLinkOpen(true); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Link className="w-4 h-4" /> Insert Link
             </button>
             <div className="border-t border-gray-100 my-1" />
             <button
