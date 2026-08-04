@@ -98,6 +98,17 @@
   font-weight: 600;
 }
 
+.tiptap a {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap a:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
 .tiptap .template-field {
   display: inline-flex;
   align-items: center;

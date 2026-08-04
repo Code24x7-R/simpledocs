@@ -320,7 +320,17 @@ export default function Navbar() {
                 <Image className="w-4 h-4" /> Image
               </button>
               <button
-                onClick={() => { setLinkOpen(true); setInsertMenuOpen(false); }}
+                onClick={() => {
+                  // Save selection before modal opens (modal steals focus)
+                  if (editor) {
+                    const { from, to } = editor.state.selection;
+                    useDocStore.getState().setSavedLinkSelection({ from, to });
+                  } else {
+                    useDocStore.getState().setSavedLinkSelection(null);
+                  }
+                  setLinkOpen(true);
+                  setInsertMenuOpen(false);
+                }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <Link className="w-4 h-4" /> Link

@@ -19,21 +19,39 @@ import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, chatOpen, setChatOpen, editor } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, chatOpen, setChatOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const pageElementsRef = useRef<HTMLElement[]>([]);
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
   // Link modal handler
-  const handleLinkSubmit = useCallback((url: string, _text: string) => {
+  const handleLinkSubmit = useCallback((url: string, text: string) => {
     if (!editor) return;
     if (!url) {
       // Remove link
       editor.chain().focus().unsetLink().run();
     } else {
-      editor.chain().focus().setLink({ href: url }).run();
+      // Restore the selection that was saved before the modal opened
+      if (savedLinkSelection) {
+        const { from, to } = savedLinkSelection;
+        editor.chain().focus().setTextSelection({ from, to }).run();
+      }
+      // If display text was provided, replace selection with that text + link
+      if (text && text.trim()) {
+        const sel = editor.state.selection;
+        editor.chain()
+          .focus()
+          .insertContentAt(
+            { from: sel.from, to: sel.to },
+            { type: 'text', text: text.trim(), marks: [{ type: 'link', attrs: { href: url } }] }
+          )
+          .run();
+      } else {
+        editor.chain().focus().setLink({ href: url }).run();
+      }
     }
+    setSavedLinkSelection(null);
     setLinkOpen(false);
-  }, [editor, setLinkOpen]);
+  }, [editor, setLinkOpen, savedLinkSelection, setSavedLinkSelection]);
 
   // Image modal handler
   const handleImageSubmit = useCallback((src: string, alt: string) => {
@@ -64,18 +82,22 @@ export default function App() {
   useEffect(() => {
     const handler = () => {
       if (editor) {
-        // Get current link URL if editing existing link
+        // Save current selection before modal steals focus
+        const { from, to } = editor.state.selection;
+        setSavedLinkSelection({ from, to });
+        // Get current link URL and selected text if editing existing link
         const attrs = editor.getAttributes('link');
+        const selectedText = editor.state.doc.textBetween(from, to, ' ');
         setLinkModalState({
           url: (attrs.href as string) || '',
-          text: '',
+          text: from !== to ? selectedText : '',
         });
       }
       setLinkOpen(true);
     };
     window.addEventListener('simpledocs:open-link', handler);
     return () => window.removeEventListener('simpledocs:open-link', handler);
-  }, [editor, setLinkOpen]);
+  }, [editor, setLinkOpen, setSavedLinkSelection]);
 
   return (
     <div className="h-screen flex flex-col">

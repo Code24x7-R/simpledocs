@@ -57,6 +57,8 @@ interface DocStore {
   linkOpen: boolean;
   imageOpen: boolean;
   chatOpen: boolean;
+  /** Editor selection saved before link modal opens (modal steals focus) */
+  savedLinkSelection: { from: number; to: number } | null;
   currentPage: number;
   totalPages: number;
 
@@ -81,6 +83,7 @@ interface DocStore {
   setFieldMergeOpen: (open: boolean) => void;
   setLinkOpen: (open: boolean) => void;
   setImageOpen: (open: boolean) => void;
+  setSavedLinkSelection: (sel: { from: number; to: number } | null) => void;
   setChatOpen: (open: boolean) => void;
   setCurrentPage: (page: number) => void;
   setTotalPages: (pages: number) => void;
@@ -216,6 +219,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     linkOpen: false,
     imageOpen: false,
     chatOpen: false,
+    savedLinkSelection: null,
     currentPage: 1,
     totalPages: 1,
 
@@ -287,6 +291,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     setFieldMergeOpen: (open) => set({ fieldMergeOpen: open }),
     setLinkOpen: (open) => set({ linkOpen: open }),
     setImageOpen: (open) => set({ imageOpen: open }),
+    setSavedLinkSelection: (sel) => set({ savedLinkSelection: sel }),
     setChatOpen: (open) => set({ chatOpen: open }),
     setCurrentPage: (page) => {
       const { totalPages } = get();

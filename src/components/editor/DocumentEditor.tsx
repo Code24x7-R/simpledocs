@@ -36,6 +36,20 @@ export default function DocumentEditor() {
       attributes: {
         class: 'tiptap',
       },
+      handleClick(_view: EditorView, _pos: number, event: MouseEvent) {
+        // Ctrl/Cmd+Click (or plain click) on a link → open in new tab
+        const target = event.target as HTMLElement;
+        const anchor = target.closest('a');
+        if (anchor) {
+          const href = anchor.getAttribute('href');
+          if (href) {
+            event.preventDefault();
+            window.open(href, '_blank', 'noopener,noreferrer');
+            return true;
+          }
+        }
+        return false;
+      },
       handleKeyDown(_view: EditorView, event: KeyboardEvent) {
         // Ctrl+Enter → insert page break
         if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
@@ -44,6 +58,18 @@ export default function DocumentEditor() {
             editor.chain().focus().setPageBreak().run();
           }
           return true;
+        }
+        // Plain Enter on a link → open in new tab
+        if (event.key === 'Enter' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+          if (editor?.isActive('link')) {
+            const attrs = editor.getAttributes('link');
+            const href = attrs.href as string | undefined;
+            if (href) {
+              event.preventDefault();
+              window.open(href, '_blank', 'noopener,noreferrer');
+              return true;
+            }
+          }
         }
         // Ctrl+K → insert/edit link
         if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
