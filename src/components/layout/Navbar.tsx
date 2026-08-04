@@ -181,6 +181,20 @@ export default function Navbar() {
     alert(`MRU: ${entry.name} (${formatMRUTimestamp(entry.timestamp)}). Use Open JSON to reopen saved documents.`);
   };
 
+  const handleLoadDemo = async () => {
+    try {
+      const base = import.meta.env.BASE_URL || '/';
+      const url = `${base}demo/Superbus-Maximus-Distracticus.json`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to load demo file');
+      const doc = await res.json();
+      loadDocument(doc);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to load demo');
+    }
+    setFileMenuOpen(false);
+  };
+
   return (
     <nav className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0 shadow-sm z-10">
       {/* Brand */}
@@ -206,6 +220,12 @@ export default function Navbar() {
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <FileText className="w-4 h-4" /> New
+            </button>
+            <button
+              onClick={handleLoadDemo}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" /> Load Demo
             </button>
             <button
               onClick={() => { handleOpenJson(); setFileMenuOpen(false); }}
