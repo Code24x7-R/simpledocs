@@ -31,8 +31,14 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
   const { commit, version, date, time, raw } = getBuildInfo();
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[400px] p-6">
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-[400px] p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">About simpledocs</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">

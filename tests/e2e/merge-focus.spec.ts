@@ -8,11 +8,29 @@ import { test, expect, Page } from '@playwright/test';
  * focus should shift to page 1 end WITH caret visible.
  */
 
-function para(text: string) {
-  return { type: 'paragraph', content: text ? [{ type: 'text', text }] : [] };
+/** Minimal Tiptap editor shape for E2E helpers */
+interface TiptapEditor {
+  state: {
+    selection: { from: number; to: number; empty: boolean };
+    doc: { resolve(pos: number): { index(depth: number): number; parentOffset: number }; content: { size: number } };
+  };
+  commands: {
+    focus(): void;
+    setTextSelection(pos: number): void;
+  };
+  view: { dom: HTMLElement };
 }
-function makeDoc(paras: string[]) {
-  return { type: 'doc', content: paras.map(para) };
+
+interface EditorElement extends HTMLElement {
+  editor?: TiptapEditor;
+}
+
+interface WindowWithStore extends Window {
+  __docStore?: {
+    getState(): {
+      loadDocument(doc: unknown): void;
+    };
+  };
 }
 
 async function setup(page: Page) {
@@ -26,7 +44,7 @@ async function createTwoPageDoc(page: Page) {
     const para = (text: string) => ({ type: 'paragraph', content: text ? [{ type: 'text', text }] : [] });
     const makeDoc = (paras: string[]) => ({ type: 'doc', content: paras.map(para) });
 
-    const store = (window as any).__docStore;
+    const store = (window as WindowWithStore).__docStore;
     if (store) {
       store.getState().loadDocument({
         id: 'test-merge',
@@ -52,11 +70,11 @@ async function createTwoPageDoc(page: Page) {
   await page.waitForTimeout(200);
 }
 
-async function getActiveEditor(page: Page): Promise<any> {
+async function getActiveEditor(page: Page): Promise<TiptapEditor | null> {
   return await page.evaluate(() => {
     const focused = document.activeElement;
     if (!focused?.classList.contains('tiptap')) return null;
-    return (focused as any)?.editor || null;
+    return (focused as EditorElement | null)?.editor || null;
   });
 }
 
@@ -71,7 +89,7 @@ async function getCurrentPage(page: Page): Promise<number> {
 async function getCursorPos(page: Page): Promise<{ line: number; col: number }> {
   return await page.evaluate(() => {
     const focused = document.activeElement;
-    const editor = (focused as any)?.editor;
+    const editor = (focused as EditorElement | null)?.editor;
     if (!editor) return { line: 0, col: 0 };
     const { selection } = editor.state;
     const resolved = editor.state.doc.resolve(selection.from);
@@ -104,7 +122,7 @@ test('merge: backspace at start of page 2 should focus page 1 with caret', async
   // Move cursor to very start of page 2
   await page.evaluate(() => {
     const el = document.querySelector<HTMLElement>('[data-page-editor="1"] .tiptap');
-    const editor = (el as any)?.editor;
+    const editor = (el as EditorElement | null)?.editor;
     if (editor) {
       editor.commands.setTextSelection(1);
     }
@@ -162,7 +180,7 @@ test('merge: verify caret is visible after merge', async ({ page }) => {
   // Move cursor to start
   await page.evaluate(() => {
     const el = document.querySelector<HTMLElement>('[data-page-editor="1"] .tiptap');
-    const editor = (el as any)?.editor;
+    const editor = (el as EditorElement | null)?.editor;
     if (editor) editor.commands.setTextSelection(1);
   });
   await page.waitForTimeout(50);
@@ -174,7 +192,7 @@ test('merge: verify caret is visible after merge', async ({ page }) => {
   // Check if caret is visible (editor has focus and shows caret)
   const caretInfo = await page.evaluate(() => {
     const focused = document.activeElement;
-    const editor = (focused as any)?.editor;
+    const editor = (focused as EditorElement | null)?.editor;
     if (!editor) return { hasEditor: false };
     const { selection } = editor.state;
     return {

@@ -11,12 +11,30 @@ import { test, expect, Page } from '@playwright/test';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-function para(text: string) {
-  return { type: 'paragraph', content: text ? [{ type: 'text', text }] : [] };
+/** Minimal Tiptap editor shape for E2E helpers */
+interface TiptapEditor {
+  state: {
+    selection: { from: number; to: number };
+    doc: { resolve(pos: number): { index(depth: number): number; parentOffset: number } };
+  };
+  commands: {
+    focus(): void;
+    setTextSelection(pos: number): void;
+    selectTextblockEnd(): void;
+  };
+  view: { dom: HTMLElement };
 }
 
-function makeDoc(paras: string[]) {
-  return { type: 'doc', content: paras.map(para) };
+interface EditorElement extends HTMLElement {
+  editor?: TiptapEditor;
+}
+
+interface WindowWithStore extends Window {
+  __docStore?: {
+    getState(): {
+      loadDocument(doc: unknown): void;
+    };
+  };
 }
 
 async function getCurrentPage(page: Page): Promise<number> {
@@ -30,7 +48,7 @@ async function getCurrentPage(page: Page): Promise<number> {
 async function getCursorPos(page: Page): Promise<{ line: number; col: number }> {
   return await page.evaluate(() => {
     const focused = document.activeElement;
-    const editor = (focused as any)?.editor;
+    const editor = (focused as EditorElement | null)?.editor;
     if (!editor) return { line: 0, col: 0 };
     const { selection } = editor.state;
     const resolved = editor.state.doc.resolve(selection.from);
@@ -48,7 +66,7 @@ async function createMultiPageDoc(page: Page, linesPerPage: number[]) {
       id: `page-${pageIdx}`,
       content: makeDoc(Array.from({ length: count }, (_, i) => `Line ${i + 1} page ${pageIdx + 1}`)),
     }));
-    const store = (window as any).__docStore;
+    const store = (window as WindowWithStore).__docStore;
     if (store) {
       store.getState().loadDocument({
         id: 'test-doc',
@@ -74,7 +92,7 @@ async function focusPage(page: Page, pageIndex: number, pos: number = 1) {
   await page.locator(`[data-page-editor="${pageIndex}"] .tiptap`).waitFor({ state: 'attached', timeout: 10000 });
   await page.evaluate(({ pageIndex, pos }) => {
     const el = document.querySelector<HTMLElement>(`[data-page-editor="${pageIndex}"] .tiptap`);
-    const editor = (el as any)?.editor;
+    const editor = (el as EditorElement | null)?.editor;
     if (editor) {
       editor.commands.focus();
       editor.commands.setTextSelection(pos);
@@ -86,7 +104,7 @@ async function focusPage(page: Page, pageIndex: number, pos: number = 1) {
 async function setCursorToEnd(page: Page, pageIndex: number) {
   await page.evaluate(({ pageIndex }) => {
     const el = document.querySelector<HTMLElement>(`[data-page-editor="${pageIndex}"] .tiptap`);
-    const editor = (el as any)?.editor;
+    const editor = (el as EditorElement | null)?.editor;
     if (editor) {
       editor.commands.focus();
       // Use selectTextblockEnd to go to the very end of the last block
@@ -314,7 +332,7 @@ test.describe('Enter Overflow', () => {
 });
 
 test.describe('Navigation Gap Summary', () => {
-  test('documents all navigation scenarios and identifies gaps', async ({ page }) => {
+  test('documents all navigation scenarios and identifies gaps', async () => {
     // Status: ✅ Works | ⚠️ Partial | ❌ Broken
     // Based on actual browser observations:
     // - Arrow keys scroll viewport when no caret is active
