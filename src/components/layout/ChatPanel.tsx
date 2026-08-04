@@ -34,7 +34,7 @@ interface ChatPanelProps {
   onClose: () => void;
 }
 
-const MAX_SELECTION_LENGTH = 200;
+const MAX_SELECTION_LENGTH = 1000;
 
 /**
  * ChatPanel — sidebar chatbot integrated with LM Studio API.
@@ -45,7 +45,7 @@ const MAX_SELECTION_LENGTH = 200;
  * - Session memory (conversation history persisted to localStorage)
  * - Context window up to 65535 tokens
  * - Bi-directional copy/paste button:
- *   - If editor has selection (≤200 chars) → paste into chat input
+ *   - If editor has selection (≤1000 chars) → paste into chat input
  *   - Else → insert last response at cursor (with MD→HTML conversion)
  * - System prompt templates (pre-populated + custom)
  */
@@ -567,7 +567,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           <button
             onClick={handleBidirectionalAction}
             className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 text-gray-600"
-            title="Select text in editor (≤200 chars) to paste here, or insert last response at cursor"
+            title="Select text in editor (≤1000 chars) to paste here, or insert last response at cursor"
           >
             <ArrowLeftRight className="w-3 h-3" />
             ↕ Editor ↔ Chat
