@@ -7,13 +7,26 @@ import type { ChatMessage } from '../../types/chat';
 describe('geminiProvider', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let fetchMock: any;
+  const originalSetTimeout = global.setTimeout;
 
   beforeEach(() => {
     fetchMock = vi.spyOn(global, 'fetch');
+    // Make retry backoff delays instant (<=8s) while leaving the 120s
+    // AbortSignal.timeout unaffected. This keeps retry tests fast.
+    vi.spyOn(global, 'setTimeout').mockImplementation(
+      (fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+        if (typeof delay === 'number' && delay <= 8000) {
+          if (fn instanceof Function) fn();
+          return originalSetTimeout(() => {}, 0);
+        }
+        return originalSetTimeout(fn, delay, ...args);
+      },
+    );
   });
 
   afterEach(() => {
     fetchMock.mockRestore();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -801,7 +814,8 @@ describe('geminiProvider', () => {
       const errorJson = JSON.stringify({
         error: { code: 429, message: 'Quota exceeded', status: 'RESOURCE_EXHAUSTED' },
       });
-      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 429 }));
+      // Retryable — all 4 attempts (initial + 3 retries) return 429
+      fetchMock.mockImplementation(() => Promise.resolve(new Response(errorJson, { status: 429 })));
 
       await expect(
         geminiProvider.sendMessage(
@@ -852,7 +866,8 @@ describe('geminiProvider', () => {
       const errorJson = JSON.stringify({
         error: { code: 500, message: 'Internal error', status: 'INTERNAL' },
       });
-      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 500 }));
+      // Retryable — all 4 attempts return 500
+      fetchMock.mockImplementation(() => Promise.resolve(new Response(errorJson, { status: 500 })));
 
       await expect(
         geminiProvider.sendMessage(
@@ -866,7 +881,8 @@ describe('geminiProvider', () => {
     });
 
     it('handles non-JSON error responses gracefully', async () => {
-      fetchMock.mockResolvedValueOnce(
+      // Retryable — all 4 attempts return 503
+      fetchMock.mockImplementation(() =>
         new Response('Something went wrong', { status: 503 })
       );
 
@@ -903,11 +919,160 @@ describe('geminiProvider', () => {
       const errorJson = JSON.stringify({
         error: { code: 429, message: 'Quota exceeded', status: 'RESOURCE_EXHAUSTED' },
       });
-      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 429 }));
+      // Retryable — all 4 attempts return 429
+      fetchMock.mockImplementation(() => Promise.resolve(new Response(errorJson, { status: 429 })));
 
       await expect(
         geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
       ).rejects.toThrow('Rate limit exceeded');
+    });
+  });
+
+  describe('retry with exponential backoff', () => {
+    const retryMessages: ChatMessage[] = [
+      { role: 'user', content: 'Hello', timestamp: Date.now() },
+    ];
+
+    it('retries on 429 and succeeds on second attempt', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 429, message: 'Rate limited', status: 'RESOURCE_EXHAUSTED' },
+      });
+      const successResponse = {
+        candidates: [{
+          content: { role: 'model', parts: [{ text: 'Success after retry' }] },
+          finishReason: 'STOP',
+        }],
+      };
+
+      fetchMock
+        .mockResolvedValueOnce(new Response(errorJson, { status: 429 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify(successResponse), { status: 200 }));
+
+      const result = await geminiProvider.sendMessage(
+        retryMessages,
+        { apiKey: 'AIzaTest123' },
+        'gemini-3.6-flash',
+        8192,
+        0.7
+      );
+
+      expect(result).toBe('Success after retry');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries on 500 server error and succeeds', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 500, message: 'Internal error', status: 'INTERNAL' },
+      });
+      const successResponse = {
+        candidates: [{
+          content: { role: 'model', parts: [{ text: 'OK' }] },
+          finishReason: 'STOP',
+        }],
+      };
+
+      fetchMock
+        .mockResolvedValueOnce(new Response(errorJson, { status: 500 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify(successResponse), { status: 200 }));
+
+      const result = await geminiProvider.sendMessage(
+        retryMessages,
+        { apiKey: 'AIzaTest123' },
+        'gemini-3.6-flash',
+        8192,
+        0.7
+      );
+
+      expect(result).toBe('OK');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does NOT retry on 401 (permanent error)', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 401, message: 'API key not valid', status: 'UNAUTHENTICATED' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 401 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          retryMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('Authentication failed');
+
+      // Should have only made 1 attempt — no retry on 401
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT retry on 400 (permanent error)', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 400, message: 'Invalid argument', status: 'INVALID_ARGUMENT' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 400 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          retryMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('Bad request');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws after exhausting all retries on persistent 429', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 429, message: 'Rate limited', status: 'RESOURCE_EXHAUSTED' },
+      });
+      // All 4 attempts (initial + 3 retries) return 429
+      fetchMock
+        .mockResolvedValueOnce(new Response(errorJson, { status: 429 }))
+        .mockResolvedValueOnce(new Response(errorJson, { status: 429 }))
+        .mockResolvedValueOnce(new Response(errorJson, { status: 429 }))
+        .mockResolvedValueOnce(new Response(errorJson, { status: 429 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          retryMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('Rate limit exceeded');
+
+      // Initial attempt + 3 retries = 4 total
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+    });
+
+    it('retries on 429 for image generation too', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 429, message: 'Rate limited', status: 'RESOURCE_EXHAUSTED' },
+      });
+      const successResponse = {
+        candidates: [{
+          content: {
+            role: 'model',
+            parts: [{ inlineData: { mimeType: 'image/png', data: 'abc123' } }],
+          },
+          finishReason: 'STOP',
+        }],
+      };
+
+      fetchMock
+        .mockResolvedValueOnce(new Response(errorJson, { status: 429 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify(successResponse), { status: 200 }));
+
+      const result = await geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' });
+
+      expect(result.base64).toBe('abc123');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
   });
 });

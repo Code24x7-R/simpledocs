@@ -76,6 +76,64 @@ const GEMINI_MODELS = [
   { id: 'gemini-3.1-flash-lite-image', name: 'Gemini 3.1 Flash-Lite Image' },
 ];
 
+/** Maximum number of retry attempts for transient errors. */
+const MAX_RETRIES = 3;
+
+/**
+ * HTTP status codes that are transient and worth retrying.
+ * 429 = rate limit, 500 = server error, 502 = bad gateway, 503 = unavailable.
+ */
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 500 || status === 502 || status === 503;
+}
+
+/**
+ * Delay before retry attempt n (0-indexed) using exponential backoff.
+ * Caps at 8 seconds: 1s, 2s, 4s.
+ */
+function retryDelay(attempt: number): number {
+  return Math.min(1000 * 2 ** attempt, 8000);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch with automatic retry on transient errors (429, 500, 502, 503).
+ * Uses exponential backoff: 1s, 2s, 4s delays between attempts.
+ * Throws a user-friendly error on permanent failures or exhausted retries.
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries: number = MAX_RETRIES
+): Promise<GeminiResponse> {
+  let lastStatus = 0;
+  let lastErrorText = '';
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.ok) {
+      return (await response.json()) as GeminiResponse;
+    }
+
+    lastStatus = response.status;
+    lastErrorText = await response.text();
+
+    // Don't retry permanent errors (400, 401, 403, 404) or if exhausted
+    if (!isRetryableStatus(lastStatus) || attempt === maxRetries) {
+      throw new Error(parseGeminiApiError(lastStatus, lastErrorText));
+    }
+
+    await sleep(retryDelay(attempt));
+  }
+
+  // Unreachable — satisfies TypeScript
+  throw new Error(parseGeminiApiError(lastStatus, lastErrorText));
+}
+
 /**
  * Parse a Gemini API error response into a user-friendly message.
  * The API returns JSON like: {"error":{"code":429,"message":"...","status":"..."}}
@@ -327,7 +385,7 @@ export const geminiProvider: LlmProvider = {
       },
     };
 
-    const response = await fetch(
+    const data = await fetchWithRetry(
       `${GEMINI_API_BASE}/models/${model}:generateContent?key=${config.apiKey}`,
       {
         method: 'POST',
@@ -336,13 +394,6 @@ export const geminiProvider: LlmProvider = {
         signal: AbortSignal.timeout(120000),
       }
     );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(parseGeminiApiError(response.status, errorText));
-    }
-
-    const data: GeminiResponse = await response.json();
 
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('No response candidates returned from Gemini API');
@@ -390,7 +441,7 @@ export const geminiProvider: LlmProvider = {
       generationConfig,
     };
 
-    const response = await fetch(
+    const data = await fetchWithRetry(
       `${GEMINI_API_BASE}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${config.apiKey}`,
       {
         method: 'POST',
@@ -399,13 +450,6 @@ export const geminiProvider: LlmProvider = {
         signal: AbortSignal.timeout(120000),
       }
     );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(parseGeminiApiError(response.status, errorText));
-    }
-
-    const data: GeminiResponse = await response.json();
 
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('No response candidates returned from Gemini API');
