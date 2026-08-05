@@ -27,7 +27,7 @@ describe('pdfmakeConverter', () => {
       expect(doc.pageSize).toBe('A4');
       expect(doc.pageOrientation).toBe('portrait');
       expect(doc.pageMargins).toEqual([25.4, 25.4, 25.4, 25.4]);
-      expect(doc.defaultStyle).toEqual({ font: 'Roboto' });
+      expect(doc.defaultStyle).toEqual({ font: 'Arial' });
     });
 
     it('creates a doc with Letter landscape', () => {
@@ -128,7 +128,7 @@ describe('pdfmakeConverter', () => {
         defaultPageSetup
       );
       const para = doc.content[0] as { text: Array<{ text: string; font: string; color: string; background: string }> };
-      expect(para.text[0].font).toBe('Courier');
+      expect(para.text[0].font).toBe('Courier New');
       expect(para.text[0].color).toBe('222222');
       expect(para.text[0].background).toBe('F5F5F5');
     });

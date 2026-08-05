@@ -148,7 +148,7 @@ function applyMarks(text: string, marks: TiptapMark[] | undefined): PdfText {
         run.strike = true;
         break;
       case 'code':
-        run.font = 'Courier';
+        run.font = 'Courier New';
         run.color = '222222';
         run.background = 'F5F5F5';
         break;
@@ -412,7 +412,7 @@ function convertTaskItem(node: TiptapNode): unknown {
         }
       }
       const checkbox = checked ? '☑' : '☐';
-      runs.unshift({ text: `${checkbox} `, font: 'Roboto' });
+      runs.unshift({ text: `${checkbox} ` });
       if (runs.length > 0) blocks.push(runs);
     } else {
       blocks.push(convertNode(child));
@@ -431,7 +431,9 @@ export function convertToPdfmake(
   const doc: PdfDocument = {
     content: [],
     pageOrientation: pageSetup.orientation,
-    defaultStyle: { font: 'Roboto' },
+    // Use Arial as default — it's always embedded (Roboto is not bundled
+    // to keep the font file small).
+    defaultStyle: { font: 'Arial' },
   };
 
   // Page size
