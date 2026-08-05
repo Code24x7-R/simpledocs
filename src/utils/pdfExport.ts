@@ -40,27 +40,42 @@ export async function exportToPdf(
   const pdfMakeInstance: any = pdfMake.default || pdfMake;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fonts: any = pdfFonts;
-  pdfMakeInstance.vfs = fonts.pdfMake ? fonts.pdfMake.vfs : fonts.default ? fonts.default.vfs : fonts.vfs;
 
-  return new Promise<void>((resolve, reject) => {
-    try {
-      const pdf = pdfMakeInstance.createPdf(pdfDoc);
-      const filename = `${doc.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+  // Load font data. pdfmake v0.3.x uses addVirtualFileSystem(); v0.2.x uses .vfs = data
+  const fontData = fonts.pdfMake ? fonts.pdfMake.vfs : fonts.default ? fonts.default.vfs : fonts.vfs;
+  if (typeof pdfMakeInstance.addVirtualFileSystem === 'function') {
+    pdfMakeInstance.addVirtualFileSystem(fontData);
+  } else {
+    pdfMakeInstance.vfs = fontData;
+  }
 
-      // Use getBuffer for broad browser compatibility
+  const pdf = pdfMakeInstance.createPdf(pdfDoc);
+  const filename = `${doc.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+  // pdfmake v0.3.x: download() is async and uses file-saver internally.
+  // Fall back to getBuffer() → Blob → manual download for broader compatibility.
+  if (typeof pdf.download === 'function') {
+    await pdf.download(filename);
+  } else {
+    // Legacy pdfmake v0.2.x API: getBuffer(callback)
+    await new Promise<void>((resolve, reject) => {
       pdf.getBuffer((blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        resolve();
+        try {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
       });
-    } catch (err) {
-      reject(err);
-    }
-  });
+    });
+  }
 }
+
+

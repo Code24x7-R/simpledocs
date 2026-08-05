@@ -4,21 +4,42 @@
 /**
  * Type declarations for pdfmake (no @types/pdfmake available).
  * Only the subset of the API used by this project is declared.
+ *
+ * Covers pdfmake v0.3.x API (async getBuffer/getBlob/download, addVirtualFileSystem).
  */
 declare module 'pdfmake/build/pdfmake' {
   interface PdfMake {
-    vfs: Record<string, string>;
+    /** Virtual filesystem containing font data */
+    virtualfs: {
+      existsSync(path: string): boolean;
+      readFileSync(path: string): string;
+    };
+    /** Font registry */
+    fonts: Record<string, unknown>;
+    /** Add font data from vfs_fonts.js */
+    addVirtualFileSystem(fonts: Record<string, string>): void;
+    /** URL access policies (unused) */
+    urlAccessPolicy: unknown;
+    localAccessPolicy: unknown;
+    /** Create a PDF document from a definition */
     createPdf(docDefinition: unknown): PdfDocument;
   }
 
   interface PdfDocument {
-    getBuffer(callback: (blob: Blob) => void): void;
-    download(defaultFilename?: string, callback?: () => void, options?: unknown): void;
-    open(options?: unknown, target?: unknown): void;
-    print(options?: unknown, target?: unknown): void;
-    getDataUrl(callback: (url: string) => void, options?: unknown): void;
-    getBase64(callback: (base64: string) => void, options?: unknown): void;
-    getBlob(callback: (blob: Blob) => void, options?: unknown): void;
+    /** Get PDF as a Blob (browser only) */
+    getBlob(): Promise<Blob>;
+    /** Get PDF as a Buffer/Uint8Array */
+    getBuffer(): Promise<Uint8Array>;
+    /** Download the PDF file (browser only, uses file-saver) */
+    download(filename?: string): Promise<void>;
+    /** Open the PDF in a new window */
+    open(win?: Window): Promise<void>;
+    /** Print the PDF */
+    print(): Promise<void>;
+    /** Get PDF as base64 string */
+    getBase64(): Promise<string>;
+    /** Get PDF as data URL */
+    getDataUrl(): Promise<string>;
   }
 
   const pdfMake: PdfMake;
@@ -26,13 +47,9 @@ declare module 'pdfmake/build/pdfmake' {
 }
 
 declare module 'pdfmake/build/vfs_fonts' {
-  interface PdfFonts {
-    vfs: Record<string, string>;
-  }
-
   // pdfmake v0.3.x exports as { pdfMake: { vfs } }
-  export const pdfMake: PdfFonts;
-  // pdfmake v0.2.x exports as default { vfs }
+  export const pdfMake: { vfs: Record<string, string> };
+  // pdfmake v0.2.x exports as default { [filename]: base64 }
   const fonts: Record<string, string>;
   export default fonts;
 }
