@@ -4,6 +4,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { DocState } from '../store/useDocStore';
 import { convertToPdfmake } from './pdfmakeConverter';
 
+// Mock the browser Image class used by loadImageDimensions
+class MockImage {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  naturalWidth = 800;
+  naturalHeight = 600;
+  private _src = '';
+  set src(value: string) {
+    this._src = value;
+    setTimeout(() => this.onload?.(), 0);
+  }
+  get src() { return this._src; }
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+global.Image = MockImage as any;
+
 // Mock pdfmake to avoid loading the ~1MB library in tests
 vi.mock('pdfmake/build/pdfmake', () => ({
   default: {

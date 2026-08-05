@@ -39,7 +39,6 @@ export interface PdfText {
   image?: string;
   width?: number;
   height?: number;
-  fit?: [number, number];
 }
 
 export interface PdfBlock {
@@ -79,9 +78,76 @@ const FONT_SIZE = {
 
 const MM_PER_INCH = 25.4;
 
+/** Pixel-to-mm conversion at 96 DPI (screen resolution). */
+export const PX_TO_MM = 25.4 / 96;
+
+/**
+ * Calculate dimensions to fill the content area while maintaining aspect ratio.
+ * This matches CSS `object-fit: contain` — scales the image to fit entirely
+ * within the box, filling whichever dimension is constraining.
+ *
+ * @param naturalWidthPx - Image natural width in pixels
+ * @param naturalHeightPx - Image natural height in pixels
+ * @param maxWidthMm - Maximum width in mm (content area width)
+ * @param maxHeightMm - Maximum height in mm (content area height)
+ * @returns Scaled dimensions in mm
+ */
+export function calculateFillDimensions(
+  naturalWidthPx: number,
+  naturalHeightPx: number,
+  maxWidthMm: number,
+  maxHeightMm: number
+): { width: number; height: number } {
+  if (naturalWidthPx <= 0 || naturalHeightPx <= 0) {
+    return { width: maxWidthMm, height: maxHeightMm };
+  }
+
+  // Convert natural pixels to mm at 96 DPI
+  const naturalWidthMm = naturalWidthPx * PX_TO_MM;
+  const naturalHeightMm = naturalHeightPx * PX_TO_MM;
+
+  // Calculate scale factors for both dimensions
+  const scaleX = maxWidthMm / naturalWidthMm;
+  const scaleY = maxHeightMm / naturalHeightMm;
+
+  // Use the smaller scale factor to ensure the image fits entirely
+  const scale = Math.min(scaleX, scaleY);
+
+  return {
+    width: Math.round(naturalWidthMm * scale * 100) / 100,
+    height: Math.round(naturalHeightMm * scale * 100) / 100,
+  };
+}
+
 // Module-level variable holding the current content area (available width/height in mm).
 // Set at the start of convertToPdfmake so image nodes can constrain themselves.
 let currentContentArea: { width: number; height: number } = { width: 160, height: 250 };
+
+// Map of image src → natural dimensions (in pixels), loaded before PDF generation.
+let imageDimensions: Record<string, { width: number; height: number }> = {};
+
+/**
+ * Recursively scan a TipTap document for image nodes and collect their src values.
+ */
+export function collectImageSources(node: TiptapNode, sources: Set<string> = new Set()): Set<string> {
+  if (node.type === 'image' && node.attrs?.src) {
+    sources.add(String(node.attrs.src));
+  }
+  if (node.content) {
+    for (const child of node.content) {
+      collectImageSources(child, sources);
+    }
+  }
+  return sources;
+}
+
+/**
+ * Set the natural dimensions for images (loaded before PDF generation).
+ * Map of image src → { width, height } in pixels.
+ */
+export function setImageDimensions(dimensions: Record<string, { width: number; height: number }>): void {
+  imageDimensions = dimensions;
+}
 
 // Standard page dimensions in mm (portrait)
 const PAGE_SIZES = {
@@ -235,8 +301,17 @@ function convertNode(node: TiptapNode): unknown {
           // Inline image inside paragraph
           const src = String(child.attrs?.src || '');
           if (src) {
-            // Inline image — use same fit logic as block images
-            runs.push({ image: src, fit: [currentContentArea.width, currentContentArea.height] });
+            // Inline image — use same dimension calculation as block images
+            const natural = imageDimensions[src];
+            const naturalWidth = natural && natural.width > 0 ? natural.width : 800;
+            const naturalHeight = natural && natural.height > 0 ? natural.height : 400;
+            const { width, height } = calculateFillDimensions(
+              naturalWidth,
+              naturalHeight,
+              currentContentArea.width,
+              currentContentArea.height
+            );
+            runs.push({ image: src, width, height });
           }
         } else if (child.type === 'templateField') {
           // Inline template field — render as bracketed placeholder
@@ -316,14 +391,23 @@ function convertNode(node: TiptapNode): unknown {
     case 'image': {
       const src = String(node.attrs?.src || '');
 
-      // Use pdfmake's `fit` property to scale the image to fill the content
-      // area while maintaining aspect ratio. The `fit` property constrains
-      // the image within the given box dimensions [width, height].
-      //
-      // This scales up small images and scales down large images to fit.
+      // Get the natural dimensions of the image (loaded before PDF generation)
+      const natural = imageDimensions[src];
+      const naturalWidth = natural && natural.width > 0 ? natural.width : 800;
+      const naturalHeight = natural && natural.height > 0 ? natural.height : 400;
+
+      // Calculate dimensions to fill the content area while maintaining aspect ratio.
+      const { width, height } = calculateFillDimensions(
+        naturalWidth,
+        naturalHeight,
+        currentContentArea.width,
+        currentContentArea.height
+      );
+
       return {
         image: src,
-        fit: [currentContentArea.width, currentContentArea.height],
+        width,
+        height,
         margin: [0, 4, 0, 8],
       };
     }
