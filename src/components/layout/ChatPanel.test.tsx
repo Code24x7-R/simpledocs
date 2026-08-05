@@ -2,29 +2,75 @@
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import * as chatService from '../../utils/chatService';
 import ChatPanel from './ChatPanel';
 import { useChatStore } from '../../store/useChatStore';
 import { useDocStore } from '../../store/useDocStore';
 import type { Editor } from '@tiptap/core';
+import type { LlmProvider } from '../../types/provider';
 
 // Mock scrollIntoView (not implemented in jsdom)
 Element.prototype.scrollIntoView = vi.fn();
 
-// Mock chatService
-vi.mock('../../utils/chatService', () => ({
-  healthcheck: vi.fn().mockResolvedValue(true),
-  listModels: vi.fn().mockResolvedValue([
-    { id: 'model-1', name: 'model-1', state: 'loaded' },
-    { id: 'model-2', name: 'model-2', state: 'unloaded' },
+// Hoist createMockProvider so it's available in the vi.mock factory
+const { createMockProvider } = vi.hoisted(() => {
+  const createMockProvider = (overrides: Partial<LlmProvider> & { id: string; name: string; icon: string }): LlmProvider => ({
+    id: overrides.id,
+    name: overrides.name,
+    icon: overrides.icon,
+    description: overrides.description ?? '',
+    hasFreeTier: overrides.hasFreeTier ?? true,
+    healthcheck: overrides.healthcheck ?? vi.fn().mockResolvedValue(true),
+    listModels: overrides.listModels ?? vi.fn().mockResolvedValue([]),
+    sendMessage: overrides.sendMessage ?? vi.fn().mockResolvedValue(''),
+    getDefaultConfig: overrides.getDefaultConfig ?? (() => ({ baseUrl: 'http://localhost:1234' })),
+    getDefaultModel: overrides.getDefaultModel ?? (() => 'google/gemma-4-e2b'),
+    validateConfig: overrides.validateConfig ?? (() => ({ valid: true as const })),
+    getAvailableModels: overrides.getAvailableModels ?? (() => []),
+  });
+  return { createMockProvider };
+});
+
+// Mock provider registry
+vi.mock('../../utils/providers/providerRegistry', () => ({
+  getProvider: vi.fn((id: string) => {
+    if (id === 'lmstudio') {
+      return createMockProvider({
+        id: 'lmstudio',
+        name: 'LM Studio',
+        icon: 'Monitor',
+        description: 'Local server',
+        healthcheck: vi.fn().mockResolvedValue(true),
+        listModels: vi.fn().mockResolvedValue([
+          { id: 'google/gemma-4-e2b', name: 'google/gemma-4-e2b', state: 'unknown' },
+        ]),
+        sendMessage: vi.fn().mockResolvedValue('AI response'),
+        getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+        getDefaultModel: () => 'google/gemma-4-e2b',
+        getAvailableModels: () => [{ id: 'google/gemma-4-e2b', name: 'Gemma 4 E2B', recommended: true }],
+      });
+    }
+    if (id === 'gemini') {
+      return createMockProvider({
+        id: 'gemini',
+        name: 'Google Gemini',
+        icon: 'Sparkles',
+        description: 'Cloud API',
+        healthcheck: vi.fn().mockResolvedValue(true),
+        listModels: vi.fn().mockResolvedValue([
+          { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', state: 'unknown' },
+        ]),
+        sendMessage: vi.fn().mockResolvedValue('AI response'),
+        getDefaultConfig: () => ({ apiKey: '' }),
+        getDefaultModel: () => 'gemini-2.5-flash',
+        getAvailableModels: () => [{ id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', recommended: true }],
+      });
+    }
+    return undefined;
+  }),
+  getAllProviders: vi.fn().mockReturnValue([
+    { id: 'lmstudio', name: 'LM Studio', icon: 'Monitor', description: 'Local server', hasFreeTier: true },
+    { id: 'gemini', name: 'Google Gemini', icon: 'Sparkles', description: 'Cloud API', hasFreeTier: true },
   ]),
-  sendMessage: vi.fn().mockResolvedValue('AI response'),
-  loadModel: vi.fn(),
-  unloadModel: vi.fn(),
-  DEFAULT_BASE_URL: 'http://localhost:1234',
-  DEFAULT_MODEL: 'google/gemma-4-e2b',
-  DEFAULT_MAX_TOKENS: 65535,
-  DEFAULT_TEMPERATURE: 0.7,
 }));
 
 describe('ChatPanel', () => {
@@ -35,12 +81,22 @@ describe('ChatPanel', () => {
 
     // Reset chat store
     useChatStore.setState({
+      configuredProviders: [
+        {
+          id: 'test-lm-studio',
+          providerId: 'lmstudio',
+          config: { baseUrl: 'http://localhost:1234' },
+          selectedModel: 'google/gemma-4-e2b',
+          isActive: true,
+        },
+      ],
+      activeProviderId: 'test-lm-studio',
       isConnected: false,
       isChecking: false,
       connectionError: null,
-      models: [],
-      selectedModel: 'google/gemma-4-e2b',
-      baseUrl: 'http://localhost:1234',
+      models: [
+        { id: 'google/gemma-4-e2b', name: 'google/gemma-4-e2b', state: 'unknown' },
+      ],
       maxTokens: 65535,
       temperature: 0.7,
       systemPrompt: 'You are a helpful assistant.',
@@ -76,6 +132,11 @@ describe('ChatPanel', () => {
   it('renders chat panel when isOpen is true', () => {
     render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
     expect(screen.getByText('Chat')).toBeInTheDocument();
+  });
+
+  it('shows provider selector dropdown', () => {
+    render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+    expect(screen.getByDisplayValue('LM Studio')).toBeInTheDocument();
   });
 
   it('shows model selector dropdown', () => {
@@ -244,9 +305,6 @@ describe('ChatPanel', () => {
   });
 
   it('shows connection status indicator', async () => {
-    // Mock healthcheck to succeed
-    vi.mocked(chatService.healthcheck).mockResolvedValue(true);
-
     render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
 
     await waitFor(() => {
@@ -256,7 +314,19 @@ describe('ChatPanel', () => {
 
   it('displays connection error banner when disconnected', async () => {
     // Mock healthcheck to hang (never resolve) so we control state manually
-    vi.mocked(chatService.healthcheck).mockReturnValue(new Promise(() => {}));
+    const { getProvider } = await import('../../utils/providers/providerRegistry');
+    vi.mocked(getProvider).mockReturnValue(
+      createMockProvider({
+        id: 'lmstudio',
+        name: 'LM Studio',
+        icon: 'Monitor',
+        healthcheck: vi.fn().mockReturnValue(new Promise(() => {})),
+        listModels: vi.fn().mockResolvedValue([]),
+        sendMessage: vi.fn().mockResolvedValue(''),
+        getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+        getDefaultModel: () => 'google/gemma-4-e2b',
+      })
+    );
 
     render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
 
@@ -272,5 +342,12 @@ describe('ChatPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('Cannot reach server')).toBeInTheDocument();
     });
+  });
+
+  it('shows add provider button', () => {
+    render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+    const addButton = screen.getByTitle('Add provider');
+    expect(addButton).toBeInTheDocument();
   });
 });

@@ -2,15 +2,9 @@
 // Copyright (c) 2026 Richard Robertson
 import { create } from 'zustand';
 import type { ChatMessage, ModelInfo } from '../types/chat';
-import {
-  healthcheck,
-  listModels,
-  sendMessage as apiSendMessage,
-  DEFAULT_BASE_URL,
-  DEFAULT_MODEL,
-  DEFAULT_MAX_TOKENS,
-  DEFAULT_TEMPERATURE,
-} from '../utils/chatService';
+import type { ConfiguredProvider, ProviderConfig } from '../types/provider';
+import { getProvider } from '../utils/providers/providerRegistry';
+import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './chatStoreDefaults';
 
 const CHAT_STORAGE_KEY = 'SIMPLEDOCS_CHAT_STATE';
 
@@ -19,6 +13,10 @@ You help users with writing, editing, formatting, and content creation.
 Be concise, helpful, and focus on the user's document context.`;
 
 interface ChatState {
+  // ─── Provider Management ───────────────────────────────────────────────
+  configuredProviders: ConfiguredProvider[];
+  activeProviderId: string | null;
+
   // Connection state
   isConnected: boolean;
   isChecking: boolean;
@@ -26,10 +24,8 @@ interface ChatState {
 
   // Model state
   models: ModelInfo[];
-  selectedModel: string;
 
   // Chat config
-  baseUrl: string;
   maxTokens: number;
   temperature: number;
   systemPrompt: string;
@@ -39,14 +35,19 @@ interface ChatState {
   isLoading: boolean;
   lastResponse: string;
 
-  // Healthcheck
-  checkHealth: () => Promise<void>;
-  refreshModels: () => Promise<void>;
-
-  // Actions
-  sendMessage: (content: string) => Promise<void>;
+  // ─── Provider Actions ──────────────────────────────────────────────────
+  addProvider: (providerId: string) => string;
+  removeProvider: (instanceId: string) => void;
+  setActiveProvider: (instanceId: string) => void;
+  updateProviderConfig: (instanceId: string, config: Partial<ProviderConfig>) => void;
   setModel: (modelId: string) => void;
   setBaseUrl: (url: string) => void;
+
+  // ─── Chat Actions ──────────────────────────────────────────────────────
+  checkHealth: () => Promise<void>;
+  checkHealthById: (instanceId: string) => Promise<boolean>;
+  refreshModels: () => Promise<void>;
+  sendMessage: (content: string) => Promise<void>;
   setTemperature: (temp: number) => void;
   setSystemPrompt: (prompt: string) => void;
   clearHistory: () => void;
@@ -54,12 +55,20 @@ interface ChatState {
 }
 
 interface PersistedState {
-  selectedModel: string;
-  baseUrl: string;
+  configuredProviders: ConfiguredProvider[];
+  activeProviderId: string | null;
   messages: ChatMessage[];
   systemPrompt: string;
   maxTokens: number;
   temperature: number;
+}
+
+/**
+ * Get the currently active provider instance.
+ */
+function getActiveProvider(state: ChatState): ConfiguredProvider | null {
+  if (!state.activeProviderId) return null;
+  return state.configuredProviders.find((p) => p.id === state.activeProviderId) ?? null;
 }
 
 const loadPersistedState = (): Partial<PersistedState> => {
@@ -74,7 +83,67 @@ const loadPersistedState = (): Partial<PersistedState> => {
   return {};
 };
 
-const persisted = loadPersistedState();
+/**
+ * Migrate old single-config state to new multi-provider format.
+ * Previously the store had: baseUrl, selectedModel, etc.
+ * Now we create a ConfiguredProvider instance for the existing LM Studio setup.
+ */
+function migrateOldState(persisted: Partial<PersistedState>): Partial<PersistedState> {
+  // Already migrated — has configuredProviders
+  if (persisted.configuredProviders && persisted.configuredProviders.length > 0) {
+    return persisted;
+  }
+
+  // Check if there's old-format data stored (pre-multi-provider)
+  // We detect this by checking if there's a baseUrl in the raw JSON
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      // Old format had 'baseUrl' and 'selectedModel' at top level
+      if (parsed.baseUrl || parsed.selectedModel) {
+        const lmStudioProvider = getProvider('lmstudio');
+        const instance: ConfiguredProvider = {
+          id: crypto.randomUUID(),
+          providerId: 'lmstudio',
+          config: {
+            baseUrl: (parsed.baseUrl as string) || 'http://localhost:1234',
+          },
+          selectedModel: (parsed.selectedModel as string) || lmStudioProvider?.getDefaultModel() || 'google/gemma-4-e2b',
+          isActive: true,
+        };
+
+        return {
+          configuredProviders: [instance],
+          activeProviderId: instance.id,
+          messages: parsed.messages as ChatMessage[],
+          systemPrompt: parsed.systemPrompt as string,
+          maxTokens: parsed.maxTokens as number,
+          temperature: parsed.temperature as number,
+        };
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  // No existing state — create default LM Studio instance
+  const lmStudioProvider = getProvider('lmstudio');
+  const instance: ConfiguredProvider = {
+    id: crypto.randomUUID(),
+    providerId: 'lmstudio',
+    config: lmStudioProvider?.getDefaultConfig() || { baseUrl: 'http://localhost:1234' },
+    selectedModel: lmStudioProvider?.getDefaultModel() || 'google/gemma-4-e2b',
+    isActive: true,
+  };
+
+  return {
+    configuredProviders: [instance],
+    activeProviderId: instance.id,
+  };
+}
+
+const persisted = migrateOldState(loadPersistedState());
 
 /**
  * Rough token count heuristic.
@@ -119,8 +188,8 @@ const persistState = (state: ChatState) => {
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     const toSave: PersistedState = {
-      selectedModel: state.selectedModel,
-      baseUrl: state.baseUrl,
+      configuredProviders: state.configuredProviders,
+      activeProviderId: state.activeProviderId,
       messages: state.messages,
       systemPrompt: state.systemPrompt,
       maxTokens: state.maxTokens,
@@ -131,6 +200,10 @@ const persistState = (state: ChatState) => {
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
+  // ─── Provider State ────────────────────────────────────────────────────
+  configuredProviders: persisted.configuredProviders ?? [],
+  activeProviderId: persisted.activeProviderId ?? null,
+
   // Connection state
   isConnected: false,
   isChecking: false,
@@ -138,10 +211,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   // Model state
   models: [],
-  selectedModel: persisted.selectedModel ?? DEFAULT_MODEL,
 
   // Chat config
-  baseUrl: persisted.baseUrl ?? DEFAULT_BASE_URL,
   maxTokens: persisted.maxTokens ?? DEFAULT_MAX_TOKENS,
   temperature: persisted.temperature ?? DEFAULT_TEMPERATURE,
   systemPrompt: persisted.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
@@ -151,14 +222,116 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   lastResponse: '',
 
-  // Healthcheck
+  // ─── Provider Actions ──────────────────────────────────────────────────
+  addProvider: (providerId: string) => {
+    const provider = getProvider(providerId);
+    if (!provider) return '';
+
+    const instance: ConfiguredProvider = {
+      id: crypto.randomUUID(),
+      providerId,
+      config: provider.getDefaultConfig(),
+      selectedModel: provider.getDefaultModel(),
+      isActive: false,
+    };
+
+    set((state) => ({
+      configuredProviders: [...state.configuredProviders, instance],
+    }));
+    persistState(get());
+    return instance.id;
+  },
+
+  removeProvider: (instanceId: string) => {
+    set((state) => {
+      const filtered = state.configuredProviders.filter((p) => p.id !== instanceId);
+      let newActiveId = state.activeProviderId;
+
+      // If we removed the active provider, activate another one
+      if (state.activeProviderId === instanceId) {
+        newActiveId = filtered.length > 0 ? filtered[0].id : null;
+        if (newActiveId) {
+          filtered.forEach((p) => {
+            if (p.id === newActiveId) {
+              p.isActive = true;
+            }
+          });
+        }
+      }
+
+      return {
+        configuredProviders: filtered,
+        activeProviderId: newActiveId,
+        isConnected: newActiveId ? state.isConnected : false,
+      };
+    });
+    persistState(get());
+  },
+
+  setActiveProvider: (instanceId: string) => {
+    set((state) => ({
+      configuredProviders: state.configuredProviders.map((p) => ({
+        ...p,
+        isActive: p.id === instanceId,
+      })),
+      activeProviderId: instanceId,
+      isConnected: false,
+      connectionError: null,
+      models: [],
+    }));
+    persistState(get());
+    // Trigger healthcheck for new active provider
+    get().checkHealth();
+    get().refreshModels();
+  },
+
+  updateProviderConfig: (instanceId: string, config: Partial<ProviderConfig>) => {
+    set((state) => ({
+      configuredProviders: state.configuredProviders.map((p) => {
+        if (p.id !== instanceId) return p;
+        return { ...p, config: { ...p.config, ...config } as ProviderConfig };
+      }),
+    }));
+    persistState(get());
+    // Re-check health when config changes
+    get().checkHealth();
+  },
+
+  setModel: (modelId: string) => {
+    set((state) => ({
+      configuredProviders: state.configuredProviders.map((p) => {
+        if (p.id !== state.activeProviderId) return p;
+        return { ...p, selectedModel: modelId };
+      }),
+    }));
+    persistState(get());
+  },
+
+  // Legacy setter — updates baseUrl for LM Studio active provider
+  setBaseUrl: (url: string) => {
+    const active = getActiveProvider(get());
+    if (active && active.providerId === 'lmstudio') {
+      get().updateProviderConfig(active.id, { baseUrl: url } as Partial<ProviderConfig>);
+    }
+  },
+
+  // ─── Chat Actions ──────────────────────────────────────────────────────
   checkHealth: async () => {
+    const active = getActiveProvider(get());
+    if (!active) {
+      set({ isConnected: false, connectionError: 'No provider configured' });
+      return;
+    }
+
+    const provider = getProvider(active.providerId);
+    if (!provider) return;
+
     set({ isChecking: true, connectionError: null });
     try {
-      const connected = await healthcheck(get().baseUrl);
+      const connected = await provider.healthcheck(active.config);
       set({ isConnected: connected, isChecking: false });
       if (!connected) {
-        set({ connectionError: 'Cannot reach LM Studio server' });
+        set({ connectionError: `Cannot reach ${provider.name} server` });
       }
     } catch (err) {
       set({
@@ -169,9 +342,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  refreshModels: async () => {
+  checkHealthById: async (instanceId: string): Promise<boolean> => {
+    const instance = get().configuredProviders.find((p) => p.id === instanceId);
+    if (!instance) return false;
+
+    const provider = getProvider(instance.providerId);
+    if (!provider) return false;
+
     try {
-      const models = await listModels(get().baseUrl);
+      return await provider.healthcheck(instance.config);
+    } catch {
+      return false;
+    }
+  },
+
+  refreshModels: async () => {
+    const active = getActiveProvider(get());
+    if (!active) return;
+
+    const provider = getProvider(active.providerId);
+    if (!provider) return;
+
+    try {
+      const models = await provider.listModels(active.config);
       set({ models });
     } catch (err) {
       set({
@@ -180,9 +373,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  // Send a message and get a response
   sendMessage: async (content: string) => {
     if (!content.trim()) return;
+
+    const active = getActiveProvider(get());
+    if (!active) {
+      set({ connectionError: 'No provider configured. Add a provider in settings.' });
+      return;
+    }
+
+    const provider = getProvider(active.providerId);
+    if (!provider) return;
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -212,12 +413,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       const fullMessages = [systemMsg, ...contextMessages];
 
-      const responseText = await apiSendMessage(fullMessages, {
-        baseUrl: get().baseUrl,
-        model: get().selectedModel,
-        maxTokens: get().maxTokens,
-        temperature: get().temperature,
-      });
+      const responseText = await provider.sendMessage(
+        fullMessages,
+        active.config,
+        active.selectedModel,
+        get().maxTokens,
+        get().temperature
+      );
 
       const assistantMessage: ChatMessage = {
         role: 'assistant',
@@ -240,19 +442,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         connectionError: err instanceof Error ? err.message : 'Failed to send message',
       });
     }
-  },
-
-  // Setters
-  setModel: (modelId: string) => {
-    set({ selectedModel: modelId });
-    persistState(get());
-  },
-
-  setBaseUrl: (url: string) => {
-    set({ baseUrl: url });
-    persistState(get());
-    // Re-check health when URL changes
-    get().checkHealth();
   },
 
   setTemperature: (temp: number) => {

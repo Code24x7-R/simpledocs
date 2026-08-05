@@ -15,11 +15,12 @@ import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import SearchReplaceModal from './components/layout/SearchReplaceModal';
 import FieldMergeModal from './components/layout/FieldMergeModal';
 import ChatPanel from './components/layout/ChatPanel';
+import ProviderSetupModal from './components/layout/ProviderSetupModal';
 import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, chatOpen, setChatOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const pageElementsRef = useRef<HTMLElement[]>([]);
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
@@ -108,6 +109,10 @@ export default function App() {
         <PaginatedViewport />
         <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       </div>
+      <ProviderSetupModal
+        isOpen={providerSetupOpen}
+        onClose={() => setProviderSetupOpen(false)}
+      />
       <PageSetupModal />
       <TableGridModal />
       <InsertFieldModal />

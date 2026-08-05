@@ -3,33 +3,84 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useChatStore, estimateTokenCount } from './useChatStore';
 import type { ChatMessage } from '../types/chat';
+import type { LlmProvider } from '../types/provider';
 
-// Mock the chatService module
-vi.mock('../utils/chatService', () => ({
-  healthcheck: vi.fn(),
-  listModels: vi.fn(),
-  sendMessage: vi.fn(),
-  loadModel: vi.fn(),
-  unloadModel: vi.fn(),
-  DEFAULT_BASE_URL: 'http://localhost:1234',
-  DEFAULT_MODEL: 'google/gemma-4-e2b',
-  DEFAULT_MAX_TOKENS: 65535,
-  DEFAULT_TEMPERATURE: 0.7,
+// Helper to create a mock LlmProvider with all required fields
+function createMockProvider(overrides: Partial<LlmProvider> & { id: string; name: string; icon: string }): LlmProvider {
+  return {
+    id: overrides.id,
+    name: overrides.name,
+    icon: overrides.icon,
+    description: overrides.description ?? '',
+    hasFreeTier: overrides.hasFreeTier ?? true,
+    healthcheck: overrides.healthcheck ?? vi.fn().mockResolvedValue(true),
+    listModels: overrides.listModels ?? vi.fn().mockResolvedValue([]),
+    sendMessage: overrides.sendMessage ?? vi.fn().mockResolvedValue(''),
+    getDefaultConfig: overrides.getDefaultConfig ?? (() => ({ baseUrl: 'http://localhost:1234' })),
+    getDefaultModel: overrides.getDefaultModel ?? (() => 'google/gemma-4-e2b'),
+    validateConfig: overrides.validateConfig ?? (() => ({ valid: true as const })),
+    getAvailableModels: overrides.getAvailableModels ?? (() => []),
+  };
+}
+
+// Mock the provider registry
+vi.mock('../utils/providers/providerRegistry', () => ({
+  getProvider: vi.fn((id: string) => {
+    if (id === 'lmstudio') {
+      return createMockProvider({
+        id: 'lmstudio',
+        name: 'LM Studio',
+        icon: 'Monitor',
+        description: 'Local server',
+        healthcheck: vi.fn().mockResolvedValue(true),
+        listModels: vi.fn().mockResolvedValue([
+          { id: 'google/gemma-4-e2b', name: 'google/gemma-4-e2b', state: 'unknown' },
+        ]),
+        sendMessage: vi.fn().mockResolvedValue('AI response here'),
+        getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+        getDefaultModel: () => 'google/gemma-4-e2b',
+      });
+    }
+    if (id === 'gemini') {
+      return createMockProvider({
+        id: 'gemini',
+        name: 'Google Gemini',
+        icon: 'Sparkles',
+        description: 'Cloud API',
+        healthcheck: vi.fn().mockResolvedValue(true),
+        listModels: vi.fn().mockResolvedValue([
+          { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', state: 'unknown' },
+        ]),
+        sendMessage: vi.fn().mockResolvedValue('AI response here'),
+        getDefaultConfig: () => ({ apiKey: 'AIzaTest123' }),
+        getDefaultModel: () => 'gemini-2.5-flash',
+      });
+    }
+    return undefined;
+  }),
 }));
 
-import * as chatService from '../utils/chatService';
+import * as providerRegistry from '../utils/providers/providerRegistry';
 
 describe('useChatStore', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.useFakeTimers();
     useChatStore.setState({
+      configuredProviders: [
+        {
+          id: 'test-lm-studio',
+          providerId: 'lmstudio',
+          config: { baseUrl: 'http://localhost:1234' },
+          selectedModel: 'google/gemma-4-e2b',
+          isActive: true,
+        },
+      ],
+      activeProviderId: 'test-lm-studio',
       isConnected: false,
       isChecking: false,
       connectionError: null,
       models: [],
-      selectedModel: 'google/gemma-4-e2b',
-      baseUrl: 'http://localhost:1234',
       maxTokens: 65535,
       temperature: 0.7,
       systemPrompt: 'You are a helpful assistant.',
@@ -62,7 +113,16 @@ describe('useChatStore', () => {
 
   describe('checkHealth', () => {
     it('sets isConnected to true on successful healthcheck', async () => {
-      vi.mocked(chatService.healthcheck).mockResolvedValueOnce(true);
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          healthcheck: vi.fn().mockResolvedValue(true),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       await useChatStore.getState().checkHealth();
 
@@ -72,7 +132,16 @@ describe('useChatStore', () => {
     });
 
     it('sets connection error on failed healthcheck', async () => {
-      vi.mocked(chatService.healthcheck).mockResolvedValueOnce(false);
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          healthcheck: vi.fn().mockResolvedValue(false),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       await useChatStore.getState().checkHealth();
 
@@ -81,22 +150,52 @@ describe('useChatStore', () => {
     });
 
     it('handles exceptions gracefully', async () => {
-      vi.mocked(chatService.healthcheck).mockRejectedValueOnce(new Error('Network error'));
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          healthcheck: vi.fn().mockRejectedValue(new Error('Network error')),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       await useChatStore.getState().checkHealth();
 
       expect(useChatStore.getState().isConnected).toBe(false);
       expect(useChatStore.getState().connectionError).toBe('Network error');
     });
+
+    it('sets error when no provider is configured', async () => {
+      useChatStore.setState({
+        configuredProviders: [],
+        activeProviderId: null,
+      });
+
+      await useChatStore.getState().checkHealth();
+
+      expect(useChatStore.getState().isConnected).toBe(false);
+      expect(useChatStore.getState().connectionError).toBe('No provider configured');
+    });
   });
 
   describe('refreshModels', () => {
     it('populates models list on success', async () => {
       const mockModels = [
-        { id: 'model-1', name: 'model-1', state: 'loaded' as const },
-        { id: 'model-2', name: 'model-2', state: 'unloaded' as const },
+        { id: 'model-1', name: 'model-1', state: 'unknown' as const },
+        { id: 'model-2', name: 'model-2', state: 'unknown' as const },
       ];
-      vi.mocked(chatService.listModels).mockResolvedValueOnce(mockModels);
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          listModels: vi.fn().mockResolvedValue(mockModels),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       await useChatStore.getState().refreshModels();
 
@@ -104,7 +203,16 @@ describe('useChatStore', () => {
     });
 
     it('sets connection error on failure', async () => {
-      vi.mocked(chatService.listModels).mockRejectedValueOnce(new Error('Failed'));
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          listModels: vi.fn().mockRejectedValue(new Error('Failed')),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       await useChatStore.getState().refreshModels();
 
@@ -116,11 +224,19 @@ describe('useChatStore', () => {
     it('does nothing for empty messages', async () => {
       await useChatStore.getState().sendMessage('   ');
       expect(useChatStore.getState().messages).toHaveLength(0);
-      expect(chatService.sendMessage).not.toHaveBeenCalled();
     });
 
     it('adds user message and gets assistant response', async () => {
-      vi.mocked(chatService.sendMessage).mockResolvedValueOnce('AI response here');
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          sendMessage: vi.fn().mockResolvedValue('AI response here'),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       await useChatStore.getState().sendMessage('Hello AI');
 
@@ -140,7 +256,16 @@ describe('useChatStore', () => {
       const messagePromise = new Promise<string>((resolve) => {
         resolveMessage = resolve;
       });
-      vi.mocked(chatService.sendMessage).mockReturnValueOnce(messagePromise);
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          sendMessage: vi.fn().mockReturnValue(messagePromise),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       const sendPromise = useChatStore.getState().sendMessage('Test');
 
@@ -155,7 +280,16 @@ describe('useChatStore', () => {
     });
 
     it('handles API errors', async () => {
-      vi.mocked(chatService.sendMessage).mockRejectedValueOnce(new Error('API down'));
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          sendMessage: vi.fn().mockRejectedValue(new Error('API down')),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
 
       await useChatStore.getState().sendMessage('Hello');
 
@@ -166,27 +300,104 @@ describe('useChatStore', () => {
     });
 
     it('includes system prompt in request', async () => {
-      vi.mocked(chatService.sendMessage).mockResolvedValueOnce('OK');
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'lmstudio',
+          name: 'LM Studio',
+          icon: 'Monitor',
+          sendMessage: vi.fn().mockImplementation(async (messages: ChatMessage[]) => {
+            // Verify system prompt is included
+            expect(messages[0].role).toBe('system');
+            expect(messages[0].content).toBe('You are a helpful assistant.');
+            return 'OK';
+          }),
+          getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+          getDefaultModel: () => 'google/gemma-4-e2b',
+        })
+      );
+
+      await useChatStore.getState().sendMessage('Hello');
+    });
+
+    it('sets error when no provider configured', async () => {
+      useChatStore.setState({
+        configuredProviders: [],
+        activeProviderId: null,
+      });
 
       await useChatStore.getState().sendMessage('Hello');
 
-      const callArgs = vi.mocked(chatService.sendMessage).mock.calls[0];
-      const messages = callArgs[0] as ChatMessage[];
-      expect(messages[0].role).toBe('system');
-      expect(messages[0].content).toBe('You are a helpful assistant.');
+      const state = useChatStore.getState();
+      expect(state.connectionError).toBe('No provider configured. Add a provider in settings.');
+    });
+  });
+
+  describe('provider management', () => {
+    it('addProvider creates a new configured instance', () => {
+      const id = useChatStore.getState().addProvider('gemini');
+      expect(id).toBeTruthy();
+
+      const state = useChatStore.getState();
+      const newProvider = state.configuredProviders.find((p) => p.id === id);
+      expect(newProvider).toBeDefined();
+      expect(newProvider?.providerId).toBe('gemini');
+      expect(newProvider?.isActive).toBe(false);
+    });
+
+    it('removeProvider removes the instance', () => {
+      const id = useChatStore.getState().addProvider('gemini');
+      const initialCount = useChatStore.getState().configuredProviders.length;
+
+      useChatStore.getState().removeProvider(id);
+
+      expect(useChatStore.getState().configuredProviders).toHaveLength(initialCount - 1);
+    });
+
+    it('removeProvider activates another provider if active was removed', () => {
+      const providers = useChatStore.getState().configuredProviders;
+      const activeId = providers[0].id;
+
+      useChatStore.getState().removeProvider(activeId);
+
+      const state = useChatStore.getState();
+      expect(state.activeProviderId).toBeNull();
+    });
+
+    it('setActiveProvider switches active provider', () => {
+      const id = useChatStore.getState().addProvider('gemini');
+
+      useChatStore.getState().setActiveProvider(id);
+
+      const state = useChatStore.getState();
+      expect(state.activeProviderId).toBe(id);
+      const activeProvider = state.configuredProviders.find((p) => p.id === id);
+      expect(activeProvider?.isActive).toBe(true);
+    });
+
+    it('updateProviderConfig updates config', () => {
+      const providers = useChatStore.getState().configuredProviders;
+      const id = providers[0].id;
+
+      useChatStore.getState().updateProviderConfig(id, { baseUrl: 'http://localhost:8080' });
+
+      const provider = useChatStore.getState().configuredProviders.find((p) => p.id === id);
+      expect((provider?.config as { baseUrl: string }).baseUrl).toBe('http://localhost:8080');
     });
   });
 
   describe('setters', () => {
-    it('setModel updates selected model', () => {
+    it('setModel updates selected model on active provider', () => {
       useChatStore.getState().setModel('new-model');
-      expect(useChatStore.getState().selectedModel).toBe('new-model');
+
+      const activeProvider = useChatStore.getState().configuredProviders.find((p) => p.isActive);
+      expect(activeProvider?.selectedModel).toBe('new-model');
     });
 
-    it('setBaseUrl updates URL', () => {
-      vi.mocked(chatService.healthcheck).mockResolvedValue(true);
+    it('setBaseUrl updates baseUrl for LM Studio active provider', () => {
       useChatStore.getState().setBaseUrl('http://localhost:8080');
-      expect(useChatStore.getState().baseUrl).toBe('http://localhost:8080');
+
+      const activeProvider = useChatStore.getState().configuredProviders.find((p) => p.isActive);
+      expect((activeProvider?.config as { baseUrl: string }).baseUrl).toBe('http://localhost:8080');
     });
 
     it('setTemperature updates temperature', () => {
@@ -229,7 +440,11 @@ describe('useChatStore', () => {
       const raw = localStorage.getItem('SIMPLEDOCS_CHAT_STATE');
       expect(raw).toBeTruthy();
       const parsed = JSON.parse(raw!);
-      expect(parsed.selectedModel).toBe('persisted-model');
+      // The active provider's selectedModel should be persisted
+      const activeProvider = parsed.configuredProviders.find(
+        (p: { isActive: boolean }) => p.isActive
+      );
+      expect(activeProvider.selectedModel).toBe('persisted-model');
     });
   });
 

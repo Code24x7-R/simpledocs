@@ -119,3 +119,46 @@ export interface ApiError {
   code?: string;
   status?: number;
 }
+
+// ─── Gemini API Types ──────────────────────────────────────────────────────────
+
+export interface GeminiPart {
+  text: string;
+}
+
+export interface GeminiContent {
+  role: string;
+  parts: GeminiPart[];
+}
+
+export interface GeminiSystemInstruction {
+  parts: GeminiPart[];
+}
+
+export interface GeminiGenerationConfig {
+  temperature?: number;
+  maxOutputTokens?: number;
+}
+
+export interface GeminiRequest {
+  contents: GeminiContent[];
+  systemInstruction?: GeminiSystemInstruction;
+  generationConfig?: GeminiGenerationConfig;
+}
+
+export interface GeminiCandidate {
+  content: {
+    role: string;
+    parts: GeminiPart[];
+  };
+  finishReason: string;
+}
+
+export interface GeminiResponse {
+  candidates: GeminiCandidate[];
+  usageMetadata?: {
+    promptTokenCount: number;
+    candidatesTokenCount: number;
+    totalTokenCount: number;
+  };
+}

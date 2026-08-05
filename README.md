@@ -1,90 +1,160 @@
-# simpledocs
+# SimpleDocs
 
-A modern, browser-based paginated WYSIWYG document editor with Microsoft Word / Google Docs feature parity. Built with React, TypeScript, and Tiptap.
+A modern, browser-based paginated WYSIWYG document editor with Microsoft Word / Google Docs feature parity. Fully client-side — no backend.
 
 **Live demo:** [https://Code24x7-R.github.io/simpledocs/](https://Code24x7-R.github.io/simpledocs/)
+**User manual:** [MANUAL.md](./MANUAL.md)
 
-### Tech Stack
-- TypeScript
-- Tiptap
+## Overview
 
-## Features
+SimpleDocs is a single-page app built with React, TypeScript, and Tiptap. It provides a paginated document editing experience in the browser with support for rich text, tables, images, template fields, and AI chat integration.
 
-### Rich Text Editing
-- **Text Formatting** — Bold, Italic, Underline, Strikethrough
-- **Colors** — Text color and highlight color with full color picker
-- **Typography** — Font family and font size selection
-- **Alignment** — Left, Center, Right, Justify
+The editor uses a continuous-scroll architecture where a single Tiptap instance renders all content, with page breaks computed from content height for print/PDF export.
 
-### Structure & Styles
-- **Headings** — Normal, Heading 1, Heading 2, Heading 3
-- **Lists** — Bullet list, Numbered list, Task list (with checkboxes)
-- **Blocks** — Blockquote, Code block, Horizontal rule
+### Key Capabilities
 
-### Tables
-- **Grid Picker** — Insert tables up to 10×10 via visual grid
-- **Header Row** — Automatic header row on creation
-- **Resizable Columns** — Drag to resize columns
+- Rich text editing (bold, italic, underline, strikethrough, colors, highlight, fonts)
+- Page layout (A4/Letter, margins, headers, footers, page breaks)
+- Tables with context-menu operations (merge/split cells, add/delete rows/columns)
+- Template fields (`{{variable}}` badges with merge support)
+- Image insertion (upload as base64 or URL)
+- Hyperlinks (insert/edit/remove, auto-link on paste)
+- Search & replace (regex, case-sensitive, whole-word)
+- File I/O (JSON save/load, PDF export, Markdown export, Word import)
+- AI chat panel (multi-provider: LM Studio, Google Gemini)
+- Zoom (75%, 100%, 125%), undo/redo, localStorage auto-save
 
-### Template Fields
-- **Inline Variables** — Insert `{{field_name}}` badges that are non-editable atomic nodes
-- **Standard Fields** — `{{current_date}}`, `{{document_title}}`, `{{page_number}}`, `{{total_pages}}`
-- **Custom Fields** — Define your own variable names
-
-### Pagination & Layout
-- **Page Formats** — A4 (210×297mm) and Letter (8.5×11in)
-- **Orientation** — Portrait and Landscape
-- **Margins** — Fully configurable top/bottom/left/right margins
-- **Headers & Footers** — Editable header content, automatic page numbering ("Page X of Y")
-- **True Paginated Model** — Each page is an independent editor with its own caret and selection
-- **Cross-Page Navigation** — Arrow keys, PgUp/PgDn move caret between pages
-- **Auto Overflow** — Content automatically flows to next page when page is full
-- **Smart Merge** — Backspace at start of page merges into previous page
-
-### File Operations
-- **JSON Export** — Download your document as a `.json` file
-- **JSON Import** — Open any previously saved `.json` document
-- **PDF Export** — Generate PDF via html2pdf.js with exact margin matching
-- **Print** — Native browser print support
-
-### Persistence
-- **Auto-Save** — Automatic localStorage save with 500ms debounce
-- **Restore on Load** — Your document reopens exactly as you left it
-- **Named Documents** — Create new documents anytime
-
-### UI Layout
-- **Menubar** — File, Edit, Insert, View, Help menus with grouped actions
-- **Toolbar** — Style, font, size, format (bold/italic/underline/strikethrough/colors), clipboard, alignment, lists, blocks, and tools
-- **Format Menu** — Text style and color controls in a single dropdown
-- **Insert Menu** — Image, link, table, field, merge fields, page break
-
-### View Controls
-- **Zoom** — 75%, 100%, 125% zoom levels
-- **Virtualized Rendering** — Smooth scrolling via @tanstack/react-virtual
+For detailed usage instructions, see **[MANUAL.md](./MANUAL.md)**.
 
 ---
 
-## Installation
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | React 18 + TypeScript 5 |
+| Build | Vite 5 |
+| Editor | Tiptap 3 (ProseMirror-based) |
+| State | Zustand |
+| Styling | Tailwind CSS 3 |
+| Virtualization | @tanstack/react-virtual |
+| PDF | html2pdf.js |
+| Word import | mammoth.js |
+| Testing | Vitest + React Testing Library + Playwright |
+
+---
+
+## Architecture
+
+### State Management
+
+```
+useDocStore (Zustand)          useChatStore (Zustand)
+┌──────────────────────┐       ┌──────────────────────┐
+│ docState: DocState   │       │ configuredProviders[] │
+│   ├─ title           │       │ activeProviderId      │
+│   ├─ settings        │       │ messages[]            │
+│   └─ content (JSON)  │       │ systemPrompt          │
+│ editor: Editor       │       │ temperature           │
+│ zoom, currentPage    │       └──────────────────────┘
+│ modal open flags     │
+│ mruList[]            │
+└──────────────────────┘
+```
+
+- **`useDocStore`** — global document state, editor instance, modal visibility flags, MRU list
+- **`useChatStore`** — chat messages, provider configuration, active provider, model settings
+
+### Editor Architecture
+
+```
+PaginatedViewport
+  └─ DocumentEditor (single Tiptap instance)
+       ├─ Extensions (StarterKit + custom)
+       │    ├─ Table + TableHeader + TableCell + TableRow
+       │    ├─ TemplateField (custom node)
+       │    ├─ PageBreak (custom node)
+       │    ├─ FontSize, FontFamily, Color (textStyle)
+       │    ├─ BackgroundColor (highlight via textStyle)
+       │    ├─ Image, Link, TaskList, BubbleMenu
+       │    └─ TextAlign, Underline, CharacterCount
+       ├─ BubbleMenu (floating toolbar on selection)
+       └─ TableContextMenu (right-click in tables)
+```
+
+### Component Hierarchy
+
+```
+App
+├─ Navbar (File / Edit / Insert / View / Help menus, title input)
+├─ Toolbar (formatting controls, clipboard, alignment, tools)
+├─ PageNavigation (prev/next, page jump, cursor pos, stats)
+├─ PaginatedViewport (zoom, scroll, page computation)
+│    └─ DocumentEditor (Tiptap + BubbleMenu + TableContextMenu)
+├─ SearchReplaceModal (find/replace with regex)
+├─ PageSetupModal (page format, margins, headers, footers)
+├─ TableGridModal (visual 10x10 grid picker)
+├─ InsertFieldModal (standard + custom template fields)
+├─ FieldMergeModal (merge all fields with values)
+├─ ImageModal (upload or URL with preview)
+├─ LinkModal (URL + display text + validation)
+├─ ChatPanel (LM Studio + Gemini, multi-provider)
+├─ ProviderSetupModal (3-step provider wizard)
+├─ KeyboardShortcutsModal (shortcut reference)
+└─ AboutModal (version, build, commit, related apps)
+```
+
+### Custom Tiptap Extensions
+
+| Extension | File | Purpose |
+|-----------|------|---------|
+| `FontSize` | `src/extensions/FontStyle.ts` | Font size attribute on textStyle mark |
+| `FontFamily` | Built into textStyle | Font family attribute |
+| `Color` | Built into textStyle | Text color attribute |
+| `BackgroundColor` | Built into textStyle | Highlight (replaces old separate Highlight mark) |
+| `TemplateField` | `src/extensions/TemplateField.ts` | Inline atomic node for `{{variables}}` |
+| `PageBreak` | `src/extensions/PageBreak.ts` | Hard page break node with `Ctrl+Enter` |
+
+### Data Flow
+
+```
+User Action → Zustand Action → Editor Command → Tiptap Transaction → View Update
+                                                                    ↓
+                                                              Auto-save (500ms debounce → localStorage)
+```
+
+---
+
+## Build Defines
+
+Vite injects these constants at build time (see `vite.config.ts`):
+
+| Constant | Type | Source |
+|----------|------|--------|
+| `__APP_VERSION__` | `string` | `package.json` version |
+| `__BUILD_TIMESTAMP__` | `string` | `new Date().toISOString()` at build |
+| `__GIT_COMMIT_HASH__` | `string` | `git rev-parse --short HEAD` |
+
+Type declarations are in `src/vite-env.d.ts`. Used by `AboutModal` for build info display.
+
+---
+
+## Getting Started (Development)
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - npm 9+
 
 ### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/Code24x7-R/simpledocs.git
 cd simpledocs
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+App runs at `http://localhost:5173` with hot reload.
 
 ---
 
@@ -92,149 +162,49 @@ The app will be available at `http://localhost:5173`
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start Vite dev server with hot reload |
-| `npm run build` | Type-check and build for production |
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Type-check (`tsc -b`) + production build |
 | `npm run preview` | Preview the production build locally |
-| `npm test` | Run unit tests (Vitest) |
+| `npm test` | Run all unit tests with coverage (Vitest) |
 | `npm run test:watch` | Run unit tests in watch mode |
 | `npm run test:e2e` | Run E2E tests (Playwright) |
 | `npm run type-check` | TypeScript type-check without emit |
-| `npm run lint` | ESLint check |
+| `npm run lint` | ESLint (zero warnings enforced) |
 
----
-
-## Deployment
-
-### GitHub Pages (Automatic)
-
-The repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically deploys to GitHub Pages on every push to `main`.
-
-**Setup:**
-1. Go to your repo's Settings → Pages
-2. Set "Source" to "GitHub Actions"
-3. Push to `main` — the workflow builds and deploys automatically
-
-The app will be available at `https://Code24x7-R.github.io/simpledocs/`
-
-### Manual Deployment
+### Full Verification
 
 ```bash
-# Build for production
-npm run build
-
-# The `dist/` folder contains the static site
-# Deploy `dist/` to any static hosting provider
+npm test && npm run lint && npm run type-check && npm run build
 ```
 
 ---
 
-## Dependencies
+## Testing
 
-### Core
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `react` | ^18.3 | UI framework |
-| `react-dom` | ^18.3 | DOM rendering |
-| `typescript` | ^5.4 | Type safety |
-| `vite` | ^5.2 | Build tool & dev server |
+### Unit Tests (Vitest)
 
-### Editor
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `@tiptap/react` | ^3.x | React bindings for Tiptap |
-| `@tiptap/starter-kit` | ^3.x | Core editor extensions |
-| `@tiptap/extension-table` | ^3.x | Table support |
-| `@tiptap/extension-underline` | ^3.x | Underline formatting |
-| `@tiptap/extension-text-style` | ^3.x | Font family/size/color |
-| `@tiptap/extension-highlight` | ^3.x | Text highlighting |
-| `@tiptap/extension-text-align` | ^3.x | Paragraph alignment |
-| `@tiptap/extension-task-list` | ^3.x | Task/check lists |
+Tests are colocated with source files (`*.test.ts`, `*.test.tsx`). Coverage targets:
 
-### State & UI
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `zustand` | ^4.5 | State management |
-| `tailwindcss` | ^3.4 | Utility-first CSS |
-| `lucide-react` | ^0.378 | Icons |
-| `@tanstack/react-virtual` | ^3.5 | Viewport virtualization |
-| `html2pdf.js` | ^0.10 | PDF export |
-| `clsx` | ^2.1 | Conditional classnames |
-| `tailwind-merge` | ^2.3 | Tailwind class merging |
+| Metric | Target |
+|--------|--------|
+| Line coverage | ≥ 95% |
+| Branch coverage | ≥ 85% |
+| Lint errors | 0 |
+| Type errors | 0 |
 
-### Testing
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `vitest` | ^1.6 | Unit testing |
-| `@testing-library/react` | ^15 | Component testing |
-| `@playwright/test` | ^1.44 | E2E testing |
+### E2E Tests (Playwright)
 
----
+Located in `tests/e2e/`:
+- `editor.spec.ts` — core editing flows
+- `keyboard-navigation.spec.ts` — keyboard shortcuts and page navigation
+- `merge-focus.spec.ts` — modal focus and selection restore
 
-## Keyboard Shortcuts
+### Running Specific Tests
 
-### Text Formatting
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + B` | Bold |
-| `Ctrl + I` | Italic |
-| `Ctrl + U` | Underline |
-| `Ctrl + Shift + S` | Strikethrough |
-| `Ctrl + E` | Inline code |
-| `Ctrl + K` | Insert/edit link |
-
-### Headings
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + Alt + 1` | Heading 1 |
-| `Ctrl + Alt + 2` | Heading 2 |
-| `Ctrl + Alt + 3` | Heading 3 |
-
-### Paragraph Styles
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + Shift + B` | Blockquote |
-| `Ctrl + Alt + C` | Code block |
-| `Ctrl + Shift + L` | Align left |
-| `Ctrl + Shift + E` | Align center |
-| `Ctrl + Shift + R` | Align right |
-| `Ctrl + Shift + J` | Justify |
-
-### Editing
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + Z` | Undo |
-| `Ctrl + Y` / `Ctrl + Shift + Z` | Redo |
-| `Ctrl + A` | Select all |
-| `Ctrl + C` | Copy |
-| `Ctrl + V` | Paste |
-| `Ctrl + X` | Cut |
-
-### Insert & Navigation
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + Enter` | Insert page break |
-| `Ctrl + H` | Find & Replace |
-| `Ctrl + F` | Find |
-| `F3` | Find next |
-| `Shift + F3` | Find previous |
-
-### Document
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + S` | Save (browser default) |
-| `Ctrl + P` | Print |
-
----
-
-## Tips & Hints
-
-- **Auto-save is automatic** — Your work saves to localStorage every 500ms. No need to manually save for browser persistence.
-- **JSON files are portable** — Export a JSON file to back up your work or transfer between devices.
-- **PDF export matches your page settings** — Margins, format, and orientation in the PDF match your Page Setup configuration.
-- **Template fields are non-editing** — Once inserted, template field badges can't be accidentally typed into. Click the × to remove them.
-- **Tables auto-include headers** — New tables come with a header row by default. Right-click table cells for more operations.
-- **Page breaks persist** — Manual page breaks are saved in your document and will restore on reload.
-- **Use zoom for overview** — Drop to 75% zoom to see the full page layout, or 125% for detail work.
+```bash
+npx jest path/to/file.test.ts          # single file
+npx jest --testPathPattern=extension   # pattern match
+```
 
 ---
 
@@ -243,58 +213,81 @@ npm run build
 ```
 simpledocs/
 ├── docs/
+│   ├── BUGFIX.md                    # Bug fix log
+│   ├── PLAN.md                      # Project roadmap (33 phases)
+│   ├── PROGRESS_LOG.md              # Development progress
 │   ├── requirements.md              # Functional specification
 │   ├── wysiwyg-pagination.md        # Pagination design doc
-│   ├── single-editor-constraints.md # Single-editor architecture reference
-│   ├── BUGFIX.md                    # Bug fix log
-│   ├── PLAN.md                      # Project roadmap
-│   └── PROGRESS_LOG.md              # Development progress log
+│   └── single-editor-constraints.md # Single-editor architecture reference
 ├── public/
 │   └── favicon.svg
 ├── src/
 │   ├── components/
-│   │   ├── editor/              # Editor components
-│   │   │   ├── MultiPageEditor.tsx   # Renders N page editors
-│   │   │   ├── PageEditor.tsx       # Single page editor
-│   │   │   ├── PaginatedViewport.tsx # Vertical page stack
-│   │   │   ├── PaginationContext.tsx # Per-page geometry
-│   │   │   └── nodes/               # Custom node views
-│   │   ├── layout/              # UI shell components
-│   │   │   ├── Navbar.tsx           # Menubar (File/Edit/Insert/View/Help)
-│   │   │   ├── Toolbar/
-│   │   │   │   └── Toolbar.tsx      # Formatting/toolbar buttons
-│   │   │   ├── KeyboardShortcutsModal.tsx
-│   │   │   ├── SearchReplaceModal.tsx
-│   │   │   ├── PageSetupModal.tsx
-│   │   │   ├── TableGridModal.tsx
-│   │   │   └── InsertFieldModal.tsx
-│   │   └── ui/                  # Reusable primitives
-│   ├── extensions/              # Tiptap extensions
+│   │   ├── editor/                  # Editor components
+│   │   │   ├── PaginatedViewport.tsx    # Zoom + scroll + page computation
+│   │   │   ├── DocumentEditor.tsx       # Tiptap instance + context menus
+│   │   │   ├── BubbleMenu.tsx           # Floating toolbar on selection
+│   │   │   ├── TableContextMenu.tsx     # Right-click table operations
+│   │   │   ├── PageNavigation.tsx       # Page controls + cursor stats
+│   │   │   ├── PaginationContext.tsx    # Page geometry provider
+│   │   │   └── nodes/                   # Custom node views
+│   │   │       ├── TemplateFieldView.tsx
+│   │   │       └── PageBreakView.tsx
+│   │   └── layout/                  # UI shell
+│   │       ├── Navbar.tsx               # Menubar + title input
+│   │       ├── Toolbar/Toolbar.tsx      # Formatting controls
+│   │       ├── SearchReplaceModal.tsx
+│   │       ├── PageSetupModal.tsx
+│   │       ├── TableGridModal.tsx
+│   │       ├── InsertFieldModal.tsx
+│   │       ├── FieldMergeModal.tsx
+│   │       ├── ImageModal.tsx
+│   │       ├── LinkModal.tsx
+│   │       ├── ChatPanel.tsx
+│   │       ├── ProviderSetupModal.tsx
+│   │       ├── KeyboardShortcutsModal.tsx
+│   │       └── AboutModal.tsx
+│   ├── extensions/                  # Custom Tiptap extensions
+│   │   ├── index.ts                     # Extension registry
 │   │   ├── FontSize.ts
 │   │   ├── TemplateField.ts
-│   │   ├── PageBreak.ts
-│   │   └── index.ts
-│   ├── store/                   # Zustand store
-│   │   └── useDocStore.ts
-│   ├── types/                   # TypeScript types
-│   │   └── page.ts
-│   ├── utils/                   # Helpers
-│   │   ├── unitConversion.ts
-│   │   ├── fileIO.ts
-│   │   ├── pdfExport.ts
-│   │   ├── pageOverflow.ts
-│   │   ├── pagination.ts
-│   │   └── DocumentLayoutEngine.ts
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
-├── tests/e2e/                   # Playwright E2E tests
+│   │   └── PageBreak.ts
+│   ├── store/                       # Zustand stores
+│   │   ├── useDocStore.ts              # Document state + modals
+│   │   └── useChatStore.ts             # Chat state + providers
+│   ├── types/                       # TypeScript interfaces
+│   │   ├── page.ts
+│   │   ├── provider.ts
+│   │   ├── chat.ts
+│   │   └── promptTemplate.ts
+│   ├── utils/                       # Helpers
+│   │   ├── fileIO.ts                   # JSON save/load, Markdown export
+│   │   ├── pdfExport.ts                # PDF generation via html2pdf.js
+│   │   ├── clipboard.ts                # Copy/paste with HTML fallback
+│   │   ├── wordImport.ts               # DOCX → Tiptap via mammoth.js
+│   │   ├── search.ts                   # Find/replace engine
+│   │   ├── templateFields.ts           # Field extraction + merge
+│   │   ├── pagination.ts               # Page geometry calculations
+│   │   ├── unitConversion.ts           # mm/pt/px/in conversions
+│   │   ├── mru.ts                      # Most Recently Used file list
+│   │   ├── textStats.ts                # Word/char count, reading time
+│   │   ├── htmlToMarkdown.ts           # Export conversion
+│   │   ├── markdownToHtml.ts           # Import conversion
+│   │   └── providers/                  # LLM provider adapters
+│   │       ├── lmStudioProvider.ts
+│   │       ├── geminiProvider.ts
+│   │       └── providerRegistry.ts
+│   ├── App.tsx                      # Root component, wires all modals
+│   ├── main.tsx                     # Entry point
+│   ├── index.css                    # Global styles + Tailwind
+│   └── vite-env.d.ts                # Build define types
+├── tests/e2e/                       # Playwright E2E tests
 │   ├── editor.spec.ts
 │   ├── keyboard-navigation.spec.ts
 │   └── merge-focus.spec.ts
-├── .github/workflows/deploy.yml # GitHub Pages deploy
-└── README.md
-```
+├── .github/workflows/deploy.yml     # CI/CD → GitHub Pages
+├── AGENTS.md                        # AI-assisted development guide
+├── MANUAL.md                        # End-user documentation
 ├── index.html
 ├── vite.config.ts
 ├── tailwind.config.js
@@ -304,6 +297,52 @@ simpledocs/
 
 ---
 
+## Deployment
+
+### GitHub Pages (Automatic)
+
+GitHub Actions workflow (`.github/workflows/deploy.yml`) auto-deploys on push to `main`.
+
+Setup: Repo Settings → Pages → Source: "GitHub Actions"
+
+### Manual
+
+```bash
+npm run build
+# Deploy dist/ to any static host
+```
+
+---
+
+## AI-Assisted Development
+
+This project includes an `AGENTS.md` file with guidelines for AI coding assistants (e.g., pi, Cursor, Claude Cover). It defines:
+
+- Development tracks (feature work vs bugfix work)
+- Testing conventions and coverage targets
+- Common pitfalls (virtualizer mocks, stale closures, modal focus)
+- Quality gates (lint + type-check + build before completion)
+
+---
+
+## Contributing
+
+1. Pick a task from `docs/PLAN.md` (Features) or `docs/BUGFIX.md` (Bugs)
+2. Write tests first targeting uncovered branches
+3. Implement the feature/fix
+4. Run full verification: `npm test && npm run lint && npm run type-check && npm run build`
+5. Update task status and coverage stats in `docs/PLAN.md`
+6. Log completion in `docs/PROGRESS_LOG.md`
+
+---
+
 ## License
 
 MIT
+
+---
+
+## Related Apps
+
+- [SimpleSheet](https://code24x7-r.github.io/simplesheets/) — Spreadsheet web app from the same author
+- [Simple Web Apps](https://sites.google.com/view/simplewebapps/home) — Project homepage

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useChatStore } from '../../store/useChatStore';
 import { useDocStore } from '../../store/useDocStore';
+import { getProvider } from '../../utils/providers/providerRegistry';
 import { markdownToHtml, containsMarkdown } from '../../utils/markdownToHtml';
 import {
   loadTemplates,
@@ -37,17 +38,17 @@ interface ChatPanelProps {
 const MAX_SELECTION_LENGTH = 1000;
 
 /**
- * ChatPanel — sidebar chatbot integrated with LM Studio API.
+ * ChatPanel — sidebar chatbot with multi-provider support.
  *
  * Features:
- * - Model selector dropdown (populated from /v1/models)
- * - Connection status indicator (healthcheck via /v1/models)
+ * - Provider selector (LM Studio, Google Gemini, etc.)
+ * - Model selector dropdown (populated from active provider)
+ * - Connection status indicator (healthcheck)
  * - Session memory (conversation history persisted to localStorage)
  * - Context window up to 65535 tokens
- * - Bi-directional copy/paste button:
- *   - If editor has selection (≤1000 chars) → paste into chat input
- *   - Else → insert last response at cursor (with MD→HTML conversion)
+ * - Bi-directional copy/paste button
  * - System prompt templates (pre-populated + custom)
+ * - Dynamic settings based on active provider
  */
 export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const { editor } = useDocStore();
@@ -56,8 +57,8 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     isChecking,
     connectionError,
     models,
-    selectedModel,
-    baseUrl,
+    configuredProviders,
+    activeProviderId,
     messages,
     isLoading,
     lastResponse,
@@ -71,7 +72,11 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setTemperature,
     setSystemPrompt,
     clearHistory,
+    setActiveProvider,
+    updateProviderConfig,
   } = useChatStore();
+
+  const { setProviderSetupOpen } = useDocStore();
 
   const [inputValue, setInputValue] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -86,6 +91,9 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [templateContent, setTemplateContent] = useState('');
+
+  // Derived state
+  const activeProvider = configuredProviders.find((p) => p.id === activeProviderId) ?? null;
 
   // Load templates on mount
   useEffect(() => {
@@ -272,6 +280,11 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setTemplateContent('');
   };
 
+  // Provider selector handler
+  const handleProviderChange = (instanceId: string) => {
+    setActiveProvider(instanceId);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -316,32 +329,66 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         </div>
       )}
 
-      {/* Model selector */}
-      <div className="px-3 py-2 border-b border-gray-100">
+      {/* Provider & Model selector */}
+      <div className="px-3 py-2 border-b border-gray-100 space-y-1.5">
+        {/* Provider selector */}
         <div className="flex items-center gap-2">
           <select
-            value={selectedModel}
-            onChange={(e) => setModel(e.target.value)}
+            value={activeProviderId ?? ''}
+            onChange={(e) => handleProviderChange(e.target.value)}
             className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
-            title="Select model"
+            title="Select provider"
           >
-            {models.length === 0 && (
-              <option value={selectedModel}>{selectedModel}</option>
+            {configuredProviders.length === 0 && (
+              <option value="">No providers configured</option>
             )}
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name} {model.state === 'loaded' ? '✓' : ''}
-              </option>
-            ))}
+            {configuredProviders.map((provider) => {
+              const def = getProvider(provider.providerId);
+              return (
+                <option key={provider.id} value={provider.id}>
+                  {def?.name ?? provider.providerId}
+                </option>
+              );
+            })}
           </select>
           <button
-            onClick={() => refreshModels()}
+            onClick={() => setProviderSetupOpen(true)}
             className="p-1 hover:bg-gray-100 rounded"
-            title="Refresh models"
+            title="Add provider"
           >
-            <RefreshCw className="w-3 h-3 text-gray-500" />
+            <Plus className="w-3 h-3 text-gray-500" />
           </button>
         </div>
+
+        {/* Model selector */}
+        {activeProvider && (
+          <div className="flex items-center gap-2">
+            <select
+              value={activeProvider.selectedModel}
+              onChange={(e) => setModel(e.target.value)}
+              className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+              title="Select model"
+            >
+              {models.length === 0 && (
+                <option value={activeProvider.selectedModel}>
+                  {activeProvider.selectedModel}
+                </option>
+              )}
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name} {model.state === 'loaded' ? '✓' : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => refreshModels()}
+              className="p-1 hover:bg-gray-100 rounded"
+              title="Refresh models"
+            >
+              <RefreshCw className="w-3 h-3 text-gray-500" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Settings toggle */}
@@ -359,17 +406,35 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       {/* Settings panel */}
       {showSettings && (
         <div className="px-3 py-2 border-b border-gray-100 space-y-2 bg-gray-50 max-h-[50vh] overflow-y-auto">
-          {/* Base URL */}
-          <div>
-            <label className="block text-xs text-gray-500 mb-0.5">Server URL</label>
-            <input
-              type="text"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="http://localhost:1234"
-              className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-            />
-          </div>
+          {/* Provider-specific settings */}
+          {activeProvider?.providerId === 'lmstudio' && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Server URL</label>
+              <input
+                type="text"
+                value={(activeProvider.config as { baseUrl: string }).baseUrl ?? 'http://localhost:1234'}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="http://localhost:1234"
+                className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+            </div>
+          )}
+
+          {activeProvider?.providerId === 'gemini' && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">API Key</label>
+              <input
+                type="password"
+                value={(activeProvider.config as { apiKey: string }).apiKey ?? ''}
+                onChange={(e) => updateProviderConfig(activeProvider.id, { apiKey: e.target.value } as { apiKey: string })}
+                placeholder="AIza..."
+                className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 font-mono"
+              />
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Get a key at aistudio.google.com
+              </p>
+            </div>
+          )}
 
           {/* Temperature */}
           <div>
@@ -596,7 +661,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           />
           <button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isLoading}
+            disabled={!inputValue.trim() || isLoading || !activeProvider}
             className="self-end p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed"
             title="Send message"
           >
