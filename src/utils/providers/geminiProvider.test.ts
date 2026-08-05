@@ -236,7 +236,7 @@ describe('geminiProvider', () => {
       expect(body.generationConfig.temperature).toBeUndefined();
     });
 
-    it('sends thinkingLevel instead of temperature', async () => {
+    it('sends thinkingLevel nested inside thinkingConfig', async () => {
       const mockResponse = {
         candidates: [{
           content: { role: 'model', parts: [{ text: 'Hi' }] },
@@ -259,7 +259,10 @@ describe('geminiProvider', () => {
       const callArgs = fetchMock.mock.calls[0];
       const options = callArgs[1] as RequestInit;
       const body = JSON.parse(options.body as string);
-      expect(body.generationConfig.thinkingLevel).toBe('medium');
+      // thinkingLevel must be nested inside thinkingConfig, not directly in generationConfig
+      expect(body.generationConfig.thinkingConfig).toBeDefined();
+      expect(body.generationConfig.thinkingConfig.thinkingLevel).toBe('medium');
+      expect(body.generationConfig.thinkingLevel).toBeUndefined();
     });
 
     it('uses minimal thinking level for lite models', async () => {
@@ -285,7 +288,7 @@ describe('geminiProvider', () => {
       const callArgs = fetchMock.mock.calls[0];
       const options = callArgs[1] as RequestInit;
       const body = JSON.parse(options.body as string);
-      expect(body.generationConfig.thinkingLevel).toBe('minimal');
+      expect(body.generationConfig.thinkingConfig.thinkingLevel).toBe('minimal');
     });
 
     it('uses maxTokens parameter for maxOutputTokens', async () => {

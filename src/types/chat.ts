@@ -135,9 +135,13 @@ export interface GeminiSystemInstruction {
   parts: GeminiPart[];
 }
 
+export interface GeminiThinkingConfig {
+  thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
+}
+
 export interface GeminiGenerationConfig {
   maxOutputTokens?: number;
-  thinkingLevel?: 'minimal' | 'medium' | 'high';
+  thinkingConfig?: GeminiThinkingConfig;
 }
 
 export interface GeminiRequest {

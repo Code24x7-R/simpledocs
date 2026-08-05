@@ -46,7 +46,7 @@ const GEMINI_MODELS = [
  * Flash-Lite variants default to 'minimal' for max throughput.
  * Full Flash variants default to 'medium' for agentic capability.
  */
-function defaultThinkingLevel(modelId: string): 'minimal' | 'medium' | 'high' {
+function defaultThinkingLevel(modelId: string): 'minimal' | 'low' | 'medium' | 'high' {
   if (modelId.includes('lite') || modelId.includes('Lite')) return 'minimal';
   return 'medium';
 }
@@ -193,7 +193,9 @@ export const geminiProvider: LlmProvider = {
       systemInstruction,
       generationConfig: {
         maxOutputTokens: maxTokens,
-        thinkingLevel: defaultThinkingLevel(model),
+        thinkingConfig: {
+          thinkingLevel: defaultThinkingLevel(model),
+        },
       },
     };
 
