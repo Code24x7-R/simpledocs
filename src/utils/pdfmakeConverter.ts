@@ -83,6 +83,66 @@ const MM_PER_INCH = 25.4;
 // Set at the start of convertToPdfmake so image nodes can constrain themselves.
 let currentContentArea: { width: number; height: number } = { width: 160, height: 250 };
 
+// Map of image src → natural dimensions (in pixels), loaded before PDF generation.
+// Used to calculate accurate scaling that fits within the content area.
+let imageDimensions: Record<string, { width: number; height: number }> = {};
+
+/**
+ * Recursively scan a TipTap document for image nodes and collect their src values.
+ */
+export function collectImageSources(node: TiptapNode, sources: Set<string> = new Set()): Set<string> {
+  if (node.type === 'image' && node.attrs?.src) {
+    sources.add(String(node.attrs.src));
+  }
+  if (node.content) {
+    for (const child of node.content) {
+      collectImageSources(child, sources);
+    }
+  }
+  return sources;
+}
+
+/**
+ * Set the natural dimensions for images (loaded before PDF generation).
+ * Map of image src → { width, height } in pixels.
+ */
+export function setImageDimensions(dimensions: Record<string, { width: number; height: number }>): void {
+  imageDimensions = dimensions;
+}
+
+/**
+ * Calculate scaled dimensions that fit within the content area while maintaining aspect ratio.
+ * Returns dimensions in mm.
+ */
+function calculateScaledDimensions(
+  naturalWidth: number,
+  naturalHeight: number,
+  maxWidth: number,
+  maxHeight: number
+): { width: number; height: number } {
+  if (naturalWidth <= 0 || naturalHeight <= 0) {
+    return { width: maxWidth, height: maxHeight };
+  }
+
+  const aspectRatio = naturalWidth / naturalHeight;
+  const boxAspectRatio = maxWidth / maxHeight;
+
+  let width: number;
+  let height: number;
+
+  if (aspectRatio > boxAspectRatio) {
+    // Image is wider than box — constrain by width
+    width = maxWidth;
+    height = maxWidth / aspectRatio;
+  } else {
+    // Image is taller than box — constrain by height
+    height = maxHeight;
+    width = maxHeight * aspectRatio;
+  }
+
+  return { width: Math.round(width * 100) / 100, height: Math.round(height * 100) / 100 };
+}
+
 // Standard page dimensions in mm (portrait)
 const PAGE_SIZES = {
   A4: { width: 210, height: 297 },
@@ -234,7 +294,18 @@ function convertNode(node: TiptapNode): unknown {
         } else if (child.type === 'image') {
           // Inline image inside paragraph
           const src = String(child.attrs?.src || '');
-          if (src) runs.push({ image: src, fit: [currentContentArea.width, currentContentArea.height] });
+          if (src) {
+            // Inline image — constrain to content area using natural dimensions if available
+            const natural = imageDimensions[src];
+            let width = currentContentArea.width;
+            let height = currentContentArea.height;
+            if (natural && natural.width > 0 && natural.height > 0) {
+              const scaled = calculateScaledDimensions(natural.width, natural.height, width, height);
+              width = scaled.width;
+              height = scaled.height;
+            }
+            runs.push({ image: src, width, height });
+          }
         } else if (child.type === 'templateField') {
           // Inline template field — render as bracketed placeholder
           const label = String(child.attrs?.label || child.attrs?.id || 'Field');
@@ -315,15 +386,42 @@ function convertNode(node: TiptapNode): unknown {
       const nodeWidth = node.attrs?.width ? Number(node.attrs.width) : undefined;
       const nodeHeight = node.attrs?.height ? Number(node.attrs.height) : undefined;
 
-      // Constrain image to fit within the available content area.
-      // If the image has explicit dimensions, use them as max bounds.
-      // Otherwise, use the full content area as the constraint.
-      const maxWidth = nodeWidth && nodeWidth > 0 ? Math.min(nodeWidth, currentContentArea.width) : currentContentArea.width;
-      const maxHeight = nodeHeight && nodeHeight > 0 ? Math.min(nodeHeight, currentContentArea.height) : currentContentArea.height;
+      // Get the natural dimensions of the image (loaded before PDF generation)
+      const natural = imageDimensions[src];
+
+      // Maximum available space in the content area
+      const maxWidth = currentContentArea.width;
+      const maxHeight = currentContentArea.height;
+
+      let width: number;
+      let height: number;
+
+      if (natural && natural.width > 0 && natural.height > 0) {
+        // Use natural dimensions to calculate scaled size that fits
+        const scaled = calculateScaledDimensions(natural.width, natural.height, maxWidth, maxHeight);
+        width = scaled.width;
+        height = scaled.height;
+      } else {
+        // Fallback: use explicit dimensions or content area
+        width = nodeWidth && nodeWidth > 0 ? Math.min(nodeWidth, maxWidth) : maxWidth;
+        height = nodeHeight && nodeHeight > 0 ? Math.min(nodeHeight, maxHeight) : maxHeight;
+      }
+
+      // If TipTap has explicit dimensions, use them as upper bounds
+      // (but don't upscale — only downscale if needed)
+      if (nodeWidth && nodeWidth > 0 && nodeWidth < width) {
+        height = height * (nodeWidth / width);
+        width = nodeWidth;
+      }
+      if (nodeHeight && nodeHeight > 0 && nodeHeight < height) {
+        width = width * (nodeHeight / height);
+        height = nodeHeight;
+      }
 
       return {
         image: src,
-        fit: [maxWidth, maxHeight],
+        width,
+        height,
         margin: [0, 4, 0, 8],
       };
     }

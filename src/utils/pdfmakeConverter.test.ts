@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   convertToPdfmake,
+  setImageDimensions,
   type TiptapNode,
   type PageSetup,
 } from './pdfmakeConverter';
@@ -21,6 +22,13 @@ function makeDoc(content: TiptapNode[]): TiptapNode {
 }
 
 describe('pdfmakeConverter', () => {
+  // Set natural dimensions for test images so scaling calculations work
+  beforeEach(() => {
+    setImageDimensions({
+      'data:image/png;base64,abc123': { width: 800, height: 600 },
+      'data:image/png;base64,xyz': { width: 1000, height: 500 },
+    });
+  });
   describe('document structure', () => {
     it('creates a doc with A4 portrait defaults', () => {
       const doc = convertToPdfmake(makeDoc([]), defaultPageSetup);
@@ -382,10 +390,11 @@ describe('pdfmakeConverter', () => {
         }]),
         defaultPageSetup
       );
-      const img = doc.content[0] as { image: string; fit: [number, number] };
-      // Explicit width (300) is clamped to content area width (~160mm for A4 with 25mm margins)
-      expect(img.fit[0]).toBeLessThanOrEqual(300);
-      expect(img.fit[1]).toBeGreaterThan(0);
+      const img = doc.content[0] as { image: string; width: number; height: number };
+      // Image is scaled to fit content area width (~159.2mm for A4 with 25.4mm margins)
+      expect(img.width).toBeCloseTo(159.2, 1);
+      // Height scales proportionally (1000x500 natural → 159.2 wide → 79.6 tall)
+      expect(img.height).toBeCloseTo(79.6, 1);
     });
 
     it('converts a large image to fit within content area', () => {
@@ -396,15 +405,13 @@ describe('pdfmakeConverter', () => {
         }]),
         defaultPageSetup
       );
-      const img = doc.content[0] as { image: string; fit: [number, number] };
-      // Both dimensions clamped to content area
-      expect(img.fit[0]).toBeLessThanOrEqual(500);
-      expect(img.fit[1]).toBeLessThanOrEqual(400);
-      expect(img.fit[0]).toBeGreaterThan(0);
-      expect(img.fit[1]).toBeGreaterThan(0);
+      const img = doc.content[0] as { image: string; width: number; height: number };
+      // Image is scaled to fit content area (constrained by width)
+      expect(img.width).toBeCloseTo(159.2, 1);
+      expect(img.height).toBeCloseTo(79.6, 1);
     });
 
-    it('converts an image without dimensions to use full content area', () => {
+    it('converts an image without dimensions to scale to content area', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
@@ -412,11 +419,28 @@ describe('pdfmakeConverter', () => {
         }]),
         defaultPageSetup
       );
-      const img = doc.content[0] as { image: string; fit: [number, number] };
-      // A4 portrait with 25.4mm margins: width = 210 - 50.8 = 159.2
-      expect(img.fit[0]).toBeCloseTo(159.2, 1);
-      // A4 portrait with 25.4mm margins: height = 297 - 50.8 = 246.2
-      expect(img.fit[1]).toBeCloseTo(246.2, 1);
+      const img = doc.content[0] as { image: string; width: number; height: number };
+      // Natural 1000x500 (aspect ratio 2.0) is wider than content box (aspect ~0.647)
+      // So constrained by width: width = 159.2mm, height = 159.2 / 2.0 = 79.6mm
+      expect(img.width).toBeCloseTo(159.2, 1);
+      expect(img.height).toBeCloseTo(79.6, 1);
+    });
+
+    it('scales a tall image to fit by height', () => {
+      // Set natural dimensions for a tall image (aspect ratio 0.5)
+      setImageDimensions({ 'data:image/png;base64,tall': { width: 500, height: 1000 } });
+      const doc = convertToPdfmake(
+        makeDoc([{
+          type: 'image',
+          attrs: { src: 'data:image/png;base64,tall' },
+        }]),
+        defaultPageSetup
+      );
+      const img = doc.content[0] as { image: string; width: number; height: number };
+      // Image aspect ratio 0.5 is taller than box aspect ratio ~0.647
+      // So constrained by height: height = 246.2mm, width = 246.2 * 0.5 = 123.1mm
+      expect(img.height).toBeCloseTo(246.2, 1);
+      expect(img.width).toBeCloseTo(123.1, 1);
     });
   });
 
