@@ -73,6 +73,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setSystemPrompt,
     clearHistory,
     setActiveProvider,
+    removeProvider,
     updateProviderConfig,
   } = useChatStore();
 
@@ -285,6 +286,18 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setActiveProvider(instanceId);
   };
 
+  // Remove the currently active provider
+  const handleRemoveProvider = () => {
+    if (!activeProviderId) return;
+    const confirmed = window.confirm(
+      `Remove ${getProvider(configuredProviders.find((p) => p.id === activeProviderId)?.providerId ?? "")?.name ?? "this provider"}? This will clear the conversation history.`
+    );
+    if (confirmed) {
+      removeProvider(activeProviderId);
+      clearHistory();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -351,6 +364,14 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               );
             })}
           </select>
+          <button
+            onClick={handleRemoveProvider}
+            disabled={!activeProviderId}
+            className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Remove provider"
+          >
+            <Trash2 className="w-3 h-3 text-gray-500" />
+          </button>
           <button
             onClick={() => setProviderSetupOpen(true)}
             className="p-1 hover:bg-gray-100 rounded"

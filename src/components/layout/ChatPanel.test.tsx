@@ -350,4 +350,93 @@ describe('ChatPanel', () => {
     const addButton = screen.getByTitle('Add provider');
     expect(addButton).toBeInTheDocument();
   });
+
+  it('shows remove provider button when a provider is active', () => {
+    render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+    const removeButton = screen.getByTitle('Remove provider');
+    expect(removeButton).toBeInTheDocument();
+  });
+
+  it('disables remove provider button when no provider is active', () => {
+    useChatStore.setState({ activeProviderId: null });
+
+    render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+    const removeButton = screen.getByTitle('Remove provider');
+    expect(removeButton).toBeDisabled();
+  });
+
+  it('removes the active provider when remove button is clicked and confirmed', () => {
+    // Set up two providers so one remains after removal
+    useChatStore.setState({
+      configuredProviders: [
+        {
+          id: 'provider-1',
+          providerId: 'lmstudio',
+          config: { baseUrl: 'http://localhost:1234' },
+          selectedModel: 'google/gemma-4-e2b',
+          isActive: true,
+        },
+        {
+          id: 'provider-2',
+          providerId: 'gemini',
+          config: { apiKey: 'test-key' },
+          selectedModel: 'gemini-3.6-flash',
+          isActive: false,
+        },
+      ],
+      activeProviderId: 'provider-1',
+      messages: [
+        { role: 'user', content: 'test', timestamp: Date.now() },
+        { role: 'assistant', content: 'response', timestamp: Date.now() },
+      ],
+    });
+
+    // Mock window.confirm to return true
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+    const removeButton = screen.getByTitle('Remove provider');
+    fireEvent.click(removeButton);
+
+    // Provider should be removed and history cleared
+    const state = useChatStore.getState();
+    expect(state.configuredProviders).toHaveLength(1);
+    expect(state.configuredProviders[0].id).toBe('provider-2');
+    expect(state.messages).toHaveLength(0);
+    expect(confirmSpy).toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
+
+  it('does not remove provider when confirm is cancelled', () => {
+    useChatStore.setState({
+      configuredProviders: [
+        {
+          id: 'provider-1',
+          providerId: 'lmstudio',
+          config: { baseUrl: 'http://localhost:1234' },
+          selectedModel: 'google/gemma-4-e2b',
+          isActive: true,
+        },
+      ],
+      activeProviderId: 'provider-1',
+    });
+
+    // Mock window.confirm to return false
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+    const removeButton = screen.getByTitle('Remove provider');
+    fireEvent.click(removeButton);
+
+    // Provider should still be there
+    expect(useChatStore.getState().configuredProviders).toHaveLength(1);
+    expect(confirmSpy).toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
 });
