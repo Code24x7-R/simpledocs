@@ -425,3 +425,26 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 | Lint | 0 errors, 0 warnings |
 | Build | Succeeds |
 | Architecture | Single-editor (Google Docs model) |
+
+## 2026-08-05 — PDF Export Overhaul (Phase 34)
+
+### [FEATURE] Bitmap PDF → Searchable PDF with pdfmake
+
+**Problem**: PDF export used `html2pdf.js` which rasterized the DOM to a JPEG image embedded in a PDF. Text was not searchable or selectable. Additionally, the export handler looked for `[data-testid="page-canvas"]` elements that didn't exist in the DOM, making PDF export non-functional.
+
+**Solution**:
+- Replaced `html2pdf.js` with `pdfmake` — produces real text-based PDFs
+- Built `pdfmakeConverter.ts` — recursive TipTap JSON → pdfmake document converter covering all 15 node types
+- Lazy-load pdfmake (~1MB) to avoid bloating the main bundle
+- Reads directly from `docState.content` instead of scraping the DOM
+- Full page setup support: margins, A4/Letter format, portrait/landscape, headers, footers, page numbers
+
+**Files**:
+- `src/utils/pdfExport.ts` — Rewritten to use pdfmake with lazy loading
+- `src/utils/pdfmakeConverter.ts` — NEW: TipTap JSON → pdfmake converter
+- `src/utils/pdfmakeConverter.test.ts` — NEW: 38 tests (all node types, marks, color normalization, page setup)
+- `src/utils/pdfExport.test.ts` — NEW: 4 export integration tests
+- `src/pdfmake.d.ts` — NEW: Type declarations for pdfmake
+- `src/App.tsx` — Removed broken page-canvas DOM scraping, removed unused `useRef`
+
+**Results**: 552 tests pass (28 suites), lint clean, type-check clean, build succeeds.

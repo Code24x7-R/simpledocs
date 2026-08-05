@@ -14,7 +14,8 @@ describe('geminiProvider', () => {
     // Make retry backoff delays instant (<=8s) while leaving the 120s
     // AbortSignal.timeout unaffected. This keeps retry tests fast.
     vi.spyOn(global, 'setTimeout').mockImplementation(
-      (fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fn: TimerHandler, delay?: number, ...args: unknown[]): any => {
         if (typeof delay === 'number' && delay <= 8000) {
           if (fn instanceof Function) fn();
           return originalSetTimeout(() => {}, 0);

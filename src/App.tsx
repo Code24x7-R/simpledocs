@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useDocStore } from './store/useDocStore';
 import { exportToPdf } from './utils/pdfExport';
 import Navbar from './components/layout/Navbar';
@@ -21,7 +21,6 @@ import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
   const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
-  const pageElementsRef = useRef<HTMLElement[]>([]);
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
   // Link modal handler
@@ -63,15 +62,11 @@ export default function App() {
 
   useEffect(() => {
     const handler = async () => {
-      const canvases = document.querySelectorAll<HTMLElement>('[data-testid="page-canvas"]');
-      pageElementsRef.current = Array.from(canvases);
-      if (pageElementsRef.current.length > 0) {
-        try {
-          await exportToPdf(docState, pageElementsRef.current);
-        } catch (err) {
-          console.error('PDF export failed:', err);
-          alert('PDF export failed. See console for details.');
-        }
+      try {
+        await exportToPdf(docState, []);
+      } catch (err) {
+        console.error('PDF export failed:', err);
+        alert('PDF export failed. See console for details.');
       }
     };
 

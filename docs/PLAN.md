@@ -37,6 +37,10 @@
 | 31 | Highlight Refactor (BackgroundColor) | COMPLETE ✅ |
 | 32 | Lint Cleanup (zero warnings) | COMPLETE ✅ |
 | 33 | Multi-Provider Chat (Gemini + LM Studio) | COMPLETE ✅ |
+| 34 | PDF Export Overhaul (Searchable pdfmake) | COMPLETE ✅ |
+
+- [ ] Update PLAN.md with results and coverage stats
+- [ ] Log completion in PROGRESS_LOG.md
 
 ---
 
@@ -728,3 +732,57 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 | Tests | **NEW/EDIT** — 60 new provider/multi-provider tests |
 
 **Results:** 452 tests pass, lint clean, type-check clean, build succeeds.
+
+---
+
+## Phase 34: PDF Export Overhaul (Searchable pdfmake) — COMPLETE ✅
+
+**2026-08-05** — Replaced bitmap-based `html2pdf.js` with text-based `pdfmake` to produce **searchable, selectable PDFs**.
+
+### Problems Fixed
+1. **Was bitmap capture**: `html2pdf.js` rendered DOM → canvas → JPEG image → PDF. Text was **not searchable or selectable**.
+2. **Was broken page detection**: `exportToPdf()` looked for `[data-testid="page-canvas"]` elements that don't exist in the DOM. `PaginatedViewport` uses CSS-based pagination.
+
+### Solution
+- `pdfmake` — client-side PDF generation with real text, embedded fonts, and full styling
+- TipTap JSON → pdfmake document converter (`pdfmakeConverter.ts`) — recursive node walker
+- Lazy-loaded so the ~1MB library doesn't bloat the main bundle
+- Reads directly from `docState.content` — no DOM scraping required
+
+### Node Type Coverage
+| TipTap Node | pdfmake Output |
+|---|---|
+| `doc` | Root document |
+| `paragraph` | Text block with margin |
+| `heading` | Sized text (h1/h2/h3) |
+| `text` + marks | Styled text chunks (bold, italic, underline, strikethrough, code, color, fontSize, fontFamily, backgroundColor) |
+| `bulletList` / `orderedList` | Bulleted/numbered lists |
+| `taskList` | Checkbox lists (☐/☑) |
+| `table` | pdfmake tables with cell styling |
+| `image` | Embedded images (including base64) |
+| `link` | Clickable hyperlinks |
+| `blockquote` | Indented styled block |
+| `codeBlock` | Monospace block with background |
+| `horizontalRule` | Horizontal line |
+| `pageBreak` | Page break |
+| `templateField` | Variable placeholder text |
+
+### Files
+| File | Action |
+|------|--------|
+| `src/utils/pdfExport.ts` | **REWRITE** — Replace html2pdf.js with pdfmake (lazy-loaded) |
+| `src/utils/pdfmakeConverter.ts` | **NEW** — TipTap JSON → pdfmake document converter |
+| `src/utils/pdfmakeConverter.test.ts` | **NEW** — 38 converter tests (all node types, marks, color normalization, page setup) |
+| `src/utils/pdfExport.test.ts` | **NEW** — 4 export integration tests (mocked pdfmake) |
+| `src/pdfmake.d.ts` | **NEW** — Type declarations for pdfmake (no @types package) |
+| `src/vite-env.d.ts` | **EDIT** — Removed html2pdf.js type declarations |
+| `src/App.tsx` | **EDIT** — Removed page-canvas DOM scraping, removed unused `useRef` |
+| `package.json` | **EDIT** — Removed html2pdf.js, added pdfmake |
+
+### Results
+- **552 tests pass** (28 suites) — up from 510
+- Lint clean, type-check clean, build succeeds
+- PDF output is now **fully searchable and selectable**
+- All TipTap node types converted to real text
+- Page setup (margins, format, orientation, headers, footers, page numbers) fully wired
+- pdfmake lazy-loaded to avoid bloating main bundle
