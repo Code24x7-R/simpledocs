@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   convertToPdfmake,
-  setImageDimensions,
-  calculateDisplayDimensions,
-  PX_TO_MM,
   type TiptapNode,
   type PageSetup,
 } from './pdfmakeConverter';
@@ -24,13 +21,6 @@ function makeDoc(content: TiptapNode[]): TiptapNode {
 }
 
 describe('pdfmakeConverter', () => {
-  // Set natural dimensions for test images so scaling calculations work
-  beforeEach(() => {
-    setImageDimensions({
-      'data:image/png;base64,abc123': { width: 800, height: 600 },
-      'data:image/png;base64,xyz': { width: 1000, height: 500 },
-    });
-  });
   describe('document structure', () => {
     it('creates a doc with A4 portrait defaults', () => {
       const doc = convertToPdfmake(makeDoc([]), defaultPageSetup);
@@ -384,38 +374,7 @@ describe('pdfmakeConverter', () => {
       expect(img.image).toBe('data:image/png;base64,abc123');
     });
 
-    it('converts an image with explicit width smaller than content area at natural size', () => {
-      const doc = convertToPdfmake(
-        makeDoc([{
-          type: 'image',
-          attrs: { src: 'data:image/png;base64,xyz', width: 300 },
-        }]),
-        defaultPageSetup
-      );
-      const img = doc.content[0] as { image: string; width: number; height: number };
-      // Natural size: 300px * 0.26458 = 79.37mm wide (smaller than 159.2mm content area)
-      // So displayed at natural size (no scaling up)
-      expect(img.width).toBeCloseTo(79.4, 1);
-      // Height from natural aspect ratio: 500 * (300/1000) = 150px = 39.69mm
-      expect(img.height).toBeCloseTo(39.7, 1);
-    });
-
-    it('converts a large image to fit within content area', () => {
-      const doc = convertToPdfmake(
-        makeDoc([{
-          type: 'image',
-          attrs: { src: 'data:image/png;base64,xyz', width: 500, height: 400 },
-        }]),
-        defaultPageSetup
-      );
-      const img = doc.content[0] as { image: string; width: number; height: number };
-      // 500px * 0.26458 = 132.3mm (smaller than 159.2mm content area)
-      // So displayed at natural size (no scaling up)
-      expect(img.width).toBeCloseTo(132.3, 1);
-      expect(img.height).toBeCloseTo(105.8, 1);
-    });
-
-    it('scales a wide natural image down to fit content area', () => {
+    it('converts an image to use fit with content area dimensions', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
@@ -423,83 +382,24 @@ describe('pdfmakeConverter', () => {
         }]),
         defaultPageSetup
       );
-      const img = doc.content[0] as { image: string; width: number; height: number };
-      // Natural 1000x500 → 264.58mm wide (exceeds 159.2mm content area)
-      // Scaled down: width = 159.2mm, height = 132.29 * (159.2/264.58) = 79.6mm
-      expect(img.width).toBeCloseTo(159.2, 1);
-      expect(img.height).toBeCloseTo(79.6, 1);
+      const img = doc.content[0] as { image: string; fit: [number, number] };
+      // fit is set to content area dimensions (pdfmake scales the image to fit)
+      expect(img.fit[0]).toBeCloseTo(159.2, 1);
+      expect(img.fit[1]).toBeCloseTo(246.2, 1);
     });
 
-    it('scales a tall image down to fit by height', () => {
-      // Set natural dimensions for a tall image (aspect ratio 0.5)
-      setImageDimensions({ 'data:image/png;base64,tall': { width: 500, height: 1000 } });
+    it('sets fit to landscape content area for landscape pages', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
-          attrs: { src: 'data:image/png;base64,tall' },
+          attrs: { src: 'data:image/png;base64,xyz' },
         }]),
-        defaultPageSetup
+        { ...defaultPageSetup, orientation: 'landscape' }
       );
-      const img = doc.content[0] as { image: string; width: number; height: number };
-      // Natural: 132.3mm wide (fits), 264.58mm tall (exceeds 246.2mm)
-      // Scaled down: height = 246.2mm, width = 132.3 * (246.2/264.58) = 123.1mm
-      expect(img.height).toBeCloseTo(246.2, 1);
-      expect(img.width).toBeCloseTo(123.1, 1);
-    });
-
-    it('displays small images at natural size without scaling up', () => {
-      // Small image that should NOT be scaled up to fill content area
-      setImageDimensions({ 'data:image/png;base64,small': { width: 200, height: 150 } });
-      const doc = convertToPdfmake(
-        makeDoc([{
-          type: 'image',
-          attrs: { src: 'data:image/png;base64,small' },
-        }]),
-        defaultPageSetup
-      );
-      const img = doc.content[0] as { image: string; width: number; height: number };
-      // Natural: 200 * 0.26458 = 52.9mm (smaller than 159.2mm)
-      // Should display at natural size, not scaled up
-      expect(img.width).toBeCloseTo(52.9, 1);
-      expect(img.height).toBeCloseTo(39.7, 1);
-    });
-  });
-
-  describe('calculateDisplayDimensions', () => {
-    it('converts pixels to mm at 96 DPI', () => {
-      expect(PX_TO_MM).toBeCloseTo(0.26458, 4);
-    });
-
-    it('returns natural size when image is smaller than container', () => {
-      const result = calculateDisplayDimensions(200, 150, 159.2, 246.2);
-      expect(result.width).toBeCloseTo(200 * PX_TO_MM, 1);
-      expect(result.height).toBeCloseTo(150 * PX_TO_MM, 1);
-    });
-
-    it('scales down wide images to fit container width', () => {
-      const result = calculateDisplayDimensions(1000, 500, 159.2, 246.2);
-      expect(result.width).toBeCloseTo(159.2, 1);
-      expect(result.height).toBeCloseTo(79.6, 1);
-    });
-
-    it('scales down tall images to fit container height', () => {
-      const result = calculateDisplayDimensions(500, 1000, 159.2, 246.2);
-      expect(result.height).toBeCloseTo(246.2, 1);
-      expect(result.width).toBeCloseTo(123.1, 1);
-    });
-
-    it('does not scale up small images', () => {
-      const result = calculateDisplayDimensions(100, 100, 159.2, 246.2);
-      expect(result.width).toBeCloseTo(100 * PX_TO_MM, 1);
-      expect(result.height).toBeCloseTo(100 * PX_TO_MM, 1);
-    });
-
-    it('uses default 800x400 when dimensions are zero', () => {
-      const result = calculateDisplayDimensions(0, 0, 159.2, 246.2);
-      // When dimensions are zero, default to 800x400 clamped to container
-      // Width clamped from 211.67 to 159.2, height clamped from 105.83 to 105.83 (under 246.2)
-      expect(result.width).toBeCloseTo(159.2, 1);
-      expect(result.height).toBeCloseTo(400 * PX_TO_MM, 1);
+      const img = doc.content[0] as { image: string; fit: [number, number] };
+      // Landscape A4: width = 297 - margins, height = 210 - margins
+      expect(img.fit[0]).toBeCloseTo(246.2, 1);
+      expect(img.fit[1]).toBeCloseTo(159.2, 1);
     });
   });
 

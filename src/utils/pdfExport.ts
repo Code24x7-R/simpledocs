@@ -1,20 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import type { DocState } from '../store/useDocStore';
-import { convertToPdfmake, collectImageSources, setImageDimensions, type PageSetup } from './pdfmakeConverter';
-
-/**
- * Load an image and return its natural dimensions in pixels.
- * Works for both data URLs and remote URLs.
- */
-function loadImageDimensions(src: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => reject(new Error(`Failed to load image: ${src.slice(0, 50)}`));
-    img.src = src;
-  });
-}
+import { convertToPdfmake, type PageSetup } from './pdfmakeConverter';
 
 /**
  * Export the current document to a **searchable** PDF using pdfmake.
@@ -41,23 +28,8 @@ export async function exportToPdf(
     title: doc.title,
   };
 
-  // Load images to get their natural dimensions for accurate scaling
-  const content = doc.content as unknown as Parameters<typeof convertToPdfmake>[0];
-  const imageSources = collectImageSources(content);
-  const dimensions: Record<string, { width: number; height: number }> = {};
-  await Promise.all(
-    Array.from(imageSources).map(async (src) => {
-      try {
-        const dims = await loadImageDimensions(src);
-        dimensions[src] = dims;
-      } catch {
-        // Image failed to load — scaling will use fallback
-      }
-    })
-  );
-  setImageDimensions(dimensions);
-
   // Convert TipTap JSON content → pdfmake document definition
+  const content = doc.content as unknown as Parameters<typeof convertToPdfmake>[0];
   const pdfDoc = convertToPdfmake(content, pageSetup);
 
   // Lazy-load pdfmake + custom fonts to keep them out of the main bundle
