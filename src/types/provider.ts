@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import type { ChatMessage, ModelInfo } from './chat';
+import type { ChatMessage, ModelInfo, GeneratedImage, ImageGenerationOptions } from './chat';
 
 /**
  * Provider configuration types.
@@ -70,6 +70,16 @@ export interface LlmProvider {
     maxTokens: number,
     temperature: number
   ): Promise<string>;
+
+  /**
+   * Generate an image from a text prompt.
+   * Optional — only providers with image generation capability implement this.
+   */
+  generateImage?(
+    prompt: string,
+    config: ProviderConfig,
+    options?: ImageGenerationOptions
+  ): Promise<GeneratedImage>;
 
   /**
    * Get default config for a new instance.

@@ -25,10 +25,25 @@ import type {
   GeminiContent,
   GeminiModelsResponse,
   GeminiModelEntry,
+  GeneratedImage,
+  ImageGenerationOptions,
 } from '../../types/chat';
 import type { ProviderConfig, LlmProvider } from '../../types/provider';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
+/** Model ID for single-shot image generation (Nano Banana 2 Lite). */
+const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
+
+/**
+ * Supported aspect ratios for gemini-3.1-flash-lite-image.
+ * Default is 1:1 (square) at 1K resolution.
+ */
+const SUPPORTED_ASPECT_RATIOS = [
+  '1:1', '1:4', '4:1', '1:8', '8:1',
+  '2:3', '3:2', '3:4', '4:3', '4:5', '5:4',
+  '9:16', '16:9', '21:9',
+];
 
 /**
  * Default model catalog — used as fallback if the live models.list API
@@ -220,7 +235,89 @@ export const geminiProvider: LlmProvider = {
       throw new Error('No response candidates returned from Gemini API');
     }
 
-    return data.candidates[0].content.parts[0].text;
+    return data.candidates[0].content.parts[0].text ?? '';
+  },
+
+  async generateImage(
+    prompt: string,
+    config: ProviderConfig,
+    options?: ImageGenerationOptions
+  ): Promise<GeneratedImage> {
+    if (!isGeminiConfig(config)) {
+      throw new Error('Invalid Gemini config: apiKey required');
+    }
+
+    // Validate aspect ratio if provided
+    if (options?.aspectRatio && !SUPPORTED_ASPECT_RATIOS.includes(options.aspectRatio)) {
+      throw new Error(
+        `Unsupported aspect ratio "${options.aspectRatio}". Supported: ${SUPPORTED_ASPECT_RATIOS.join(', ')}`
+      );
+    }
+
+    const generationConfig: Record<string, unknown> = {
+      // Must include BOTH TEXT and IMAGE — IMAGE alone returns empty response.
+      responseModalities: ['TEXT', 'IMAGE'],
+    };
+
+    // Optional image config (aspect ratio + resolution)
+    if (options?.aspectRatio || options?.imageSize) {
+      const imageConfig: Record<string, string> = {};
+      if (options.aspectRatio) imageConfig.aspectRatio = options.aspectRatio;
+      if (options.imageSize) imageConfig.imageSize = options.imageSize;
+      generationConfig.imageConfig = imageConfig;
+    }
+
+    const requestBody = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig,
+    };
+
+    const response = await fetch(
+      `${GEMINI_API_BASE}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${config.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(120000),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText} — ${errorText}`);
+    }
+
+    const data: GeminiResponse = await response.json();
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('No response candidates returned from Gemini API');
+    }
+
+    // Extract image data and optional caption from response parts
+    const parts = data.candidates[0].content.parts;
+    let base64: string | undefined;
+    let mimeType: string | undefined;
+    let caption: string | undefined;
+
+    for (const part of parts) {
+      if (part.inlineData) {
+        base64 = part.inlineData.data;
+        mimeType = part.inlineData.mimeType;
+      } else if (part.text) {
+        caption = caption ? `${caption}\n${part.text}` : part.text;
+      }
+    }
+
+    if (!base64 || !mimeType) {
+      throw new Error('Gemini image generation returned no image data');
+    }
+
+    return { base64, mimeType, caption };
   },
 
   getDefaultConfig(): ProviderConfig {

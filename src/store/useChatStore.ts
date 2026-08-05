@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { create } from 'zustand';
-import type { ChatMessage, ModelInfo } from '../types/chat';
+import type { ChatMessage, ModelInfo, GeneratedImage, ImageGenerationOptions } from '../types/chat';
 import type { ConfiguredProvider, ProviderConfig } from '../types/provider';
 import { getProvider } from '../utils/providers/providerRegistry';
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './chatStoreDefaults';
@@ -34,6 +34,7 @@ interface ChatState {
   messages: ChatMessage[];
   isLoading: boolean;
   lastResponse: string;
+  lastGeneratedImage: GeneratedImage | null;
 
   // ─── Provider Actions ──────────────────────────────────────────────────
   addProvider: (providerId: string) => string;
@@ -48,6 +49,7 @@ interface ChatState {
   checkHealthById: (instanceId: string) => Promise<boolean>;
   refreshModels: () => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
+  generateImage: (prompt: string, options?: ImageGenerationOptions) => Promise<void>;
   setTemperature: (temp: number) => void;
   setSystemPrompt: (prompt: string) => void;
   clearHistory: () => void;
@@ -61,6 +63,7 @@ interface PersistedState {
   systemPrompt: string;
   maxTokens: number;
   temperature: number;
+  lastGeneratedImage: GeneratedImage | null;
 }
 
 /**
@@ -194,6 +197,7 @@ const persistState = (state: ChatState) => {
       systemPrompt: state.systemPrompt,
       maxTokens: state.maxTokens,
       temperature: state.temperature,
+      lastGeneratedImage: state.lastGeneratedImage,
     };
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
   }, 500);
@@ -221,6 +225,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: persisted.messages ?? [],
   isLoading: false,
   lastResponse: '',
+  lastGeneratedImage: persisted.lastGeneratedImage ?? null,
 
   // ─── Provider Actions ──────────────────────────────────────────────────
   addProvider: (providerId: string) => {
@@ -444,6 +449,62 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  generateImage: async (prompt: string, options?: ImageGenerationOptions) => {
+    if (!prompt.trim()) return;
+
+    const active = getActiveProvider(get());
+    if (!active) {
+      set({ connectionError: 'No provider configured. Add a provider in settings.' });
+      return;
+    }
+
+    const provider = getProvider(active.providerId);
+    if (!provider || !provider.generateImage) {
+      set({ connectionError: 'Image generation is not supported by the active provider.' });
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: `[Image] ${prompt.trim()}`,
+      timestamp: Date.now(),
+    };
+
+    // Add user message immediately
+    const updatedMessages = [...get().messages, userMessage];
+    set({ messages: updatedMessages, isLoading: true, connectionError: null });
+    persistState(get());
+
+    try {
+      const result = await provider.generateImage(
+        prompt.trim(),
+        active.config,
+        options
+      );
+
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: result.caption ?? 'Image generated',
+        timestamp: Date.now(),
+      };
+
+      const finalMessages = [...get().messages, assistantMessage];
+      set({
+        messages: finalMessages,
+        isLoading: false,
+        lastGeneratedImage: result,
+        isConnected: true,
+      });
+      persistState(get());
+    } catch (err) {
+      set({
+        isLoading: false,
+        isConnected: false,
+        connectionError: err instanceof Error ? err.message : 'Failed to generate image',
+      });
+    }
+  },
+
   setTemperature: (temp: number) => {
     set({ temperature: temp });
     persistState(get());
@@ -455,7 +516,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearHistory: () => {
-    set({ messages: [], lastResponse: '' });
+    set({ messages: [], lastResponse: '', lastGeneratedImage: null });
     persistState(get());
   },
 

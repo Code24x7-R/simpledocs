@@ -16,6 +16,11 @@ function createMockProvider(overrides: Partial<LlmProvider> & { id: string; name
     healthcheck: overrides.healthcheck ?? vi.fn().mockResolvedValue(true),
     listModels: overrides.listModels ?? vi.fn().mockResolvedValue([]),
     sendMessage: overrides.sendMessage ?? vi.fn().mockResolvedValue(''),
+    generateImage: overrides.generateImage ?? vi.fn().mockResolvedValue({
+      base64: 'abc123',
+      mimeType: 'image/png',
+      caption: 'Generated image',
+    }),
     getDefaultConfig: overrides.getDefaultConfig ?? (() => ({ baseUrl: 'http://localhost:1234' })),
     getDefaultModel: overrides.getDefaultModel ?? (() => 'google/gemma-4-e2b'),
     validateConfig: overrides.validateConfig ?? (() => ({ valid: true as const })),
@@ -87,6 +92,7 @@ describe('useChatStore', () => {
       messages: [],
       isLoading: false,
       lastResponse: '',
+      lastGeneratedImage: null,
     });
   });
 
@@ -332,6 +338,209 @@ describe('useChatStore', () => {
     });
   });
 
+  describe('generateImage', () => {
+    beforeEach(() => {
+      // Switch to a gemini provider for image generation tests
+      useChatStore.setState({
+        configuredProviders: [
+          {
+            id: 'test-gemini',
+            providerId: 'gemini',
+            config: { apiKey: 'AIzaTest123' },
+            selectedModel: 'gemini-3.6-flash',
+            isActive: true,
+          },
+        ],
+        activeProviderId: 'test-gemini',
+      });
+    });
+
+    it('does nothing for empty prompt', async () => {
+      await useChatStore.getState().generateImage('   ');
+      expect(useChatStore.getState().messages).toHaveLength(0);
+    });
+
+    it('adds user message and stores generated image', async () => {
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'gemini',
+          name: 'Google Gemini',
+          icon: 'Sparkles',
+          generateImage: vi.fn().mockResolvedValue({
+            base64: 'iVBORw0KGgo=',
+            mimeType: 'image/png',
+            caption: 'A cat sitting on a keyboard',
+          }),
+          getDefaultConfig: () => ({ apiKey: '' }),
+          getDefaultModel: () => 'gemini-3.6-flash',
+        })
+      );
+
+      await useChatStore.getState().generateImage('A cat on a keyboard', {
+        aspectRatio: '16:9',
+        imageSize: '1K',
+      });
+
+      const state = useChatStore.getState();
+      // User message + assistant message
+      expect(state.messages).toHaveLength(2);
+      expect(state.messages[0].role).toBe('user');
+      expect(state.messages[0].content).toBe('[Image] A cat on a keyboard');
+      expect(state.messages[1].role).toBe('assistant');
+      expect(state.messages[1].content).toBe('A cat sitting on a keyboard');
+      // Generated image stored
+      expect(state.lastGeneratedImage).toEqual({
+        base64: 'iVBORw0KGgo=',
+        mimeType: 'image/png',
+        caption: 'A cat sitting on a keyboard',
+      });
+      expect(state.isLoading).toBe(false);
+      expect(state.isConnected).toBe(true);
+    });
+
+    it('passes options to provider.generateImage', async () => {
+      const mockGenerateImage = vi.fn().mockResolvedValue({
+        base64: 'abc',
+        mimeType: 'image/png',
+      });
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'gemini',
+          name: 'Google Gemini',
+          icon: 'Sparkles',
+          generateImage: mockGenerateImage,
+          getDefaultConfig: () => ({ apiKey: '' }),
+          getDefaultModel: () => 'gemini-3.6-flash',
+        })
+      );
+
+      await useChatStore.getState().generateImage('A landscape', {
+        aspectRatio: '16:9',
+        imageSize: '1K',
+      });
+
+      expect(mockGenerateImage).toHaveBeenCalledWith(
+        'A landscape',
+        { apiKey: 'AIzaTest123' },
+        { aspectRatio: '16:9', imageSize: '1K' }
+      );
+    });
+
+    it('uses caption or fallback for assistant message', async () => {
+      // Test with no caption
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'gemini',
+          name: 'Google Gemini',
+          icon: 'Sparkles',
+          generateImage: vi.fn().mockResolvedValue({
+            base64: 'abc',
+            mimeType: 'image/png',
+          }),
+          getDefaultConfig: () => ({ apiKey: '' }),
+          getDefaultModel: () => 'gemini-3.6-flash',
+        })
+      );
+
+      await useChatStore.getState().generateImage('No caption here');
+
+      const state = useChatStore.getState();
+      expect(state.messages[1].content).toBe('Image generated');
+    });
+
+    it('sets loading state while generating', async () => {
+      let resolveImage: (value: { base64: string; mimeType: string }) => void;
+      const imagePromise = new Promise<{ base64: string; mimeType: string }>((resolve) => {
+        resolveImage = resolve;
+      });
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'gemini',
+          name: 'Google Gemini',
+          icon: 'Sparkles',
+          generateImage: vi.fn().mockReturnValue(imagePromise),
+          getDefaultConfig: () => ({ apiKey: '' }),
+          getDefaultModel: () => 'gemini-3.6-flash',
+        })
+      );
+
+      const genPromise = useChatStore.getState().generateImage('Test');
+
+      // Should be loading
+      expect(useChatStore.getState().isLoading).toBe(true);
+
+      // Resolve the image
+      resolveImage!({ base64: 'done', mimeType: 'image/png' });
+      await genPromise;
+
+      expect(useChatStore.getState().isLoading).toBe(false);
+    });
+
+    it('handles API errors', async () => {
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(
+        createMockProvider({
+          id: 'gemini',
+          name: 'Google Gemini',
+          icon: 'Sparkles',
+          generateImage: vi.fn().mockRejectedValue(new Error('Rate limit exceeded')),
+          getDefaultConfig: () => ({ apiKey: '' }),
+          getDefaultModel: () => 'gemini-3.6-flash',
+        })
+      );
+
+      await useChatStore.getState().generateImage('A cat');
+
+      const state = useChatStore.getState();
+      expect(state.isLoading).toBe(false);
+      expect(state.isConnected).toBe(false);
+      expect(state.connectionError).toBe('Rate limit exceeded');
+    });
+
+    it('sets error when no provider configured', async () => {
+      useChatStore.setState({
+        configuredProviders: [],
+        activeProviderId: null,
+      });
+
+      await useChatStore.getState().generateImage('A cat');
+
+      const state = useChatStore.getState();
+      expect(state.connectionError).toBe('No provider configured. Add a provider in settings.');
+    });
+
+    it('sets error when provider does not support image generation', async () => {
+      // LM Studio provider has no generateImage method
+      useChatStore.setState({
+        configuredProviders: [
+          {
+            id: 'test-lmstudio',
+            providerId: 'lmstudio',
+            config: { baseUrl: 'http://localhost:1234' },
+            selectedModel: 'google/gemma-4-e2b',
+            isActive: true,
+          },
+        ],
+        activeProviderId: 'test-lmstudio',
+      });
+
+      // createMockProvider adds generateImage by default, so we override with one that deletes it
+      const lmStudioProvider = createMockProvider({
+        id: 'lmstudio',
+        name: 'LM Studio',
+        icon: 'Monitor',
+        getDefaultConfig: () => ({ baseUrl: 'http://localhost:1234' }),
+        getDefaultModel: () => 'google/gemma-4-e2b',
+      });
+      delete lmStudioProvider.generateImage;
+      vi.mocked(providerRegistry.getProvider).mockReturnValue(lmStudioProvider);
+
+      await useChatStore.getState().generateImage('A cat');
+
+      const state = useChatStore.getState();
+      expect(state.connectionError).toBe('Image generation is not supported by the active provider.');
+    });
+  });
+
   describe('provider management', () => {
     it('addProvider creates a new configured instance', () => {
       const id = useChatStore.getState().addProvider('gemini');
@@ -412,19 +621,25 @@ describe('useChatStore', () => {
   });
 
   describe('clearHistory', () => {
-    it('clears all messages and last response', () => {
+    it('clears all messages, last response, and generated image', () => {
       useChatStore.setState({
         messages: [
           { role: 'user', content: 'test', timestamp: Date.now() },
           { role: 'assistant', content: 'response', timestamp: Date.now() },
         ],
         lastResponse: 'response',
+        lastGeneratedImage: {
+          base64: 'abc',
+          mimeType: 'image/png',
+          caption: 'test',
+        },
       });
 
       useChatStore.getState().clearHistory();
 
       expect(useChatStore.getState().messages).toHaveLength(0);
       expect(useChatStore.getState().lastResponse).toBe('');
+      expect(useChatStore.getState().lastGeneratedImage).toBeNull();
     });
   });
 

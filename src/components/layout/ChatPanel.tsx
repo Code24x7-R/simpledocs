@@ -18,6 +18,8 @@ import {
   Plus,
   Save,
   Pencil,
+  Image,
+  Download,
 } from 'lucide-react';
 import { useChatStore } from '../../store/useChatStore';
 import { useDocStore } from '../../store/useDocStore';
@@ -62,11 +64,13 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     messages,
     isLoading,
     lastResponse,
+    lastGeneratedImage,
     temperature,
     systemPrompt,
     checkHealth,
     refreshModels,
     sendMessage,
+    generateImage,
     setModel,
     setBaseUrl,
     setTemperature,
@@ -82,6 +86,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [imageAspectRatio, setImageAspectRatio] = useState('1:1');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -129,6 +134,14 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     const text = inputValue.trim();
     setInputValue('');
     await sendMessage(text);
+  };
+
+  // Handle image generation
+  const handleGenerateImage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+    const prompt = inputValue.trim();
+    setInputValue('');
+    await generateImage(prompt, { aspectRatio: imageAspectRatio, imageSize: '1K' });
   };
 
   // Handle Enter to send (Shift+Enter for newline)
@@ -191,6 +204,35 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     } catch {
       showStatus('Failed to copy');
     }
+  };
+
+  // Insert generated image into the editor
+  const handleInsertGeneratedImage = () => {
+    if (!editor || !lastGeneratedImage) {
+      showStatus('No image to insert');
+      return;
+    }
+    const { base64, mimeType, caption } = lastGeneratedImage;
+    const src = `data:${mimeType};base64,${base64}`;
+    editor.chain().focus().setImage({ src, alt: caption || 'AI generated image' }).run();
+    showStatus('Image inserted into document');
+  };
+
+  // Download generated image
+  const handleDownloadImage = () => {
+    if (!lastGeneratedImage) {
+      showStatus('No image to download');
+      return;
+    }
+    const { base64, mimeType } = lastGeneratedImage;
+    const src = `data:${mimeType};base64,${base64}`;
+    const link = document.createElement('a');
+    link.href = src;
+    link.download = `generated-image-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus('Image downloaded');
   };
 
   // Template handlers
@@ -636,6 +678,40 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           </div>
         )}
 
+        {/* Generated image display */}
+        {lastGeneratedImage && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-lg border border-purple-200 bg-purple-50 p-2 space-y-1.5">
+              <img
+                src={`data:${lastGeneratedImage.mimeType};base64,${lastGeneratedImage.base64}`}
+                alt={lastGeneratedImage.caption || 'AI generated image'}
+                className="max-w-full rounded border border-purple-100"
+              />
+              {lastGeneratedImage.caption && (
+                <p className="text-[10px] text-purple-700 italic">{lastGeneratedImage.caption}</p>
+              )}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleInsertGeneratedImage}
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-purple-600 text-white rounded hover:bg-purple-700"
+                  title="Insert image into document"
+                >
+                  <Image className="w-2.5 h-2.5" />
+                  Insert
+                </button>
+                <button
+                  onClick={handleDownloadImage}
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-purple-700 border border-purple-200 rounded hover:bg-purple-100"
+                  title="Download image"
+                >
+                  <Download className="w-2.5 h-2.5" />
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -688,7 +764,39 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           >
             <Send className="w-3.5 h-3.5" />
           </button>
+          <button
+            onClick={handleGenerateImage}
+            disabled={!inputValue.trim() || isLoading || !activeProvider}
+            className="self-end p-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Generate image with Gemini (Nano Banana)"
+          >
+            <Image className="w-3.5 h-3.5" />
+          </button>
         </div>
+
+        {/* Image generation controls */}
+        {activeProvider?.providerId === 'gemini' && (
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+            <span>Aspect:</span>
+            <select
+              value={imageAspectRatio}
+              onChange={(e) => setImageAspectRatio(e.target.value)}
+              className="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white"
+              title="Image aspect ratio"
+            >
+              <option value="1:1">1:1</option>
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+              <option value="4:3">4:3</option>
+              <option value="3:4">3:4</option>
+              <option value="21:9">21:9</option>
+              <option value="3:2">3:2</option>
+              <option value="2:3">2:3</option>
+            </select>
+            <span className="text-gray-400">|</span>
+            <span>1K · Nano Banana</span>
+          </div>
+        )}
 
         {/* Bottom actions */}
         <div className="flex items-center justify-between">

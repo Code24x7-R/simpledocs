@@ -123,7 +123,11 @@ export interface ApiError {
 // ─── Gemini API Types ──────────────────────────────────────────────────────────
 
 export interface GeminiPart {
-  text: string;
+  text?: string;
+  inlineData?: {
+    mimeType: string;
+    data: string;
+  };
 }
 
 export interface GeminiContent {
@@ -181,4 +185,22 @@ export interface GeminiModelEntry {
 export interface GeminiModelsResponse {
   models: GeminiModelEntry[];
   nextPageToken?: string;
+}
+
+// ─── Image Generation Types ──────────────────────────────────────────────────
+
+export interface GeneratedImage {
+  /** Raw base64-encoded image bytes (no data URI prefix). */
+  base64: string;
+  /** MIME type of the generated image (e.g. 'image/png'). */
+  mimeType: string;
+  /** Optional text caption returned alongside the image. */
+  caption?: string;
+}
+
+export interface ImageGenerationOptions {
+  /** Aspect ratio of the generated image (e.g. '1:1', '16:9', '9:16'). */
+  aspectRatio?: string;
+  /** Image resolution — '1K' for gemini-3.1-flash-lite-image. */
+  imageSize?: string;
 }

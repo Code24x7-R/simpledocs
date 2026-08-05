@@ -487,4 +487,205 @@ describe('geminiProvider', () => {
       expect(geminiProvider.hasFreeTier).toBe(true);
     });
   });
+
+  describe('generateImage', () => {
+    it('sends request to gemini-3.1-flash-lite-image endpoint', async () => {
+      const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          candidates: [{
+            content: {
+              role: 'model',
+              parts: [
+                { text: 'Here is your image.' },
+                { inlineData: { mimeType: 'image/png', data: mockBase64 } },
+              ],
+            },
+            finishReason: 'STOP',
+          }],
+        }), { status: 200 })
+      );
+
+      const result = await geminiProvider.generateImage!(
+        'A cat sitting on a keyboard',
+        { apiKey: 'AIzaTest123' }
+      );
+
+      // Verify it hits the image model endpoint
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('gemini-3.1-flash-lite-image:generateContent'),
+        expect.objectContaining({ method: 'POST' })
+      );
+
+      // Verify response is parsed correctly
+      expect(result.base64).toBe(mockBase64);
+      expect(result.mimeType).toBe('image/png');
+      expect(result.caption).toBe('Here is your image.');
+    });
+
+    it('sends both TEXT and IMAGE responseModalities', async () => {
+      const mockBase64 = 'abc123';
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          candidates: [{
+            content: {
+              role: 'model',
+              parts: [
+                { inlineData: { mimeType: 'image/png', data: mockBase64 } },
+              ],
+            },
+            finishReason: 'STOP',
+          }],
+        }), { status: 200 })
+      );
+
+      await geminiProvider.generateImage!(
+        'A sunset',
+        { apiKey: 'AIzaTest123' }
+      );
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      // Must include BOTH TEXT and IMAGE (IMAGE alone returns empty)
+      expect(body.generationConfig.responseModalities).toEqual(['TEXT', 'IMAGE']);
+    });
+
+    it('includes imageConfig when aspectRatio is provided', async () => {
+      const mockBase64 = 'abc123';
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          candidates: [{
+            content: {
+              role: 'model',
+              parts: [
+                { inlineData: { mimeType: 'image/png', data: mockBase64 } },
+              ],
+            },
+            finishReason: 'STOP',
+          }],
+        }), { status: 200 })
+      );
+
+      await geminiProvider.generateImage!(
+        'A landscape',
+        { apiKey: 'AIzaTest123' },
+        { aspectRatio: '16:9', imageSize: '1K' }
+      );
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.generationConfig.imageConfig).toEqual({
+        aspectRatio: '16:9',
+        imageSize: '1K',
+      });
+    });
+
+    it('omits imageConfig when no options provided', async () => {
+      const mockBase64 = 'abc123';
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          candidates: [{
+            content: {
+              role: 'model',
+              parts: [
+                { inlineData: { mimeType: 'image/png', data: mockBase64 } },
+              ],
+            },
+            finishReason: 'STOP',
+          }],
+        }), { status: 200 })
+      );
+
+      await geminiProvider.generateImage!(
+        'A landscape',
+        { apiKey: 'AIzaTest123' }
+      );
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.generationConfig.imageConfig).toBeUndefined();
+    });
+
+    it('throws for unsupported aspect ratio', async () => {
+      await expect(
+        geminiProvider.generateImage!(
+          'A landscape',
+          { apiKey: 'AIzaTest123' },
+          { aspectRatio: '5:7' }
+        )
+      ).rejects.toThrow('Unsupported aspect ratio');
+    });
+
+    it('throws for invalid config', async () => {
+      await expect(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        geminiProvider.generateImage!('A cat', {} as any)
+      ).rejects.toThrow('Invalid Gemini config');
+    });
+
+    it('throws on non-OK response', async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response('Bad Request', { status: 400 })
+      );
+
+      await expect(
+        geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
+      ).rejects.toThrow('Gemini API error');
+    });
+
+    it('throws when no candidates returned', async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ candidates: [] }), { status: 200 })
+      );
+
+      await expect(
+        geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
+      ).rejects.toThrow('No response candidates');
+    });
+
+    it('throws when response contains no image data', async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          candidates: [{
+            content: {
+              role: 'model',
+              parts: [{ text: 'I cannot generate that image.' }],
+            },
+            finishReason: 'SAFETY',
+          }],
+        }), { status: 200 })
+      );
+
+      await expect(
+        geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
+      ).rejects.toThrow('no image data');
+    });
+
+    it('concatenates multiple text parts into caption', async () => {
+      const mockBase64 = 'abc123';
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          candidates: [{
+            content: {
+              role: 'model',
+              parts: [
+                { text: 'First line.' },
+                { inlineData: { mimeType: 'image/png', data: mockBase64 } },
+                { text: 'Second line.' },
+              ],
+            },
+            finishReason: 'STOP',
+          }],
+        }), { status: 200 })
+      );
+
+      const result = await geminiProvider.generateImage!(
+        'A cat',
+        { apiKey: 'AIzaTest123' }
+      );
+
+      expect(result.caption).toBe('First line.\nSecond line.');
+      expect(result.base64).toBe(mockBase64);
+    });
+  });
 });

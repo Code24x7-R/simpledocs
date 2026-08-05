@@ -22,6 +22,11 @@ const { createMockProvider } = vi.hoisted(() => {
     healthcheck: overrides.healthcheck ?? vi.fn().mockResolvedValue(true),
     listModels: overrides.listModels ?? vi.fn().mockResolvedValue([]),
     sendMessage: overrides.sendMessage ?? vi.fn().mockResolvedValue(''),
+    generateImage: overrides.generateImage ?? vi.fn().mockResolvedValue({
+      base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      mimeType: 'image/png',
+      caption: 'A generated test image',
+    }),
     getDefaultConfig: overrides.getDefaultConfig ?? (() => ({ baseUrl: 'http://localhost:1234' })),
     getDefaultModel: overrides.getDefaultModel ?? (() => 'google/gemma-4-e2b'),
     validateConfig: overrides.validateConfig ?? (() => ({ valid: true as const })),
@@ -103,6 +108,7 @@ describe('ChatPanel', () => {
       messages: [],
       isLoading: false,
       lastResponse: '',
+      lastGeneratedImage: null,
     });
 
     // Create a mock editor
@@ -114,6 +120,7 @@ describe('ChatPanel', () => {
       chain: vi.fn().mockReturnThis(),
       focus: vi.fn().mockReturnThis(),
       insertContentAt: vi.fn().mockReturnThis(),
+      setImage: vi.fn().mockReturnThis(),
       run: vi.fn(),
     } as unknown as Partial<Editor>;
 
@@ -438,5 +445,133 @@ describe('ChatPanel', () => {
     expect(confirmSpy).toHaveBeenCalled();
 
     confirmSpy.mockRestore();
+  });
+
+  describe('image generation', () => {
+    beforeEach(() => {
+      // Switch to gemini provider for image generation tests
+      useChatStore.setState({
+        configuredProviders: [
+          {
+            id: 'test-gemini',
+            providerId: 'gemini',
+            config: { apiKey: 'AIzaTest123' },
+            selectedModel: 'gemini-3.6-flash',
+            isActive: true,
+          },
+        ],
+        activeProviderId: 'test-gemini',
+        models: [
+          { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', state: 'unknown' },
+        ],
+      });
+    });
+
+    it('shows image generation button when gemini is active', () => {
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      expect(imageButton).toBeInTheDocument();
+    });
+
+    it('shows aspect ratio selector when gemini is active', () => {
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      expect(screen.getByText('Aspect:')).toBeInTheDocument();
+      expect(screen.getByText('1K · Nano Banana')).toBeInTheDocument();
+    });
+
+    it('does not show aspect ratio selector for non-gemini providers', () => {
+      useChatStore.setState({
+        configuredProviders: [
+          {
+            id: 'test-lm-studio',
+            providerId: 'lmstudio',
+            config: { baseUrl: 'http://localhost:1234' },
+            selectedModel: 'google/gemma-4-e2b',
+            isActive: true,
+          },
+        ],
+        activeProviderId: 'test-lm-studio',
+      });
+
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      expect(screen.queryByText('Aspect:')).not.toBeInTheDocument();
+      expect(screen.queryByText('1K · Nano Banana')).not.toBeInTheDocument();
+    });
+
+    it('calls generateImage when image button is clicked', async () => {
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      const textarea = screen.getByPlaceholderText(/Type a message/);
+      fireEvent.change(textarea, { target: { value: 'A cat on a keyboard' } });
+
+      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      fireEvent.click(imageButton);
+
+      await waitFor(() => {
+        const state = useChatStore.getState();
+        expect(state.messages).toHaveLength(2);
+        expect(state.messages[0].content).toBe('[Image] A cat on a keyboard');
+      });
+    });
+
+    it('displays generated image in chat area', () => {
+      useChatStore.setState({
+        lastGeneratedImage: {
+          base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          mimeType: 'image/png',
+          caption: 'A generated test image',
+        },
+      });
+
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      // Should show the image
+      const img = screen.getByAltText('A generated test image');
+      expect(img).toBeInTheDocument();
+      expect(img.getAttribute('src')).toContain('data:image/png;base64,');
+
+      // Should show caption
+      expect(screen.getByText('A generated test image')).toBeInTheDocument();
+
+      // Should show action buttons
+      expect(screen.getByText('Insert')).toBeInTheDocument();
+      expect(screen.getByText('Save')).toBeInTheDocument();
+    });
+
+    it('inserts generated image into editor when Insert is clicked', () => {
+      useChatStore.setState({
+        lastGeneratedImage: {
+          base64: 'abc123',
+          mimeType: 'image/png',
+          caption: 'Test image',
+        },
+      });
+
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      const insertButton = screen.getByText('Insert');
+      fireEvent.click(insertButton);
+
+      expect(mockEditor.chain).toHaveBeenCalled();
+    });
+
+    it('disables image button when input is empty', () => {
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      expect(imageButton).toBeDisabled();
+    });
+
+    it('disables image button when no provider is active', () => {
+      useChatStore.setState({ activeProviderId: null });
+
+      render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      expect(imageButton).toBeDisabled();
+    });
   });
 });
