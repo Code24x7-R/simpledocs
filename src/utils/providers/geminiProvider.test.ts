@@ -31,6 +31,18 @@ describe('geminiProvider', () => {
       );
     });
 
+    it('probes gemini-3.6-flash (not preview)', async () => {
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+        candidates: [{ content: { role: 'model', parts: [{ text: 'Hi' }] }, finishReason: 'STOP' }],
+      }), { status: 200 }));
+
+      await geminiProvider.healthcheck({ apiKey: 'AIzaTest123' });
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('gemini-3.6-flash:generateContent'),
+        expect.any(Object)
+      );
+    });
+
     it('returns false when API responds with error', async () => {
       fetchMock.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }));
 
@@ -53,16 +65,104 @@ describe('geminiProvider', () => {
   });
 
   describe('listModels', () => {
-    it('returns hardcoded list of common Gemini models', async () => {
+    it('queries the live models.list API and filters for generateContent', async () => {
+      const liveResponse = {
+        models: [
+          {
+            name: 'models/gemini-3.6-flash',
+            displayName: 'Gemini 3.6 Flash',
+            supportedGenerationMethods: ['generateContent', 'countTokens'],
+          },
+          {
+            name: 'models/gemini-3.5-flash-lite',
+            displayName: 'Gemini 3.5 Flash-Lite',
+            supportedGenerationMethods: ['generateContent'],
+          },
+          {
+            name: 'models/gemini-embedding-2',
+            displayName: 'Gemini Embedding 2',
+            supportedGenerationMethods: ['embedContent'],
+          },
+        ],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(liveResponse), { status: 200 })
+      );
+
       const models = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
-      expect(models.length).toBeGreaterThan(0);
-      expect(models[0]).toHaveProperty('id');
-      expect(models[0]).toHaveProperty('name');
+
+      // Should only include models supporting generateContent (not embedding)
+      expect(models.length).toBe(2);
+      expect(models[0].id).toBe('gemini-3.6-flash');
+      expect(models[0].name).toBe('Gemini 3.6 Flash');
+      expect(models[1].id).toBe('gemini-3.5-flash-lite');
+
+      // Verify it called the models.list endpoint
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/models?key='),
+        expect.objectContaining({ method: 'GET' })
+      );
     });
 
-    it('marks gemini-3.6-flash-preview as recommended in getAvailableModels', () => {
+    it('strips models/ prefix from resource names', async () => {
+      const liveResponse = {
+        models: [
+          {
+            name: 'models/gemini-3.5-flash',
+            displayName: 'Gemini 3.5 Flash',
+            supportedGenerationMethods: ['generateContent'],
+          },
+        ],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(liveResponse), { status: 200 })
+      );
+
+      const models = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(models[0].id).toBe('gemini-3.5-flash');
+      expect(models[0].id).not.toContain('models/');
+    });
+
+    it('uses displayName as fallback name when missing', async () => {
+      const liveResponse = {
+        models: [
+          {
+            name: 'models/gemini-3.1-flash-lite',
+            supportedGenerationMethods: ['generateContent'],
+          },
+        ],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(liveResponse), { status: 200 })
+      );
+
+      const models = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(models[0].id).toBe('gemini-3.1-flash-lite');
+      expect(models[0].name).toBe('gemini-3.1-flash-lite');
+    });
+
+    it('falls back to hardcoded catalog when API is unreachable', async () => {
+      fetchMock.mockRejectedValueOnce(new Error('Network error'));
+
+      const models = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(models.length).toBeGreaterThan(0);
+      expect(models[0].id).toBe('gemini-3.6-flash');
+    });
+
+    it('falls back to hardcoded catalog when API returns non-OK', async () => {
+      fetchMock.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }));
+
+      const models = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(models.length).toBeGreaterThan(0);
+      expect(models[0].id).toBe('gemini-3.6-flash');
+    });
+
+    it('marks gemini-3.6-flash as recommended in getAvailableModels', () => {
       const available = geminiProvider.getAvailableModels();
-      const flash = available.find((m) => m.id === 'gemini-3.6-flash-preview');
+      const flash = available.find((m) => m.id === 'gemini-3.6-flash');
       expect(flash?.recommended).toBe(true);
     });
   });
@@ -88,7 +188,7 @@ describe('geminiProvider', () => {
       const result = await geminiProvider.sendMessage(
         mockMessages,
         { apiKey: 'AIzaTest123' },
-        'gemini-2.5-flash',
+        'gemini-3.6-flash',
         8192,
         0.7
       );
@@ -108,7 +208,110 @@ describe('geminiProvider', () => {
       expect(body.contents).toHaveLength(1);
       expect(body.contents[0].role).toBe('user');
       expect(body.contents[0].parts[0].text).toBe('Hello');
-      expect(body.generationConfig.temperature).toBe(0.7);
+    });
+
+    it('does not send deprecated temperature parameter', async () => {
+      const mockResponse = {
+        candidates: [{
+          content: { role: 'model', parts: [{ text: 'Hi' }] },
+          finishReason: 'STOP',
+        }],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), { status: 200 })
+      );
+
+      await geminiProvider.sendMessage(
+        mockMessages,
+        { apiKey: 'AIzaTest123' },
+        'gemini-3.6-flash',
+        8192,
+        0.7
+      );
+
+      const callArgs = fetchMock.mock.calls[0];
+      const options = callArgs[1] as RequestInit;
+      const body = JSON.parse(options.body as string);
+      expect(body.generationConfig.temperature).toBeUndefined();
+    });
+
+    it('sends thinkingLevel instead of temperature', async () => {
+      const mockResponse = {
+        candidates: [{
+          content: { role: 'model', parts: [{ text: 'Hi' }] },
+          finishReason: 'STOP',
+        }],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), { status: 200 })
+      );
+
+      await geminiProvider.sendMessage(
+        mockMessages,
+        { apiKey: 'AIzaTest123' },
+        'gemini-3.6-flash',
+        8192,
+        0.7
+      );
+
+      const callArgs = fetchMock.mock.calls[0];
+      const options = callArgs[1] as RequestInit;
+      const body = JSON.parse(options.body as string);
+      expect(body.generationConfig.thinkingLevel).toBe('medium');
+    });
+
+    it('uses minimal thinking level for lite models', async () => {
+      const mockResponse = {
+        candidates: [{
+          content: { role: 'model', parts: [{ text: 'Hi' }] },
+          finishReason: 'STOP',
+        }],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), { status: 200 })
+      );
+
+      await geminiProvider.sendMessage(
+        mockMessages,
+        { apiKey: 'AIzaTest123' },
+        'gemini-3.5-flash-lite',
+        8192,
+        0.7
+      );
+
+      const callArgs = fetchMock.mock.calls[0];
+      const options = callArgs[1] as RequestInit;
+      const body = JSON.parse(options.body as string);
+      expect(body.generationConfig.thinkingLevel).toBe('minimal');
+    });
+
+    it('uses maxTokens parameter for maxOutputTokens', async () => {
+      const mockResponse = {
+        candidates: [{
+          content: { role: 'model', parts: [{ text: 'Hi' }] },
+          finishReason: 'STOP',
+        }],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), { status: 200 })
+      );
+
+      await geminiProvider.sendMessage(
+        mockMessages,
+        { apiKey: 'AIzaTest123' },
+        'gemini-3.6-flash',
+        16384,
+        0.7
+      );
+
+      const callArgs = fetchMock.mock.calls[0];
+      const options = callArgs[1] as RequestInit;
+      const body = JSON.parse(options.body as string);
+      expect(body.generationConfig.maxOutputTokens).toBe(16384);
     });
 
     it('maps assistant role to model', async () => {
@@ -132,7 +335,7 @@ describe('geminiProvider', () => {
       await geminiProvider.sendMessage(
         messagesWithAssistant,
         { apiKey: 'AIzaTest123' },
-        'gemini-2.5-flash',
+        'gemini-3.6-flash',
         8192,
         0.7
       );
@@ -165,7 +368,7 @@ describe('geminiProvider', () => {
       await geminiProvider.sendMessage(
         messagesWithSystem,
         { apiKey: 'AIzaTest123' },
-        'gemini-2.5-flash',
+        'gemini-3.6-flash',
         8192,
         0.7
       );
@@ -189,7 +392,7 @@ describe('geminiProvider', () => {
         geminiProvider.sendMessage(
           mockMessages,
           { apiKey: 'AIzaTest123' },
-          'gemini-2.5-flash',
+          'gemini-3.6-flash',
           8192,
           0.7
         )
@@ -207,7 +410,7 @@ describe('geminiProvider', () => {
         geminiProvider.sendMessage(
           mockMessages,
           { apiKey: 'AIzaTest123' },
-          'gemini-2.5-flash',
+          'gemini-3.6-flash',
           8192,
           0.7
         )
@@ -217,7 +420,7 @@ describe('geminiProvider', () => {
     it('throws for invalid config', async () => {
       await expect(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        geminiProvider.sendMessage(mockMessages, {} as any, 'gemini-2.5-flash', 8192, 0.7)
+        geminiProvider.sendMessage(mockMessages, {} as any, 'gemini-3.6-flash', 8192, 0.7)
       ).rejects.toThrow('Invalid Gemini config');
     });
   });
@@ -230,6 +433,11 @@ describe('geminiProvider', () => {
 
     it('accepts any key with sufficient length (not just AIza prefix)', () => {
       const result = geminiProvider.validateConfig({ apiKey: 'AIzaSyAbc123def456ghijklmnopqrstuvwxyz' });
+      expect(result.valid).toBe(true);
+    });
+
+    it('accepts AQ-prefixed keys', () => {
+      const result = geminiProvider.validateConfig({ apiKey: 'AQ.Ab8RN6Ktestkey' });
       expect(result.valid).toBe(true);
     });
 
@@ -258,8 +466,8 @@ describe('geminiProvider', () => {
       expect(config).toEqual({ apiKey: '' });
     });
 
-    it('returns gemini-3.6-flash-preview as default model', () => {
-      expect(geminiProvider.getDefaultModel()).toBe('gemini-3.6-flash-preview');
+    it('returns gemini-3.6-flash as default model', () => {
+      expect(geminiProvider.getDefaultModel()).toBe('gemini-3.6-flash');
     });
   });
 

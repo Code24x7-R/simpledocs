@@ -136,8 +136,8 @@ export interface GeminiSystemInstruction {
 }
 
 export interface GeminiGenerationConfig {
-  temperature?: number;
   maxOutputTokens?: number;
+  thinkingLevel?: 'minimal' | 'medium' | 'high';
 }
 
 export interface GeminiRequest {
@@ -161,4 +161,20 @@ export interface GeminiResponse {
     candidatesTokenCount: number;
     totalTokenCount: number;
   };
+}
+
+// ─── Gemini Models.list API Types ────────────────────────────────────────────
+
+export interface GeminiModelEntry {
+  name: string;
+  displayName?: string;
+  description?: string;
+  supportedGenerationMethods?: string[];
+  inputTokenLimit?: number;
+  outputTokenLimit?: number;
+}
+
+export interface GeminiModelsResponse {
+  models: GeminiModelEntry[];
+  nextPageToken?: string;
 }
