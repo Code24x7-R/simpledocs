@@ -373,14 +373,25 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
       {/* Connection error banner */}
       {connectionError && (
-        <div className="px-3 py-1.5 bg-red-50 border-b border-red-100 text-xs text-red-600 flex items-center justify-between">
-          <span className="truncate">{connectionError}</span>
-          <button
-            onClick={() => checkHealth()}
-            className="ml-2 text-red-700 underline hover:no-underline shrink-0"
-          >
-            Retry
-          </button>
+        <div className="px-3 py-1.5 bg-red-50 border-b border-red-100 text-xs text-red-600">
+          <div className="flex items-start justify-between gap-2">
+            <span className="break-words">{connectionError}</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => checkHealth()}
+                className="text-red-700 underline hover:no-underline"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => useChatStore.setState({ connectionError: null })}
+                className="text-red-400 hover:text-red-600"
+                title="Dismiss"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

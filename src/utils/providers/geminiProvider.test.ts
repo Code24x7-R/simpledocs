@@ -65,7 +65,12 @@ describe('geminiProvider', () => {
   });
 
   describe('listModels', () => {
-    it('queries the live models.list API and filters for generateContent', async () => {
+    beforeEach(() => {
+      // Clear models cache before each test
+      localStorage.removeItem('SIMPLEDOCS_GEMINI_MODELS_CACHE');
+    });
+
+    it('queries the live models.list API and filters to flash family + nano banana', async () => {
       const liveResponse = {
         models: [
           {
@@ -79,9 +84,24 @@ describe('geminiProvider', () => {
             supportedGenerationMethods: ['generateContent'],
           },
           {
+            name: 'models/gemini-3.1-flash-lite-image',
+            displayName: 'Gemini 3.1 Flash-Lite Image',
+            supportedGenerationMethods: ['generateContent'],
+          },
+          {
             name: 'models/gemini-embedding-2',
             displayName: 'Gemini Embedding 2',
             supportedGenerationMethods: ['embedContent'],
+          },
+          {
+            name: 'models/gemini-3-pro',
+            displayName: 'Gemini 3 Pro',
+            supportedGenerationMethods: ['generateContent'],
+          },
+          {
+            name: 'models/imagen-4.0-generate-001',
+            displayName: 'Imagen 4.0',
+            supportedGenerationMethods: ['generateContent'],
           },
         ],
       };
@@ -92,11 +112,12 @@ describe('geminiProvider', () => {
 
       const models = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
 
-      // Should only include models supporting generateContent (not embedding)
-      expect(models.length).toBe(2);
+      // Should only include flash family + nano banana (not embedding, pro, imagen)
+      expect(models.length).toBe(3);
       expect(models[0].id).toBe('gemini-3.6-flash');
       expect(models[0].name).toBe('Gemini 3.6 Flash');
       expect(models[1].id).toBe('gemini-3.5-flash-lite');
+      expect(models[2].id).toBe('gemini-3.1-flash-lite-image');
 
       // Verify it called the models.list endpoint
       expect(fetchMock).toHaveBeenCalledWith(
@@ -158,6 +179,88 @@ describe('geminiProvider', () => {
       const models = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
       expect(models.length).toBeGreaterThan(0);
       expect(models[0].id).toBe('gemini-3.6-flash');
+    });
+
+    it('returns cached models on second call without hitting API again', async () => {
+      const liveResponse = {
+        models: [
+          {
+            name: 'models/gemini-3.6-flash',
+            displayName: 'Gemini 3.6 Flash',
+            supportedGenerationMethods: ['generateContent'],
+          },
+        ],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(liveResponse), { status: 200 })
+      );
+
+      // First call hits the API
+      const models1 = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(models1.length).toBe(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Second call returns cached result — no additional fetch
+      const models2 = await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(models2.length).toBe(1);
+      expect(models2[0].id).toBe('gemini-3.6-flash');
+      expect(fetchMock).toHaveBeenCalledTimes(1); // still 1 — no new fetch
+    });
+
+    it('refetches after cache expires (24h)', async () => {
+      const liveResponse = {
+        models: [
+          {
+            name: 'models/gemini-3.6-flash',
+            displayName: 'Gemini 3.6 Flash',
+            supportedGenerationMethods: ['generateContent'],
+          },
+        ],
+      };
+
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify(liveResponse), { status: 200 })
+      );
+
+      // First call hits the API
+      await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Simulate 25 hours passing (cache TTL is 24h)
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 25 * 60 * 60 * 1000);
+
+      // Second call should refetch
+      await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+
+    it('writes cache to localStorage after fetch', async () => {
+      const liveResponse = {
+        models: [
+          {
+            name: 'models/gemini-3.6-flash',
+            displayName: 'Gemini 3.6 Flash',
+            supportedGenerationMethods: ['generateContent'],
+          },
+        ],
+      };
+
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify(liveResponse), { status: 200 })
+      );
+
+      await geminiProvider.listModels({ apiKey: 'AIzaTest123' });
+
+      const cached = JSON.parse(
+        localStorage.getItem('SIMPLEDOCS_GEMINI_MODELS_CACHE') || '{}'
+      );
+      expect(cached.models).toHaveLength(1);
+      expect(cached.models[0].id).toBe('gemini-3.6-flash');
+      expect(typeof cached.timestamp).toBe('number');
     });
 
     it('marks gemini-3.6-flash as recommended in getAvailableModels', () => {
@@ -399,7 +502,7 @@ describe('geminiProvider', () => {
           8192,
           0.7
         )
-      ).rejects.toThrow('Gemini API error');
+      ).rejects.toThrow('Bad request');
     });
 
     it('throws when no candidates returned', async () => {
@@ -630,7 +733,7 @@ describe('geminiProvider', () => {
 
       await expect(
         geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
-      ).rejects.toThrow('Gemini API error');
+      ).rejects.toThrow('Bad request');
     });
 
     it('throws when no candidates returned', async () => {
@@ -686,6 +789,125 @@ describe('geminiProvider', () => {
 
       expect(result.caption).toBe('First line.\nSecond line.');
       expect(result.base64).toBe(mockBase64);
+    });
+  });
+
+  describe('error handling', () => {
+    const errorTestMessages: ChatMessage[] = [
+      { role: 'user', content: 'Hello', timestamp: Date.now() },
+    ];
+
+    it('returns user-friendly message for 429 rate limit', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 429, message: 'Quota exceeded', status: 'RESOURCE_EXHAUSTED' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 429 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          errorTestMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('Rate limit exceeded');
+    });
+
+    it('returns user-friendly message for 401 unauthorized', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 401, message: 'API key not valid', status: 'UNAUTHENTICATED' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 401 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          errorTestMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('Authentication failed');
+    });
+
+    it('returns user-friendly message for 403 forbidden', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 403, message: 'Permission denied', status: 'PERMISSION_DENIED' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 403 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          errorTestMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('Access denied');
+    });
+
+    it('returns user-friendly message for 500 server error', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 500, message: 'Internal error', status: 'INTERNAL' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 500 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          errorTestMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('server error');
+    });
+
+    it('handles non-JSON error responses gracefully', async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response('Something went wrong', { status: 503 })
+      );
+
+      await expect(
+        geminiProvider.sendMessage(
+          errorTestMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow('temporarily unavailable');
+    });
+
+    it('truncates very long error messages', async () => {
+      const longMessage = 'A'.repeat(300);
+      const errorJson = JSON.stringify({
+        error: { code: 400, message: longMessage, status: 'INVALID_ARGUMENT' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 400 }));
+
+      await expect(
+        geminiProvider.sendMessage(
+          errorTestMessages,
+          { apiKey: 'AIzaTest123' },
+          'gemini-3.6-flash',
+          8192,
+          0.7
+        )
+      ).rejects.toThrow(/\.\.\.$/);
+    });
+
+    it('returns user-friendly 429 message for image generation', async () => {
+      const errorJson = JSON.stringify({
+        error: { code: 429, message: 'Quota exceeded', status: 'RESOURCE_EXHAUSTED' },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 429 }));
+
+      await expect(
+        geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
+      ).rejects.toThrow('Rate limit exceeded');
     });
   });
 });

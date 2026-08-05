@@ -36,6 +36,25 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
 
 /**
+ * Filter regex for models we expose in the UI.
+ * Keeps the Gemini flash family (text generation) and the
+ * flash-lite-image model (Nano Banana). Excludes embedding,
+ * imagen, pro-image, and other specialized models.
+ */
+const GEMINI_MODEL_FILTER = /^gemini-[\d.]+(?:-pro)?-flash(?:-lite(?:-image)?)?$/;
+
+/** Cache key for the models list in localStorage. */
+const MODELS_CACHE_KEY = 'SIMPLEDOCS_GEMINI_MODELS_CACHE';
+
+/** Cache TTL — 24 hours in milliseconds. */
+const MODELS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+interface ModelsCacheEntry {
+  timestamp: number;
+  models: ModelInfo[];
+}
+
+/**
  * Supported aspect ratios for gemini-3.1-flash-lite-image.
  * Default is 1:1 (square) at 1K resolution.
  */
@@ -47,14 +66,61 @@ const SUPPORTED_ASPECT_RATIOS = [
 
 /**
  * Default model catalog — used as fallback if the live models.list API
- * is unreachable. These are the Gemini 3 Core Models (GA as of 2026-08).
+ * is unreachable. Text-generation flash family + Nano Banana image model.
  */
 const GEMINI_MODELS = [
   { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', recommended: true },
   { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash' },
   { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite' },
   { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash-Lite' },
+  { id: 'gemini-3.1-flash-lite-image', name: 'Gemini 3.1 Flash-Lite Image' },
 ];
+
+/**
+ * Parse a Gemini API error response into a user-friendly message.
+ * The API returns JSON like: {"error":{"code":429,"message":"...","status":"..."}}
+ */
+function parseGeminiApiError(status: number, errorText: string): string {
+  // Try to parse the structured error JSON
+  try {
+    const parsed = JSON.parse(errorText);
+    const detail = parsed.error?.message || parsed.message || parsed.error;
+    if (typeof detail === 'string' && detail.length > 0) {
+      return formatGeminiErrorMessage(status, detail);
+    }
+  } catch {
+    // Not JSON — fall through to status-based message
+  }
+
+  return formatGeminiErrorMessage(status, errorText);
+}
+
+/**
+ * Map HTTP status + API message to a user-friendly error string.
+ */
+function formatGeminiErrorMessage(status: number, detail: string): string {
+  // Truncate very long detail strings (keep first sentence or 150 chars)
+  const trimmed = detail.length > 150 ? `${detail.slice(0, 147)}...` : detail;
+
+  switch (status) {
+    case 400:
+      return `Bad request: ${trimmed}`;
+    case 401:
+      return 'Authentication failed. Please check your Google AI Studio API key.';
+    case 403:
+      return 'Access denied. Your API key may not have permission for this model.';
+    case 404:
+      return 'Model not found. Please select a different model.';
+    case 429:
+      return 'Rate limit exceeded. Please wait a moment before trying again.';
+    case 500:
+      return 'Gemini API server error. Please try again in a moment.';
+    case 503:
+      return 'Gemini API is temporarily unavailable. Please try again later.';
+    default:
+      return `Gemini API error (${status}): ${trimmed}`;
+  }
+}
 
 /**
  * Map a model ID to its default thinking level.
@@ -76,6 +142,7 @@ function resourceNameToId(name: string): string {
 
 /**
  * Fetch available models from the Gemini models.list API.
+ * Filters to text-generation models + the Nano Banana image model.
  * Returns null if the API is unreachable.
  */
 async function fetchLiveModels(
@@ -92,12 +159,52 @@ async function fetchLiveModels(
     const data: GeminiModelsResponse = await response.json();
     if (!data.models || !Array.isArray(data.models)) return null;
 
-    // Only return models that support generateContent
-    return data.models.filter((m) =>
-      m.supportedGenerationMethods?.includes('generateContent')
-    );
+    // Only return models that:
+    //   1. Support generateContent (text generation)
+    //   2. Match our allowed model filter (flash family + nano banana)
+    return data.models.filter((m) => {
+      if (!m.supportedGenerationMethods?.includes('generateContent')) return false;
+      const id = resourceNameToId(m.name);
+      return GEMINI_MODEL_FILTER.test(id);
+    });
   } catch {
     return null;
+  }
+}
+
+/**
+ * Read the models cache from localStorage.
+ * Returns null if cache is missing or expired.
+ */
+function readModelsCache(): ModelInfo[] | null {
+  try {
+    const raw = localStorage.getItem(MODELS_CACHE_KEY);
+    if (!raw) return null;
+
+    const entry: ModelsCacheEntry = JSON.parse(raw);
+    const age = Date.now() - entry.timestamp;
+
+    if (age > MODELS_CACHE_TTL) return null;
+    if (!Array.isArray(entry.models)) return null;
+
+    return entry.models;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write the models list to localStorage cache.
+ */
+function writeModelsCache(models: ModelInfo[]): void {
+  try {
+    const entry: ModelsCacheEntry = {
+      timestamp: Date.now(),
+      models,
+    };
+    localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // Ignore cache write failures (private mode, quota, etc.)
   }
 }
 
@@ -172,17 +279,23 @@ export const geminiProvider: LlmProvider = {
   async listModels(config: ProviderConfig): Promise<ModelInfo[]> {
     if (!isGeminiConfig(config)) return [];
 
-    // Query the live models.list API for models supporting generateContent.
+    // 1. Try cache first (refreshes at most once per day).
+    const cached = readModelsCache();
+    if (cached) return cached;
+
+    // 2. Query the live models.list API (filtered to text + image models).
     const liveModels = await fetchLiveModels(config.apiKey);
     if (liveModels && liveModels.length > 0) {
-      return liveModels.map((m) => ({
+      const models = liveModels.map((m) => ({
         id: resourceNameToId(m.name),
         name: m.displayName || resourceNameToId(m.name),
         state: 'unknown' as const,
       }));
+      writeModelsCache(models);
+      return models;
     }
 
-    // Fallback to hardcoded catalog if API is unreachable.
+    // 3. Fallback to hardcoded catalog if API is unreachable.
     return GEMINI_MODELS.map((m) => ({
       id: m.id,
       name: m.name,
@@ -226,7 +339,7 @@ export const geminiProvider: LlmProvider = {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText} — ${errorText}`);
+      throw new Error(parseGeminiApiError(response.status, errorText));
     }
 
     const data: GeminiResponse = await response.json();
@@ -289,7 +402,7 @@ export const geminiProvider: LlmProvider = {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText} — ${errorText}`);
+      throw new Error(parseGeminiApiError(response.status, errorText));
     }
 
     const data: GeminiResponse = await response.json();

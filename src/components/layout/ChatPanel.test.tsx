@@ -351,6 +351,27 @@ describe('ChatPanel', () => {
     });
   });
 
+  it('dismisses error banner when X is clicked', async () => {
+    render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
+
+    // Simulate an error occurring during use (after mount)
+    act(() => {
+      useChatStore.setState({
+        isConnected: false,
+        connectionError: 'Rate limit exceeded. Please wait a moment before trying again.',
+      });
+    });
+
+    expect(screen.getByText(/Rate limit exceeded/)).toBeInTheDocument();
+
+    // Click dismiss button
+    const dismissButton = screen.getByTitle('Dismiss');
+    fireEvent.click(dismissButton);
+
+    // Error banner should be gone
+    expect(useChatStore.getState().connectionError).toBeNull();
+  });
+
   it('shows add provider button', () => {
     render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
 
