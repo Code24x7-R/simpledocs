@@ -48,7 +48,6 @@ export default function Navbar() {
     setAboutOpen,
     setShortcutsOpen,
     setFieldMergeOpen,
-    setLinkOpen,
     setImageOpen,
     setTableGridOpen,
     setInsertFieldOpen,
@@ -341,15 +340,10 @@ export default function Navbar() {
               </button>
               <button
                 onClick={() => {
-                  // Save selection before modal opens (modal steals focus)
-                  if (editor) {
-                    const { from, to } = editor.state.selection;
-                    useDocStore.getState().setSavedLinkSelection({ from, to });
-                  } else {
-                    useDocStore.getState().setSavedLinkSelection(null);
-                  }
-                  setLinkOpen(true);
+                  // Dispatch event so App.tsx handler populates modal state
+                  // (current link URL + selected text) before opening
                   setInsertMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent('simpledocs:open-link'));
                 }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >

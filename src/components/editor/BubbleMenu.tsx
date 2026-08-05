@@ -83,9 +83,11 @@ export default function BubbleMenu({ editor }: BubbleMenuProps) {
       options={{
         placement: 'top-start',
       }}
-      shouldShow={({ from, to, state }) => {
-        // Only show when there's a non-empty selection
-        return from !== to && !!state.selection;
+      shouldShow={({ from, to, state, editor: ed }) => {
+        // Show when there's a non-empty selection...
+        if (from !== to && !!state.selection) return true;
+        // ...or when the cursor is inside a link (allows editing/removing links)
+        return ed.isActive('link');
       }}
     >
       <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg shadow-lg px-2 py-1">
@@ -196,7 +198,15 @@ export default function BubbleMenu({ editor }: BubbleMenuProps) {
         <Button
           onClick={() => {
             if (editor.isActive('link')) {
-              editor.chain().focus().unsetLink().run();
+              // Cursor is on a link — prompt to edit the URL (or cancel to keep)
+              const currentUrl = editor.getAttributes('link').href || '';
+              const url = window.prompt('Edit URL (leave empty to remove):', currentUrl);
+              if (url === null) return; // cancelled — keep existing link
+              if (url) {
+                editor.chain().focus().setLink({ href: url }).run();
+              } else {
+                editor.chain().focus().unsetLink().run();
+              }
             } else {
               const url = window.prompt('Enter URL:', 'https://');
               if (url) {
