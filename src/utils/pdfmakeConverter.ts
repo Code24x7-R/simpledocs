@@ -22,6 +22,9 @@ export interface TiptapMark {
   attrs?: Record<string, unknown>;
 }
 
+/** Pixel-to-mm conversion at 96 DPI (screen resolution). */
+export const PX_TO_MM = 25.4 / 96;
+
 export interface PdfText {
   text?: string | PdfText[];
   fontSize?: number;
@@ -39,7 +42,39 @@ export interface PdfText {
   image?: string;
   width?: number;
   height?: number;
-  fit?: [number, number];
+}
+
+/**
+ * Calculate display dimensions matching the TipTap editor's CSS behavior.
+ * See calculateDisplayDimensions below for full documentation.
+ */
+export function calculateDisplayDimensions(
+  naturalWidthPx: number,
+  naturalHeightPx: number,
+  maxWidthMm: number,
+  maxHeightMm: number
+): { width: number; height: number } {
+  if (naturalWidthPx <= 0 || naturalHeightPx <= 0) {
+    return { width: Math.min(800 * PX_TO_MM, maxWidthMm), height: Math.min(400 * PX_TO_MM, maxHeightMm) };
+  }
+
+  // Convert natural pixel dimensions to mm (how the browser displays them)
+  let width = naturalWidthPx * PX_TO_MM;
+  let height = naturalHeightPx * PX_TO_MM;
+
+  // Apply max-width: 100% — only scale DOWN, never up
+  if (width > maxWidthMm) {
+    height = height * (maxWidthMm / width);
+    width = maxWidthMm;
+  }
+
+  // Apply max-height constraint — only scale DOWN, never up
+  if (height > maxHeightMm) {
+    width = width * (maxHeightMm / height);
+    height = maxHeightMm;
+  }
+
+  return { width: Math.round(width * 100) / 100, height: Math.round(height * 100) / 100 };
 }
 
 export interface PdfBlock {
@@ -108,39 +143,6 @@ export function collectImageSources(node: TiptapNode, sources: Set<string> = new
  */
 export function setImageDimensions(dimensions: Record<string, { width: number; height: number }>): void {
   imageDimensions = dimensions;
-}
-
-/**
- * Calculate scaled dimensions that fit within the content area while maintaining aspect ratio.
- * Returns dimensions in mm.
- */
-function calculateScaledDimensions(
-  naturalWidth: number,
-  naturalHeight: number,
-  maxWidth: number,
-  maxHeight: number
-): { width: number; height: number } {
-  if (naturalWidth <= 0 || naturalHeight <= 0) {
-    return { width: maxWidth, height: maxHeight };
-  }
-
-  const aspectRatio = naturalWidth / naturalHeight;
-  const boxAspectRatio = maxWidth / maxHeight;
-
-  let width: number;
-  let height: number;
-
-  if (aspectRatio > boxAspectRatio) {
-    // Image is wider than box — constrain by width
-    width = maxWidth;
-    height = maxWidth / aspectRatio;
-  } else {
-    // Image is taller than box — constrain by height
-    height = maxHeight;
-    width = maxHeight * aspectRatio;
-  }
-
-  return { width: Math.round(width * 100) / 100, height: Math.round(height * 100) / 100 };
 }
 
 // Standard page dimensions in mm (portrait)
@@ -295,15 +297,16 @@ function convertNode(node: TiptapNode): unknown {
           // Inline image inside paragraph
           const src = String(child.attrs?.src || '');
           if (src) {
-            // Inline image — constrain to content area using natural dimensions if available
+            // Inline image — use same display logic as block images
             const natural = imageDimensions[src];
-            let width = currentContentArea.width;
-            let height = currentContentArea.height;
-            if (natural && natural.width > 0 && natural.height > 0) {
-              const scaled = calculateScaledDimensions(natural.width, natural.height, width, height);
-              width = scaled.width;
-              height = scaled.height;
-            }
+            const intrinsicWidth = natural && natural.width > 0 ? natural.width : 800;
+            const intrinsicHeight = natural && natural.height > 0 ? natural.height : 400;
+            const { width, height } = calculateDisplayDimensions(
+              intrinsicWidth,
+              intrinsicHeight,
+              currentContentArea.width,
+              currentContentArea.height
+            );
             runs.push({ image: src, width, height });
           }
         } else if (child.type === 'templateField') {
@@ -388,35 +391,51 @@ function convertNode(node: TiptapNode): unknown {
 
       // Get the natural dimensions of the image (loaded before PDF generation)
       const natural = imageDimensions[src];
+      const naturalWidth = natural && natural.width > 0 ? natural.width : undefined;
+      const naturalHeight = natural && natural.height > 0 ? natural.height : undefined;
 
-      // Maximum available space in the content area
-      const maxWidth = currentContentArea.width;
-      const maxHeight = currentContentArea.height;
+      // Determine the intrinsic dimensions in pixels — what the browser would
+      // render BEFORE CSS max-width: 100% kicks in.
+      //
+      // Cases (matching how the browser resolves <img width=... height=...>):
+      // 1. Both explicit → use both as-is
+      // 2. Only width explicit → width as-is, height from natural aspect ratio
+      // 3. Only height explicit → height as-is, width from natural aspect ratio
+      // 4. Neither explicit → use natural dimensions (or 800x400 default)
+      let intrinsicWidth: number;
+      let intrinsicHeight: number;
 
-      let width: number;
-      let height: number;
-
-      if (natural && natural.width > 0 && natural.height > 0) {
-        // Use natural dimensions to calculate scaled size that fits
-        const scaled = calculateScaledDimensions(natural.width, natural.height, maxWidth, maxHeight);
-        width = scaled.width;
-        height = scaled.height;
+      if (nodeWidth && nodeWidth > 0 && nodeHeight && nodeHeight > 0) {
+        // Both explicit
+        intrinsicWidth = nodeWidth;
+        intrinsicHeight = nodeHeight;
+      } else if (nodeWidth && nodeWidth > 0 && naturalWidth && naturalHeight) {
+        // Only width explicit — height follows natural aspect ratio
+        intrinsicWidth = nodeWidth;
+        intrinsicHeight = Math.round(naturalHeight * (nodeWidth / naturalWidth));
+      } else if (nodeHeight && nodeHeight > 0 && naturalWidth && naturalHeight) {
+        // Only height explicit — width follows natural aspect ratio
+        intrinsicHeight = nodeHeight;
+        intrinsicWidth = Math.round(naturalWidth * (nodeHeight / naturalHeight));
+      } else if (naturalWidth && naturalHeight) {
+        // Neither explicit — use natural dimensions
+        intrinsicWidth = naturalWidth;
+        intrinsicHeight = naturalHeight;
       } else {
-        // Fallback: use explicit dimensions or content area
-        width = nodeWidth && nodeWidth > 0 ? Math.min(nodeWidth, maxWidth) : maxWidth;
-        height = nodeHeight && nodeHeight > 0 ? Math.min(nodeHeight, maxHeight) : maxHeight;
+        // Fallback default (matches TipTap's default)
+        intrinsicWidth = 800;
+        intrinsicHeight = 400;
       }
 
-      // If TipTap has explicit dimensions, use them as upper bounds
-      // (but don't upscale — only downscale if needed)
-      if (nodeWidth && nodeWidth > 0 && nodeWidth < width) {
-        height = height * (nodeWidth / width);
-        width = nodeWidth;
-      }
-      if (nodeHeight && nodeHeight > 0 && nodeHeight < height) {
-        width = width * (nodeHeight / height);
-        height = nodeHeight;
-      }
+      // Calculate display dimensions matching the editor's CSS behavior:
+      // Images render at intrinsic pixel size, with max-width: 100% scaling down
+      // only when wider than the container (maintaining aspect ratio).
+      const { width, height } = calculateDisplayDimensions(
+        intrinsicWidth,
+        intrinsicHeight,
+        currentContentArea.width,
+        currentContentArea.height
+      );
 
       return {
         image: src,

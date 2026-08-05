@@ -4,6 +4,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   convertToPdfmake,
   setImageDimensions,
+  calculateDisplayDimensions,
+  PX_TO_MM,
   type TiptapNode,
   type PageSetup,
 } from './pdfmakeConverter';
@@ -382,7 +384,7 @@ describe('pdfmakeConverter', () => {
       expect(img.image).toBe('data:image/png;base64,abc123');
     });
 
-    it('converts an image with explicit width constrained to content area', () => {
+    it('converts an image with explicit width smaller than content area at natural size', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
@@ -391,10 +393,11 @@ describe('pdfmakeConverter', () => {
         defaultPageSetup
       );
       const img = doc.content[0] as { image: string; width: number; height: number };
-      // Image is scaled to fit content area width (~159.2mm for A4 with 25.4mm margins)
-      expect(img.width).toBeCloseTo(159.2, 1);
-      // Height scales proportionally (1000x500 natural → 159.2 wide → 79.6 tall)
-      expect(img.height).toBeCloseTo(79.6, 1);
+      // Natural size: 300px * 0.26458 = 79.37mm wide (smaller than 159.2mm content area)
+      // So displayed at natural size (no scaling up)
+      expect(img.width).toBeCloseTo(79.4, 1);
+      // Height from natural aspect ratio: 500 * (300/1000) = 150px = 39.69mm
+      expect(img.height).toBeCloseTo(39.7, 1);
     });
 
     it('converts a large image to fit within content area', () => {
@@ -406,12 +409,13 @@ describe('pdfmakeConverter', () => {
         defaultPageSetup
       );
       const img = doc.content[0] as { image: string; width: number; height: number };
-      // Image is scaled to fit content area (constrained by width)
-      expect(img.width).toBeCloseTo(159.2, 1);
-      expect(img.height).toBeCloseTo(79.6, 1);
+      // 500px * 0.26458 = 132.3mm (smaller than 159.2mm content area)
+      // So displayed at natural size (no scaling up)
+      expect(img.width).toBeCloseTo(132.3, 1);
+      expect(img.height).toBeCloseTo(105.8, 1);
     });
 
-    it('converts an image without dimensions to scale to content area', () => {
+    it('scales a wide natural image down to fit content area', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
@@ -420,13 +424,13 @@ describe('pdfmakeConverter', () => {
         defaultPageSetup
       );
       const img = doc.content[0] as { image: string; width: number; height: number };
-      // Natural 1000x500 (aspect ratio 2.0) is wider than content box (aspect ~0.647)
-      // So constrained by width: width = 159.2mm, height = 159.2 / 2.0 = 79.6mm
+      // Natural 1000x500 → 264.58mm wide (exceeds 159.2mm content area)
+      // Scaled down: width = 159.2mm, height = 132.29 * (159.2/264.58) = 79.6mm
       expect(img.width).toBeCloseTo(159.2, 1);
       expect(img.height).toBeCloseTo(79.6, 1);
     });
 
-    it('scales a tall image to fit by height', () => {
+    it('scales a tall image down to fit by height', () => {
       // Set natural dimensions for a tall image (aspect ratio 0.5)
       setImageDimensions({ 'data:image/png;base64,tall': { width: 500, height: 1000 } });
       const doc = convertToPdfmake(
@@ -437,10 +441,65 @@ describe('pdfmakeConverter', () => {
         defaultPageSetup
       );
       const img = doc.content[0] as { image: string; width: number; height: number };
-      // Image aspect ratio 0.5 is taller than box aspect ratio ~0.647
-      // So constrained by height: height = 246.2mm, width = 246.2 * 0.5 = 123.1mm
+      // Natural: 132.3mm wide (fits), 264.58mm tall (exceeds 246.2mm)
+      // Scaled down: height = 246.2mm, width = 132.3 * (246.2/264.58) = 123.1mm
       expect(img.height).toBeCloseTo(246.2, 1);
       expect(img.width).toBeCloseTo(123.1, 1);
+    });
+
+    it('displays small images at natural size without scaling up', () => {
+      // Small image that should NOT be scaled up to fill content area
+      setImageDimensions({ 'data:image/png;base64,small': { width: 200, height: 150 } });
+      const doc = convertToPdfmake(
+        makeDoc([{
+          type: 'image',
+          attrs: { src: 'data:image/png;base64,small' },
+        }]),
+        defaultPageSetup
+      );
+      const img = doc.content[0] as { image: string; width: number; height: number };
+      // Natural: 200 * 0.26458 = 52.9mm (smaller than 159.2mm)
+      // Should display at natural size, not scaled up
+      expect(img.width).toBeCloseTo(52.9, 1);
+      expect(img.height).toBeCloseTo(39.7, 1);
+    });
+  });
+
+  describe('calculateDisplayDimensions', () => {
+    it('converts pixels to mm at 96 DPI', () => {
+      expect(PX_TO_MM).toBeCloseTo(0.26458, 4);
+    });
+
+    it('returns natural size when image is smaller than container', () => {
+      const result = calculateDisplayDimensions(200, 150, 159.2, 246.2);
+      expect(result.width).toBeCloseTo(200 * PX_TO_MM, 1);
+      expect(result.height).toBeCloseTo(150 * PX_TO_MM, 1);
+    });
+
+    it('scales down wide images to fit container width', () => {
+      const result = calculateDisplayDimensions(1000, 500, 159.2, 246.2);
+      expect(result.width).toBeCloseTo(159.2, 1);
+      expect(result.height).toBeCloseTo(79.6, 1);
+    });
+
+    it('scales down tall images to fit container height', () => {
+      const result = calculateDisplayDimensions(500, 1000, 159.2, 246.2);
+      expect(result.height).toBeCloseTo(246.2, 1);
+      expect(result.width).toBeCloseTo(123.1, 1);
+    });
+
+    it('does not scale up small images', () => {
+      const result = calculateDisplayDimensions(100, 100, 159.2, 246.2);
+      expect(result.width).toBeCloseTo(100 * PX_TO_MM, 1);
+      expect(result.height).toBeCloseTo(100 * PX_TO_MM, 1);
+    });
+
+    it('uses default 800x400 when dimensions are zero', () => {
+      const result = calculateDisplayDimensions(0, 0, 159.2, 246.2);
+      // When dimensions are zero, default to 800x400 clamped to container
+      // Width clamped from 211.67 to 159.2, height clamped from 105.83 to 105.83 (under 246.2)
+      expect(result.width).toBeCloseTo(159.2, 1);
+      expect(result.height).toBeCloseTo(400 * PX_TO_MM, 1);
     });
   });
 
