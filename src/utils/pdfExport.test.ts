@@ -17,8 +17,11 @@ vi.mock('pdfmake/build/pdfmake', () => ({
   },
 }));
 
-vi.mock('pdfmake/build/vfs_fonts', () => ({
-  pdfMake: { vfs: {} },
+vi.mock('./pdfFonts.json', () => ({
+  vfs: { 'Arial-normal-normal': 'base64data' },
+  fontConfigs: [
+    { name: 'Arial', normal: 'Arial-normal-normal', bold: 'Arial-bold-normal', italics: 'Arial-normal-italic', bolditalics: 'Arial-bold-italic' },
+  ],
 }));
 
 // We test the converter directly (already covered in pdfmakeConverter.test.ts)
@@ -160,9 +163,11 @@ describe('pdfExport', () => {
 
       // pdfmake v0.3.x: download() is called directly (uses file-saver internally)
       // The mock returns a resolved promise, so we just verify no error was thrown.
-      // Also verify addVirtualFileSystem was called with font data.
+      // Also verify addVirtualFileSystem was called with font data and fonts were registered.
       const pdfMakeMock = await import('pdfmake/build/pdfmake');
       expect(pdfMakeMock.default.addVirtualFileSystem).toHaveBeenCalled();
+      expect(pdfMakeMock.default.fonts).toBeDefined();
+      expect(pdfMakeMock.default.fonts.Arial).toBeDefined();
     });
   });
 });

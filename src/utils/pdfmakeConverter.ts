@@ -156,7 +156,10 @@ function applyMarks(text: string, marks: TiptapMark[] | undefined): PdfText {
         const attrs = mark.attrs || {};
         if (attrs.fontSize) {
           const size = parseFloat(String(attrs.fontSize));
-          if (!isNaN(size)) run.fontSize = size;
+          if (!isNaN(size)) {
+            // Editor uses px, pdfmake uses pt. Convert: 1px = 0.75pt (96 DPI → 72 DPI)
+            run.fontSize = size * 0.75;
+          }
         }
         if (attrs.fontFamily) run.font = String(attrs.fontFamily);
         if (attrs.color) run.color = normalizeColor(String(attrs.color));

@@ -10,7 +10,8 @@ import { convertToPdfmake, type PageSetup } from './pdfmakeConverter';
  * image), pdfmake produces real text with embedded fonts — the resulting PDF
  * is fully searchable, selectable, and accessible.
  *
- * pdfmake is lazy-loaded (~1MB) so it doesn't bloat the main bundle.
+ * pdfmake and font data are lazy-loaded (~20MB total) so they don't bloat
+ * the main bundle — they're only fetched when the user exports.
  */
 export async function exportToPdf(
   doc: DocState,
@@ -31,29 +32,48 @@ export async function exportToPdf(
   const content = doc.content as unknown as Parameters<typeof convertToPdfmake>[0];
   const pdfDoc = convertToPdfmake(content, pageSetup);
 
-  // Lazy-load pdfmake to keep it out of the main bundle
+  // Lazy-load pdfmake + custom fonts to keep them out of the main bundle
   const pdfMake = await import('pdfmake/build/pdfmake');
-  const pdfFonts = await import('pdfmake/build/vfs_fonts');
-
-  // pdfmake v0.3.x uses named exports; v0.2.x uses module.exports.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfMakeInstance: any = pdfMake.default || pdfMake;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fonts: any = pdfFonts;
 
-  // Load font data. pdfmake v0.3.x uses addVirtualFileSystem(); v0.2.x uses .vfs = data
-  const fontData = fonts.pdfMake ? fonts.pdfMake.vfs : fonts.default ? fonts.default.vfs : fonts.vfs;
-  if (typeof pdfMakeInstance.addVirtualFileSystem === 'function') {
-    pdfMakeInstance.addVirtualFileSystem(fontData);
-  } else {
-    pdfMakeInstance.vfs = fontData;
+  // Load custom fonts (lazy-loaded JSON with base64-encoded TTF data)
+  // Falls back to Roboto only if custom fonts are not available
+  let vfs: Record<string, string> = {};
+  let fontConfigs: Array<{ name: string; normal: string; bold: string; italics: string; bolditalics: string }> = [];
+  try {
+    const fonts = await import('./pdfFonts.json');
+    vfs = fonts.vfs;
+    fontConfigs = fonts.fontConfigs;
+  } catch (e) {
+    console.warn('Custom fonts not found. Run: npx tsx scripts/generateFontVfs.ts fonts');
   }
 
+  // Add font data to pdfmake's virtual filesystem
+  if (typeof pdfMakeInstance.addVirtualFileSystem === 'function') {
+    pdfMakeInstance.addVirtualFileSystem(vfs);
+  } else {
+    pdfMakeInstance.vfs = vfs;
+  }
+
+  // Register font families with pdfmake
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fonts: Record<string, any> = {};
+  for (const config of fontConfigs) {
+    fonts[config.name] = {
+      normal: config.normal,
+      bold: config.bold,
+      italics: config.italics,
+      bolditalics: config.bolditalics,
+    };
+  }
+  pdfMakeInstance.fonts = fonts;
+
+  // Create and download PDF
   const pdf = pdfMakeInstance.createPdf(pdfDoc);
   const filename = `${doc.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 
-  // pdfmake v0.3.x: download() is async and uses file-saver internally.
-  // Fall back to getBuffer() → Blob → manual download for broader compatibility.
+  // pdfmake v0.3.x: download() is async and uses file-saver internally
   if (typeof pdf.download === 'function') {
     await pdf.download(filename);
   } else {
@@ -77,5 +97,3 @@ export async function exportToPdf(
     });
   }
 }
-
-

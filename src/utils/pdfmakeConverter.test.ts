@@ -140,15 +140,32 @@ describe('pdfmakeConverter', () => {
           content: [{
             type: 'text',
             text: 'Styled',
-            marks: [{ type: 'textStyle', attrs: { fontSize: '18', fontFamily: 'Arial', color: '#FF0000' } }],
+            marks: [{ type: 'textStyle', attrs: { fontSize: '18px', fontFamily: 'Arial', color: '#FF0000' } }],
           }],
         }]),
         defaultPageSetup
       );
       const para = doc.content[0] as { text: Array<{ fontSize: number; font: string; color: string }> };
-      expect(para.text[0].fontSize).toBe(18);
+      // px → pt conversion: 18px * 0.75 = 13.5pt
+      expect(para.text[0].fontSize).toBe(13.5);
       expect(para.text[0].font).toBe('Arial');
       expect(para.text[0].color).toBe('FF0000');
+    });
+
+    it('converts px to pt for font sizes (12px → 9pt, 16px → 12pt)', () => {
+      const doc = convertToPdfmake(
+        makeDoc([{
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Small', marks: [{ type: 'textStyle', attrs: { fontSize: '12px' } }] },
+            { type: 'text', text: 'Large', marks: [{ type: 'textStyle', attrs: { fontSize: '16px' } }] },
+          ],
+        }]),
+        defaultPageSetup
+      );
+      const para = doc.content[0] as { text: Array<{ text: string; fontSize: number }> };
+      expect(para.text[0].fontSize).toBe(9);   // 12px → 9pt
+      expect(para.text[1].fontSize).toBe(12);  // 16px → 12pt
     });
 
     it('applies color mark', () => {

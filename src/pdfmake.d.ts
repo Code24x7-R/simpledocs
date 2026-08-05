@@ -8,14 +8,21 @@
  * Covers pdfmake v0.3.x API (async getBuffer/getBlob/download, addVirtualFileSystem).
  */
 declare module 'pdfmake/build/pdfmake' {
+  interface FontStyle {
+    normal: string;
+    bold: string;
+    italics: string;
+    bolditalics: string;
+  }
+
   interface PdfMake {
     /** Virtual filesystem containing font data */
     virtualfs: {
       existsSync(path: string): boolean;
       readFileSync(path: string): string;
     };
-    /** Font registry */
-    fonts: Record<string, unknown>;
+    /** Font registry mapping font names to their styles */
+    fonts: Record<string, FontStyle>;
     /** Add font data from vfs_fonts.js */
     addVirtualFileSystem(fonts: Record<string, string>): void;
     /** URL access policies (unused) */
@@ -52,4 +59,9 @@ declare module 'pdfmake/build/vfs_fonts' {
   // pdfmake v0.2.x exports as default { [filename]: base64 }
   const fonts: Record<string, string>;
   export default fonts;
+}
+
+declare module '*.json' {
+  const value: { vfs: Record<string, string>; fontConfigs: Array<{ name: string; normal: string; bold: string; italics: string; bolditalics: string }> };
+  export default value;
 }

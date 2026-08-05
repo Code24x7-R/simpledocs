@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "setup:fonts": "tsx scripts/generateFontVfs.ts"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.5.0",
