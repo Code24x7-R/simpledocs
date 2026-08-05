@@ -39,6 +39,7 @@ export interface PdfText {
   image?: string;
   width?: number;
   height?: number;
+  fit?: [number, number];
 }
 
 export interface PdfBlock {
@@ -77,6 +78,41 @@ const FONT_SIZE = {
 } as const;
 
 const MM_PER_INCH = 25.4;
+
+// Module-level variable holding the current content area (available width/height in mm).
+// Set at the start of convertToPdfmake so image nodes can constrain themselves.
+let currentContentArea: { width: number; height: number } = { width: 160, height: 250 };
+
+// Standard page dimensions in mm (portrait)
+const PAGE_SIZES = {
+  A4: { width: 210, height: 297 },
+  LETTER: { width: 215.9, height: 279.4 },
+} as const;
+
+/**
+ * Calculate the available content area (in mm) after subtracting margins.
+ * Accounts for orientation (landscape swaps width/height).
+ */
+function getContentArea(
+  pageFormat: string,
+  orientation: string,
+  margins: { top: string; bottom: string; left: string; right: string }
+): { width: number; height: number } {
+  const size = PAGE_SIZES[pageFormat.toUpperCase() as keyof typeof PAGE_SIZES] || PAGE_SIZES.A4;
+  const isLandscape = orientation === 'landscape';
+  const pageWidth = isLandscape ? size.height : size.width;
+  const pageHeight = isLandscape ? size.width : size.height;
+
+  const left = toMm(margins.left);
+  const right = toMm(margins.right);
+  const top = toMm(margins.top);
+  const bottom = toMm(margins.bottom);
+
+  return {
+    width: Math.max(pageWidth - left - right, 50),
+    height: Math.max(pageHeight - top - bottom, 50),
+  };
+}
 
 export interface PageSetup {
   pageFormat: 'A4' | 'Letter';
@@ -198,7 +234,7 @@ function convertNode(node: TiptapNode): unknown {
         } else if (child.type === 'image') {
           // Inline image inside paragraph
           const src = String(child.attrs?.src || '');
-          if (src) runs.push({ image: src, width: 20 });
+          if (src) runs.push({ image: src, fit: [currentContentArea.width, currentContentArea.height] });
         } else if (child.type === 'templateField') {
           // Inline template field — render as bracketed placeholder
           const label = String(child.attrs?.label || child.attrs?.id || 'Field');
@@ -276,10 +312,18 @@ function convertNode(node: TiptapNode): unknown {
 
     case 'image': {
       const src = String(node.attrs?.src || '');
-      const width = node.attrs?.width ? Number(node.attrs.width) : undefined;
+      const nodeWidth = node.attrs?.width ? Number(node.attrs.width) : undefined;
+      const nodeHeight = node.attrs?.height ? Number(node.attrs.height) : undefined;
+
+      // Constrain image to fit within the available content area.
+      // If the image has explicit dimensions, use them as max bounds.
+      // Otherwise, use the full content area as the constraint.
+      const maxWidth = nodeWidth && nodeWidth > 0 ? Math.min(nodeWidth, currentContentArea.width) : currentContentArea.width;
+      const maxHeight = nodeHeight && nodeHeight > 0 ? Math.min(nodeHeight, currentContentArea.height) : currentContentArea.height;
+
       return {
         image: src,
-        ...(width ? { width } : {}),
+        fit: [maxWidth, maxHeight],
         margin: [0, 4, 0, 8],
       };
     }
@@ -446,6 +490,13 @@ export function convertToPdfmake(
     toMm(pageSetup.margins.right),
     toMm(pageSetup.margins.bottom),
   ];
+
+  // Calculate available content area for image constraining
+  currentContentArea = getContentArea(
+    pageSetup.pageFormat,
+    pageSetup.orientation,
+    pageSetup.margins
+  );
 
   // Convert content nodes
   if (content.content) {

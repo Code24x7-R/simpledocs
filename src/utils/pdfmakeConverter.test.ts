@@ -374,7 +374,7 @@ describe('pdfmakeConverter', () => {
       expect(img.image).toBe('data:image/png;base64,abc123');
     });
 
-    it('converts an image with explicit width', () => {
+    it('converts an image with explicit width constrained to content area', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
@@ -382,8 +382,41 @@ describe('pdfmakeConverter', () => {
         }]),
         defaultPageSetup
       );
-      const img = doc.content[0] as { image: string; width: number };
-      expect(img.width).toBe(300);
+      const img = doc.content[0] as { image: string; fit: [number, number] };
+      // Explicit width (300) is clamped to content area width (~160mm for A4 with 25mm margins)
+      expect(img.fit[0]).toBeLessThanOrEqual(300);
+      expect(img.fit[1]).toBeGreaterThan(0);
+    });
+
+    it('converts a large image to fit within content area', () => {
+      const doc = convertToPdfmake(
+        makeDoc([{
+          type: 'image',
+          attrs: { src: 'data:image/png;base64,xyz', width: 500, height: 400 },
+        }]),
+        defaultPageSetup
+      );
+      const img = doc.content[0] as { image: string; fit: [number, number] };
+      // Both dimensions clamped to content area
+      expect(img.fit[0]).toBeLessThanOrEqual(500);
+      expect(img.fit[1]).toBeLessThanOrEqual(400);
+      expect(img.fit[0]).toBeGreaterThan(0);
+      expect(img.fit[1]).toBeGreaterThan(0);
+    });
+
+    it('converts an image without dimensions to use full content area', () => {
+      const doc = convertToPdfmake(
+        makeDoc([{
+          type: 'image',
+          attrs: { src: 'data:image/png;base64,xyz' },
+        }]),
+        defaultPageSetup
+      );
+      const img = doc.content[0] as { image: string; fit: [number, number] };
+      // A4 portrait with 25.4mm margins: width = 210 - 50.8 = 159.2
+      expect(img.fit[0]).toBeCloseTo(159.2, 1);
+      // A4 portrait with 25.4mm margins: height = 297 - 50.8 = 246.2
+      expect(img.fit[1]).toBeCloseTo(246.2, 1);
     });
   });
 
