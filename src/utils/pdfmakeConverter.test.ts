@@ -374,7 +374,7 @@ describe('pdfmakeConverter', () => {
       expect(img.image).toBe('data:image/png;base64,abc123');
     });
 
-    it('sets fit to content area dimensions', () => {
+    it('scales a wide image to fill content area width', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
@@ -382,10 +382,11 @@ describe('pdfmakeConverter', () => {
         }]),
         defaultPageSetup
       );
-      const img = doc.content[0] as { image: string; fit: [number, number] };
-      // fit is set to content area dimensions
-      expect(img.fit[0]).toBeCloseTo(159.2, 1);
-      expect(img.fit[1]).toBeCloseTo(246.2, 1);
+      const img = doc.content[0] as { image: string; width: number; height: number };
+      // Natural 1000x500 at 96 DPI = 264.6x132.3mm, exceeds content width 159.2mm
+      // Scaled to fit: width = 159.2mm, height = 132.3 * (159.2/264.6) = 79.6mm
+      expect(img.width).toBeCloseTo(159.2, 1);
+      expect(img.height).toBeCloseTo(79.6, 1);
     });
 
     it('uses landscape content area for landscape pages', () => {
@@ -396,10 +397,10 @@ describe('pdfmakeConverter', () => {
         }]),
         { ...defaultPageSetup, orientation: 'landscape' }
       );
-      const img = doc.content[0] as { image: string; fit: [number, number] };
+      const img = doc.content[0] as { image: string; width: number; height: number };
       // Landscape A4: content width = 297 - 50.8 = 246.2mm, height = 210 - 50.8 = 159.2mm
-      expect(img.fit[0]).toBeCloseTo(246.2, 1);
-      expect(img.fit[1]).toBeCloseTo(159.2, 1);
+      // Wide image scaled to fit width: width = 246.2mm
+      expect(img.width).toBeCloseTo(246.2, 1);
     });
   });
 

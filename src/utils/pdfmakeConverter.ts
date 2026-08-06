@@ -39,7 +39,6 @@ export interface PdfText {
   image?: string;
   width?: number;
   height?: number;
-  fit?: [number, number];
 }
 
 export interface PdfBlock {
@@ -294,8 +293,16 @@ function convertNode(node: TiptapNode): unknown {
             const childWidth = child.attrs?.width ? Number(child.attrs.width) : undefined;
             const childHeight = child.attrs?.height ? Number(child.attrs.height) : undefined;
             console.log('[PDF Converter] Inline image:', { src: src.slice(0, 50), childWidth, childHeight });
-            // Inline image — use same fit approach as block images
-            runs.push({ image: src, fit: [currentContentArea.width, currentContentArea.height] });
+            // Inline image — use same dimension calculation as block images
+            const naturalWidth = childWidth && childWidth > 0 ? childWidth : 800;
+            const naturalHeight = childHeight && childHeight > 0 ? childHeight : 400;
+            const { width, height } = calculateFillDimensions(
+              naturalWidth,
+              naturalHeight,
+              currentContentArea.width,
+              currentContentArea.height
+            );
+            runs.push({ image: src, width, height });
           }
         } else if (child.type === 'templateField') {
           // Inline template field — render as bracketed placeholder
@@ -384,13 +391,23 @@ function convertNode(node: TiptapNode): unknown {
         contentArea: currentContentArea,
       });
 
-      // Use pdfmake's `fit` property to scale the image to fill the content
-      // area while maintaining aspect ratio. The `fit` property constrains
-      // the image within the given box dimensions [width, height].
-      // pdfmake handles intrinsic dimensions internally.
+      // Use stored natural dimensions to calculate scaled size that fills
+      // the content area while maintaining aspect ratio.
+      const naturalWidth = nodeWidth && nodeWidth > 0 ? nodeWidth : 800;
+      const naturalHeight = nodeHeight && nodeHeight > 0 ? nodeHeight : 400;
+      const { width, height } = calculateFillDimensions(
+        naturalWidth,
+        naturalHeight,
+        currentContentArea.width,
+        currentContentArea.height
+      );
+
+      console.log('[PDF Converter] Calculated dimensions:', { width, height });
+
       return {
         image: src,
-        fit: [currentContentArea.width, currentContentArea.height],
+        width,
+        height,
         margin: [0, 4, 0, 8],
       };
     }
