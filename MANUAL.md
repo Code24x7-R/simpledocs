@@ -15,7 +15,9 @@
 - [Page Navigation](#page-navigation)
 - [Search & Replace](#search--replace)
 - [File Operations](#file-operations)
-  - [Google Drive Integration](#google-drive-integration)
+  - [Cloud Storage](#cloud-storage)
+    - [Google Drive Setup](#google-drive-setup)
+    - [OneDrive Setup](#onedrive-setup)
 - [AI Chat Panel](#ai-chat-panel)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Planned Features](#planned-features)
@@ -73,7 +75,7 @@ SimpleDocs is a browser-based WYSIWYG document editor — no installation requir
 
 | Menu | Purpose |
 |------|---------|
-| **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Google Drive (Save/Open), Recent Files |
+| **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Cloud Storage (Save/Open), Recent Files |
 | **Edit** | Copy, Cut, Paste |
 | **Insert** | Image, Link, Table, Field, Merge Fields, Page Break |
 | **View** | Zoom levels (75%, 100%, 125%) |
@@ -411,14 +413,16 @@ Merge replaces all template fields with their resolved values:
 | **Open JSON** | File → Open JSON | Open a previously saved `.json` document |
 | **Import Word** | File → Import Word | Import a `.docx` file (converts to editor content) |
 
-### Google Drive (Cloud Storage)
+### Cloud Storage
+
+SimpleDocs supports saving and opening documents from **Google Drive** and **Microsoft OneDrive**.
 
 | Operation | Menu Path | Description |
 |-----------|-----------|-------------|
-| **Save to Drive** | File → Save to Drive | Save document as `.sdjson` to Google Drive |
-| **Open from Drive** | File → Open from Drive | Browse and open documents from Drive |
+| **Save to Cloud** | File → Save to Cloud | Save document as `.sdjson` to Google Drive or OneDrive |
+| **Open from Cloud** | File → Open from Cloud | Browse and open documents from Google Drive or OneDrive |
 
-> **Note:** First-time use requires connecting to Google Drive via OAuth. See [Google Drive Integration](#google-drive-integration) for setup instructions.
+> **Note:** First-time use requires connecting to a cloud provider via OAuth. See [Google Drive Setup](#google-drive-setup) or [OneDrive Setup](#onedrive-setup) for setup instructions.
 
 ### Exporting
 
@@ -428,11 +432,11 @@ Merge replaces all template fields with their resolved values:
 | **Markdown** | File → Export Markdown | Download document as `.md` file |
 | **Print** | File → Print | Native browser print dialog |
 
-### Google Drive Integration
+### Google Drive Setup
 
 SimpleDocs can save and open documents directly from Google Drive.
 
-#### Setup (First Time Only)
+#### Prerequisites
 
 Before using Google Drive, you need to configure OAuth credentials:
 
@@ -457,36 +461,103 @@ Before using Google Drive, you need to configure OAuth credentials:
    - Add: `VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com`
    - Restart the development server
 
-#### Saving to Drive
+#### Saving to Google Drive
 
 1. Make sure you're connected (see below)
-2. **File → Save to Drive**
-3. Enter a filename (`.sdjson` extension is added automatically)
-4. Click **Save to Drive**
-5. Your document is saved to the root of your Google Drive
+2. **File → Save to Cloud**
+3. Select **Google Drive** as the provider
+4. Enter a filename (`.sdjson` extension is added automatically)
+5. Click **Save to Drive**
+6. Your document is saved to the root of your Google Drive
 
-#### Opening from Drive
+#### Opening from Google Drive
 
 1. Make sure you're connected (see below)
-2. **File → Open from Drive**
-3. Browse your Drive files using the built-in picker
-4. Or view a list of recently saved SimpleDocs files
-5. Click **Open** to load the document into the editor
+2. **File → Open from Cloud**
+3. Select **Google Drive** as the provider
+4. Browse your Drive files using the built-in picker
+5. Or view a list of recently saved SimpleDocs files
+6. Click **Open** to load the document into the editor
 
-#### Connecting to Drive
+#### Connecting to Google Drive
 
-1. Click **File → Save to Drive** or **File → Open from Drive**
-2. Click **Connect to Google Drive**
+1. Click **File → Save to Cloud** or **File → Open from Cloud**
+2. Select **Google Drive** as the provider
 3. A Google consent popup will appear
 4. Grant permission for the app to access your Drive files
 5. Once connected, you can save/open documents
 
 #### Disconnecting
 
-- Click **Disconnect** at the bottom of the Drive modal to revoke access
+- Click **Disconnect** at the bottom of the modal to revoke access
 - Your access token is cleared from the browser
 
 > **Privacy:** SimpleDocs uses the `drive.file` scope, which only allows access to files created or opened by this app. It cannot access your other Google Drive files.
+
+---
+
+### OneDrive Setup
+
+SimpleDocs can save and open documents directly from Microsoft OneDrive.
+
+#### Prerequisites
+
+Before using OneDrive, you need to configure OAuth credentials:
+
+1. **Register an app in Azure AD** (Microsoft Entra admin center):
+   - Go to [Azure Portal](https://portal.azure.com/) → **Microsoft Entra ID** → **App registrations**
+   - Click **New registration**
+   - Enter a name (e.g., "SimpleDocs")
+   - Supported account types: **Accounts in any organizational directory and personal Microsoft accounts**
+   - Redirect URI: **Single-page application (SPA)**
+     - For local development: `http://localhost:5173`
+     - For production: `https://code24x7-r.github.io`
+   - Click **Register**
+
+2. **Copy the Application (client) ID** from the app overview page
+
+3. **Add API permissions:**
+   - Go to **API permissions** → **Add a permission**
+   - Select **Microsoft Graph** → **Delegated permissions**
+   - Add: **Files.ReadWrite.AppFolder** (access only app-created files)
+   - Click **Grant admin consent** (if required by your organization)
+
+4. **Configure SimpleDocs:**
+   - Create a `.env` file in the project root (if not exists)
+   - Add: `VITE_MICROSOFT_CLIENT_ID=your-application-client-id`
+   - Restart the development server
+
+#### Saving to OneDrive
+
+1. Make sure you're connected (see below)
+2. **File → Save to Cloud**
+3. Select **OneDrive** as the provider
+4. Enter a filename (`.sdjson` extension is added automatically)
+5. Click **Save to OneDrive**
+6. Your document is saved to the OneDrive app folder
+
+#### Opening from OneDrive
+
+1. Make sure you're connected (see below)
+2. **File → Open from Cloud**
+3. Select **OneDrive** as the provider
+4. View a list of recently saved SimpleDocs files
+5. Click **Open** to load the document into the editor
+
+#### Connecting to OneDrive
+
+1. Click **File → Save to Cloud** or **File → Open from Cloud**
+2. Select **OneDrive** as the provider
+3. A Microsoft sign-in popup will appear
+4. Sign in with your Microsoft account and grant permission
+5. Once connected, you can save/open documents
+
+#### Disconnecting
+
+- Click **Disconnect** at the bottom of the modal to revoke access
+- Your access token is cleared from the browser
+
+> **Privacy:** SimpleDocs uses the `Files.ReadWrite.AppFolder` scope, which only allows access to files created by this app in a special app folder. It cannot access your other OneDrive files.
 
 ### Recent Files
 
@@ -633,7 +704,7 @@ The following features are on the roadmap for future releases:
 | **Fit-to-Width Zoom** | Auto-zoom to fit page width |
 | **Spell Check** | Built-in spell checking |
 | **Collaborative Editing** | Real-time multi-user editing |
-| **Cloud Storage** | ~~Integration with cloud providers~~ — **Google Drive** support added (save/open documents) |
+| **Cloud Storage** | ~~Integration with cloud providers~~ — **Google Drive** and **OneDrive** support added (save/open documents) |
 | **DOCX Export** | Export to Microsoft Word format |
 | **Markdown Import** | Paste markdown → convert to editor content |
 | **Floating Menu** | Insert menu on empty line |
