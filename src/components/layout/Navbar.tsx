@@ -207,7 +207,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
         <button
           onClick={() => setFileMenuOpen(!fileMenuOpen)}
-          className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+          className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
         >
           File
         </button>
@@ -293,7 +293,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             onClick={() => setEditMenuOpen(!editMenuOpen)}
-            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+            className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             Edit
           </button>
@@ -325,7 +325,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             onClick={() => setInsertMenuOpen(!insertMenuOpen)}
-            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+            className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             Insert
           </button>
@@ -380,7 +380,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             onClick={() => setViewMenuOpen(!viewMenuOpen)}
-            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+            className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             View
           </button>
@@ -410,7 +410,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-            className="px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-1"
+            className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             Help
           </button>
