@@ -606,7 +606,7 @@ describe('geminiProvider', () => {
   });
 
   describe('generateImage', () => {
-    it('sends request to gemini-3.1-flash-lite-image endpoint', async () => {
+    it('sends request to gemini-2.5-flash-image endpoint', async () => {
       const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify({
@@ -630,7 +630,7 @@ describe('geminiProvider', () => {
 
       // Verify it hits the image model endpoint
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-3.1-flash-lite-image:generateContent'),
+        expect.stringContaining('gemini-2.5-flash-image:generateContent'),
         expect.objectContaining({ method: 'POST' })
       );
 

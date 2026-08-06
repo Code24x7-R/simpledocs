@@ -32,8 +32,15 @@ import type { ProviderConfig, LlmProvider } from '../../types/provider';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-/** Model ID for single-shot image generation (Nano Banana 2 Lite). */
-const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
+/**
+ * Model ID for single-shot image generation.
+ * Uses gemini-2.5-flash-image (Nano Banana) which has a free tier:
+ * - ~500 requests per day, no credit card required
+ * - 1K resolution, supports multiple aspect ratios
+ *
+ * Note: gemini-3.1-flash-lite-image (Nano Banana 2 Lite) requires Tier 1 billing.
+ */
+const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
 
 /**
  * Filter regex for models we expose in the UI.

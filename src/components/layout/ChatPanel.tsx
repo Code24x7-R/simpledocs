@@ -779,7 +779,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             onClick={handleGenerateImage}
             disabled={!inputValue.trim() || isLoading || !activeProvider}
             className="self-end p-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Generate image with Gemini Nano Banana (requires billing enabled in Google AI Studio)"
+title="Generate image with Gemini Nano Banana (free tier: ~500/day)"
           >
             <Image className="w-3.5 h-3.5" />
           </button>
@@ -806,8 +806,6 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             </select>
             <span className="text-gray-400">|</span>
             <span>1K · Nano Banana</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-amber-600" title="Enable billing in Google AI Studio to use image generation">Paid tier required</span>
           </div>
         )}
 
