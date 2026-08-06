@@ -197,9 +197,8 @@ export default function Navbar() {
   return (
     <nav className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0 shadow-sm z-10">
       {/* Brand */}
-      <div className="flex items-center gap-2 shrink-0">
-        <FileText className="w-5 h-5 text-blue-600" />
-        <span className="font-bold text-gray-800 text-lg">simpledocs</span>
+      <div className="flex items-center shrink-0">
+        <span className="font-bold text-blue-700 text-lg">SimpleDocs</span>
       </div>
 
       {/* Centered Menu Group */}
