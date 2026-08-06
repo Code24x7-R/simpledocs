@@ -10,6 +10,7 @@ import TableGridModal from './components/layout/TableGridModal';
 import InsertFieldModal from './components/layout/InsertFieldModal';
 import LinkModal from './components/layout/LinkModal';
 import ImageModal from './components/layout/ImageModal';
+import DriveModal from './components/layout/DriveModal';
 import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import SearchReplaceModal from './components/layout/SearchReplaceModal';
@@ -20,7 +21,7 @@ import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
   // Link modal handler
@@ -52,6 +53,22 @@ export default function App() {
     setSavedLinkSelection(null);
     setLinkOpen(false);
   }, [editor, setLinkOpen, savedLinkSelection, setSavedLinkSelection]);
+
+  // Drive open handler
+  const handleOpenFromDrive = useCallback((content: string, fileName: string) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.id && parsed.settings && (parsed.content || parsed.pages)) {
+        // Valid DocState format
+        useDocStore.setState(parsed);
+        console.log('[App] Opened document from Drive:', fileName);
+      } else {
+        alert('Invalid document format in Drive file');
+      }
+    } catch {
+      alert('Failed to parse document from Drive');
+    }
+  }, []);
 
   // Image modal handler
   const handleImageSubmit = useCallback((src: string, alt: string, width: number, height: number) => {
@@ -129,6 +146,14 @@ export default function App() {
         isOpen={imageOpen}
         onClose={() => setImageOpen(false)}
         onSubmit={handleImageSubmit}
+      />
+      <DriveModal
+        isOpen={driveOpen}
+        onClose={() => setDriveOpen(false)}
+        mode={driveMode}
+        documentTitle={docState.title || 'Untitled'}
+        documentContent={JSON.stringify(docState, null, 2)}
+        onOpenDocument={handleOpenFromDrive}
       />
     </div>
   );

@@ -39,6 +39,7 @@
 | 33 | Multi-Provider Chat (Gemini + LM Studio) | COMPLETE ✅ |
 | 34 | PDF Export Overhaul (Searchable pdfmake) | COMPLETE ✅ |
 | 35 | Font Embedding + Image Sizing Fixes | COMPLETE ✅ |
+| 36 | Google Drive Integration | IN PROGRESS 🔄 |
 
 ### Final Results (2026-08-06)
 - **565 tests pass** (29 suites)
@@ -834,3 +835,34 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 - Lint clean, type-check clean, build succeeds
 - PDFs now embed standard web fonts for consistent cross-platform rendering
 - Images in PDF export respect content area margins with correct scaling
+
+---
+
+## Phase 36: Google Drive Integration — IN PROGRESS 🔄
+
+**2026-08-06** — Implement Google Drive save/load using Google Picker API and Drive API v3.
+
+### Features
+| Feature | Description |
+|---------|-------------|
+| Save to Drive | Save current document as JSON to Google Drive |
+| Open from Drive | Browse and open documents from Drive using Picker API |
+| File management | Create folders, rename, delete documents in Drive |
+
+### Architecture
+- Google Picker API — native Drive file browser
+- Google Drive API v3 — REST API for CRUD operations
+- Google Identity Services (GIS) — OAuth 2.0 client-side auth
+- drive.file scope (only files created by the app)
+
+### Files
+| File | Action |
+|------|--------|
+| `src/utils/driveAuth.ts` | **NEW** — Google OAuth 2.0 token management |
+| `src/utils/driveApi.ts` | **NEW** — Drive API wrapper (list, create, read, update, delete) |
+| `src/utils/pickerApi.ts` | **NEW** — Google Picker API wrapper |
+| `src/components/layout/DriveModal.tsx` | **NEW** — Open/save dialog with Picker |
+| `src/store/useDriveStore.ts` | **NEW** — Drive connection state |
+| `src/components/layout/Navbar.tsx` | **EDIT** — Save/Open Drive menu items |
+| `index.html` | **EDIT** — Load Google API scripts |
+| Tests | **NEW** — Unit tests for drive utils |

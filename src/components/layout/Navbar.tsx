@@ -20,6 +20,7 @@ import {
   Table,
   Sparkles,
   Minus,
+  Cloud,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
@@ -49,6 +50,7 @@ export default function Navbar() {
     setShortcutsOpen,
     setFieldMergeOpen,
     setImageOpen,
+    setDriveOpen,
     setTableGridOpen,
     setInsertFieldOpen,
     mruList,
@@ -260,6 +262,19 @@ export default function Navbar() {
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <Printer className="w-4 h-4" /> Print
+            </button>
+            <div className="border-t border-gray-100 my-1" />
+            <button
+              onClick={() => { setDriveOpen(true, 'save'); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Cloud className="w-4 h-4" /> Save to Drive
+            </button>
+            <button
+              onClick={() => { setDriveOpen(true, 'open'); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Cloud className="w-4 h-4" /> Open from Drive
             </button>
             <button
               onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}
