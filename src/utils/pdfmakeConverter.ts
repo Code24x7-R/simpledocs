@@ -81,6 +81,9 @@ const MM_PER_INCH = 25.4;
 /** Pixel-to-mm conversion at 96 DPI (screen resolution). */
 export const PX_TO_MM = 25.4 / 96;
 
+/** mm-to-point conversion (pdfmake uses points for width/height). */
+export const MM_TO_PT = 72 / 25.4;
+
 /**
  * Calculate dimensions to fill the content area while maintaining aspect ratio.
  * This matches CSS `object-fit: contain` — scales the image to fit entirely
@@ -302,7 +305,7 @@ function convertNode(node: TiptapNode): unknown {
               currentContentArea.width,
               currentContentArea.height
             );
-            runs.push({ image: src, width, height });
+            runs.push({ image: src, width: width * MM_TO_PT, height: height * MM_TO_PT });
           }
         } else if (child.type === 'templateField') {
           // Inline template field — render as bracketed placeholder
@@ -393,6 +396,7 @@ function convertNode(node: TiptapNode): unknown {
 
       // Use stored natural dimensions to calculate scaled size that fills
       // the content area while maintaining aspect ratio.
+      // pdfmake uses points (pt) for width/height, so convert mm → pt.
       const naturalWidth = nodeWidth && nodeWidth > 0 ? nodeWidth : 800;
       const naturalHeight = nodeHeight && nodeHeight > 0 ? nodeHeight : 400;
       const { width, height } = calculateFillDimensions(
@@ -402,12 +406,12 @@ function convertNode(node: TiptapNode): unknown {
         currentContentArea.height
       );
 
-      console.log('[PDF Converter] Calculated dimensions:', { width, height });
+      console.log('[PDF Converter] Calculated dimensions (mm):', { width, height });
 
       return {
         image: src,
-        width,
-        height,
+        width: width * MM_TO_PT,
+        height: height * MM_TO_PT,
         margin: [0, 4, 0, 8],
       };
     }

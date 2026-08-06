@@ -385,8 +385,9 @@ describe('pdfmakeConverter', () => {
       const img = doc.content[0] as { image: string; width: number; height: number };
       // Natural 1000x500 at 96 DPI = 264.6x132.3mm, exceeds content width 159.2mm
       // Scaled to fit: width = 159.2mm, height = 132.3 * (159.2/264.6) = 79.6mm
-      expect(img.width).toBeCloseTo(159.2, 1);
-      expect(img.height).toBeCloseTo(79.6, 1);
+      // pdfmake uses points: 159.2mm * 2.835 = 451.3pt, 79.6mm * 2.835 = 225.7pt
+      expect(img.width).toBeCloseTo(451.3, 0);
+      expect(img.height).toBeCloseTo(225.7, 0);
     });
 
     it('uses landscape content area for landscape pages', () => {
@@ -399,8 +400,8 @@ describe('pdfmakeConverter', () => {
       );
       const img = doc.content[0] as { image: string; width: number; height: number };
       // Landscape A4: content width = 297 - 50.8 = 246.2mm, height = 210 - 50.8 = 159.2mm
-      // Wide image scaled to fit width: width = 246.2mm
-      expect(img.width).toBeCloseTo(246.2, 1);
+      // Wide image scaled to fit width: width = 246.2mm = 697.9pt
+      expect(img.width).toBeCloseTo(697.9, 0);
     });
   });
 
