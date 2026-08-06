@@ -50,6 +50,17 @@ const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image';
  */
 const GEMINI_MODEL_FILTER = /^gemini-[\d.]+(?:-pro)?-flash(?:-lite(?:-image)?)?$/;
 
+/** Minimum interval between image generation requests (ms) — max 10 RPM to stay within free tier. */
+const MIN_IMAGE_REQUEST_INTERVAL = 6000;
+
+/** Last timestamp an image was generated (for rate limiting). */
+let lastImageRequestTime = 0;
+
+/** Reset the image rate limiter (for testing). */
+export function resetImageRateLimiter(): void {
+  lastImageRequestTime = 0;
+}
+
 /** Cache key for the models list in localStorage. */
 const MODELS_CACHE_KEY = 'SIMPLEDOCS_GEMINI_MODELS_CACHE';
 
@@ -426,6 +437,17 @@ export const geminiProvider: LlmProvider = {
     if (!isGeminiConfig(config)) {
       throw new Error('Invalid Gemini config: apiKey required');
     }
+
+    // Client-side rate limiting — max 10 RPM to stay within free tier
+    const now = Date.now();
+    const elapsed = now - lastImageRequestTime;
+    if (elapsed < MIN_IMAGE_REQUEST_INTERVAL) {
+      const waitSeconds = Math.ceil((MIN_IMAGE_REQUEST_INTERVAL - elapsed) / 1000);
+      throw new Error(
+        `Rate limit: Please wait ${waitSeconds}s before generating another image. Free tier allows ~500 images/day.`
+      );
+    }
+    lastImageRequestTime = now;
 
     // Validate aspect ratio if provided
     if (options?.aspectRatio && !SUPPORTED_ASPECT_RATIOS.includes(options.aspectRatio)) {

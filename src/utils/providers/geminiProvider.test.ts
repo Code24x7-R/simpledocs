@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { geminiProvider } from './geminiProvider';
+import { geminiProvider, resetImageRateLimiter } from './geminiProvider';
 import type { ChatMessage } from '../../types/chat';
 
 describe('geminiProvider', () => {
@@ -606,6 +606,10 @@ describe('geminiProvider', () => {
   });
 
   describe('generateImage', () => {
+    beforeEach(() => {
+      resetImageRateLimiter();
+    });
+
     it('sends request to gemini-2.5-flash-image endpoint', async () => {
       const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       fetchMock.mockResolvedValueOnce(
@@ -807,6 +811,10 @@ describe('geminiProvider', () => {
   });
 
   describe('error handling', () => {
+    beforeEach(() => {
+      resetImageRateLimiter();
+    });
+
     const errorTestMessages: ChatMessage[] = [
       { role: 'user', content: 'Hello', timestamp: Date.now() },
     ];
@@ -963,6 +971,10 @@ describe('geminiProvider', () => {
   });
 
   describe('retry with exponential backoff', () => {
+    beforeEach(() => {
+      resetImageRateLimiter();
+    });
+
     const retryMessages: ChatMessage[] = [
       { role: 'user', content: 'Hello', timestamp: Date.now() },
     ];
