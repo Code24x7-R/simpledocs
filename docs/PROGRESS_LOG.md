@@ -420,7 +420,8 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 |--------|-------|
 | Total Phases | 35 (all complete) |
 | Test Suites | 29 files |
-| Total Tests | 562 passing |
+| Total Tests | 565 passing |
+| Coverage | 93.45% line / 81.35% branch |
 | Type-check | Clean |
 | Lint | 0 errors, 0 warnings |
 | Build | Succeeds |
@@ -492,3 +493,15 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 **Files**: `src/utils/providers/geminiProvider.ts`, `src/components/layout/ChatPanel.tsx`, `src/store/useChatStore.ts`, `src/types/chat.ts`, `src/types/provider.ts`
 
 **Results**: 562 tests pass (29 suites), lint clean, type-check clean, build succeeds.
+
+## 2026-08-06 — Image Generation Fixes (Follow-up)
+
+### [FIX] Switch to free-tier image model + rate limiting
+
+**Problem**: `gemini-3.1-flash-lite-image` has no free tier (limit: 0). Users hitting 429 errors.
+
+**Fix**: Switched to `gemini-2.5-flash-image` (Nano Banana) which has ~500 RPD free tier. Added client-side rate limiting (6s min interval, max 10 RPM). Added free_tier 429 detection with clear billing-required message.
+
+**Files**: `src/utils/providers/geminiProvider.ts`, `src/components/layout/ChatPanel.tsx`, `src/components/layout/ChatPanel.test.tsx`, `src/utils/providers/geminiProvider.test.ts`
+
+
