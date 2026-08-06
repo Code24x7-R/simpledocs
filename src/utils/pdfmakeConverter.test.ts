@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   convertToPdfmake,
-  setImageDimensions,
-  calculateFillDimensions,
-  PX_TO_MM,
   type TiptapNode,
   type PageSetup,
 } from './pdfmakeConverter';
@@ -24,13 +21,6 @@ function makeDoc(content: TiptapNode[]): TiptapNode {
 }
 
 describe('pdfmakeConverter', () => {
-  // Set natural dimensions for test images so scaling calculations work
-  beforeEach(() => {
-    setImageDimensions({
-      'data:image/png;base64,abc123': { width: 800, height: 600 },
-      'data:image/png;base64,xyz': { width: 1000, height: 500 },
-    });
-  });
   describe('document structure', () => {
     it('creates a doc with A4 portrait defaults', () => {
       const doc = convertToPdfmake(makeDoc([]), defaultPageSetup);
@@ -384,7 +374,7 @@ describe('pdfmakeConverter', () => {
       expect(img.image).toBe('data:image/png;base64,abc123');
     });
 
-    it('scales a wide image to fill content area width', () => {
+    it('sets fit to content area dimensions', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
@@ -392,27 +382,10 @@ describe('pdfmakeConverter', () => {
         }]),
         defaultPageSetup
       );
-      const img = doc.content[0] as { image: string; width: number; height: number };
-      // Natural 1000x500 at 96 DPI = 264.6x132.3mm, exceeds content width 159.2mm
-      // Scaled to fit: width = 159.2mm, height = 132.3 * (159.2/264.6) = 79.6mm
-      expect(img.width).toBeCloseTo(159.2, 1);
-      expect(img.height).toBeCloseTo(79.6, 1);
-    });
-
-    it('scales a tall image to fill content area height', () => {
-      setImageDimensions({ 'data:image/png;base64,tall': { width: 500, height: 1000 } });
-      const doc = convertToPdfmake(
-        makeDoc([{
-          type: 'image',
-          attrs: { src: 'data:image/png;base64,tall' },
-        }]),
-        defaultPageSetup
-      );
-      const img = doc.content[0] as { image: string; width: number; height: number };
-      // Natural 500x1000 at 96 DPI = 132.3x264.6mm, exceeds content height 246.2mm
-      // Scaled to fit: height = 246.2mm, width = 132.3 * (246.2/264.6) = 123.1mm
-      expect(img.height).toBeCloseTo(246.2, 1);
-      expect(img.width).toBeCloseTo(123.1, 1);
+      const img = doc.content[0] as { image: string; fit: [number, number] };
+      // fit is set to content area dimensions
+      expect(img.fit[0]).toBeCloseTo(159.2, 1);
+      expect(img.fit[1]).toBeCloseTo(246.2, 1);
     });
 
     it('uses landscape content area for landscape pages', () => {
@@ -423,47 +396,10 @@ describe('pdfmakeConverter', () => {
         }]),
         { ...defaultPageSetup, orientation: 'landscape' }
       );
-      const img = doc.content[0] as { image: string; width: number; height: number };
+      const img = doc.content[0] as { image: string; fit: [number, number] };
       // Landscape A4: content width = 297 - 50.8 = 246.2mm, height = 210 - 50.8 = 159.2mm
-      // Wide image scaled to fit width: width = 246.2mm
-      expect(img.width).toBeCloseTo(246.2, 1);
-    });
-  });
-
-  describe('calculateFillDimensions', () => {
-    it('converts pixels to mm at 96 DPI', () => {
-      expect(PX_TO_MM).toBeCloseTo(0.26458, 4);
-    });
-
-    it('scales down wide images to fit content area width', () => {
-      // 3840x2160 (4K) into A4 portrait content area (159.2x246.2mm)
-      const result = calculateFillDimensions(3840, 2160, 159.2, 246.2);
-      // Width is constraining factor
-      expect(result.width).toBeCloseTo(159.2, 1);
-      expect(result.height).toBeCloseTo(89.6, 1);
-    });
-
-    it('scales down tall images to fit content area height', () => {
-      const result = calculateFillDimensions(500, 1000, 159.2, 246.2);
-      // Height is constraining factor
-      expect(result.height).toBeCloseTo(246.2, 1);
-      expect(result.width).toBeCloseTo(123.1, 1);
-    });
-
-    it('scales up small images to fill content area', () => {
-      // Small image should be scaled up to fill the content area
-      const result = calculateFillDimensions(200, 150, 159.2, 246.2);
-      // Width is constraining factor: 200 * 0.26458 = 52.9mm < 159.2mm
-      // Scale up to fit: width = 159.2mm
-      expect(result.width).toBeCloseTo(159.2, 1);
-      expect(result.height).toBeCloseTo(119.4, 1);
-    });
-
-    it('handles square images', () => {
-      const result = calculateFillDimensions(500, 500, 159.2, 246.2);
-      // Square image, width is constraining factor
-      expect(result.width).toBeCloseTo(159.2, 1);
-      expect(result.height).toBeCloseTo(159.2, 1);
+      expect(img.fit[0]).toBeCloseTo(246.2, 1);
+      expect(img.fit[1]).toBeCloseTo(159.2, 1);
     });
   });
 

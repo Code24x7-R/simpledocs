@@ -57,7 +57,9 @@ export default function App() {
   const handleImageSubmit = useCallback((src: string, alt: string, width: number, height: number) => {
     if (!editor) return;
     // Store natural pixel dimensions as attributes for accurate PDF export
-    editor.chain().focus().setImage({ src, alt, width: width > 0 ? width : undefined, height: height > 0 ? height : undefined }).run();
+    const attrs = { src, alt, width: width > 0 ? width : undefined, height: height > 0 ? height : undefined };
+    console.log('[App] Inserting image with attrs:', { src: src.slice(0, 50), alt, width, height });
+    editor.chain().focus().setImage(attrs).run();
     setImageOpen(false);
   }, [editor, setImageOpen]);
 

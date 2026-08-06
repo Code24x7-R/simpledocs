@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import type { DocState } from '../store/useDocStore';
-import { convertToPdfmake, collectImageSources, setImageDimensions, type PageSetup } from './pdfmakeConverter';
+import { convertToPdfmake, collectImageSources, type PageSetup } from './pdfmakeConverter';
 
 /**
  * Load an image and return its natural dimensions in pixels.
@@ -43,22 +43,40 @@ export async function exportToPdf(
 
   // Load images to get their natural dimensions for accurate scaling
   const content = doc.content as unknown as Parameters<typeof convertToPdfmake>[0];
+
+  // Debug: Log all image nodes in the document
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const logImageNodes = (node: any): void => {
+    if (node?.type === 'image') {
+      console.log('[PDF Export] Found image node in doc:', {
+        src: String(node.attrs?.src || '').slice(0, 50),
+        width: node.attrs?.width,
+        height: node.attrs?.height,
+      });
+    }
+    if (node?.content && Array.isArray(node.content)) {
+      node.content.forEach(logImageNodes);
+    }
+  };
+  logImageNodes(content);
+
+  // Debug: Load images and log their dimensions
   const imageSources = collectImageSources(content);
-  const dimensions: Record<string, { width: number; height: number }> = {};
+  console.log('[PDF Export] Image sources found:', imageSources.size);
   await Promise.all(
     Array.from(imageSources).map(async (src) => {
       try {
         const dims = await loadImageDimensions(src);
-        dimensions[src] = dims;
+        console.log('[PDF Export] Loaded dimensions for:', src.slice(0, 50), dims);
       } catch {
-        // Image failed to load — scaling will use fallback
+        console.warn('[PDF Export] Failed to load image:', src.slice(0, 50));
       }
     })
   );
-  setImageDimensions(dimensions);
 
   // Convert TipTap JSON content → pdfmake document definition
   const pdfDoc = convertToPdfmake(content, pageSetup);
+  console.log('[PDF Export] PDF doc content:', JSON.stringify(pdfDoc.content).slice(0, 500));
 
   // Lazy-load pdfmake + custom fonts to keep them out of the main bundle
   const pdfMake = await import('pdfmake/build/pdfmake');

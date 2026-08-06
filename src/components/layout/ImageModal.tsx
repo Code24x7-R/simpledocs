@@ -67,6 +67,7 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
       // Load image to get natural dimensions for PDF export
       const img = new window.Image();
       img.onload = () => {
+        console.log('[ImageModal] File loaded:', file.name, 'naturalWidth:', img.naturalWidth, 'naturalHeight:', img.naturalHeight);
         setNaturalWidth(img.naturalWidth);
         setNaturalHeight(img.naturalHeight);
       };
@@ -82,10 +83,12 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
       // Load image to get natural dimensions for PDF export
       const img = new window.Image();
       img.onload = () => {
+        console.log('[ImageModal] URL image loaded:', value.slice(0, 50), 'naturalWidth:', img.naturalWidth, 'naturalHeight:', img.naturalHeight);
         setNaturalWidth(img.naturalWidth);
         setNaturalHeight(img.naturalHeight);
       };
       img.onerror = () => {
+        console.warn('[ImageModal] Failed to load URL image:', value.slice(0, 50));
         setNaturalWidth(0);
         setNaturalHeight(0);
       };
@@ -101,6 +104,7 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
     e.preventDefault();
     const src = tab === 'upload' ? previewSrc : url;
     if (src) {
+      console.log('[ImageModal] Submitting image:', { src: src.slice(0, 50), alt: altText.trim(), naturalWidth, naturalHeight });
       onSubmit(src, altText.trim(), naturalWidth, naturalHeight);
     }
   };
