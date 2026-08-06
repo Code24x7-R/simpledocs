@@ -127,6 +127,11 @@ async function fetchWithRetry(
       throw new Error(parseGeminiApiError(lastStatus, lastErrorText));
     }
 
+    // Don't retry free-tier quota exhaustion (limit: 0) — retrying won't help
+    if (lastStatus === 429 && lastErrorText.includes('free_tier')) {
+      throw new Error(parseGeminiApiError(lastStatus, lastErrorText));
+    }
+
     await sleep(retryDelay(attempt));
   }
 
@@ -170,6 +175,10 @@ function formatGeminiErrorMessage(status: number, detail: string): string {
     case 404:
       return 'Model not found. Please select a different model.';
     case 429:
+      // Detect free-tier quota exhaustion (limit: 0)
+      if (detail.includes('free_tier') || detail.includes('FreeTier')) {
+        return 'Image generation requires a paid tier. Please enable billing in Google AI Studio (Tools → Billing → Enable).';
+      }
       return 'Rate limit exceeded. Please wait a moment before trying again.';
     case 500:
       return 'Gemini API server error. Please try again in a moment.';

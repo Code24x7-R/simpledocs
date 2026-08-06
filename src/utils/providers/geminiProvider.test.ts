@@ -927,6 +927,39 @@ describe('geminiProvider', () => {
         geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
       ).rejects.toThrow('Rate limit exceeded');
     });
+
+    it('returns billing-required message for free_tier 429 errors', async () => {
+      const errorJson = JSON.stringify({
+        error: {
+          code: 429,
+          message: 'Quota exceeded for metric: generate_content_free_tier_requests, limit: 0, model: gemini-3.1-flash-lite-image',
+          status: 'RESOURCE_EXHAUSTED',
+        },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 429 }));
+
+      await expect(
+        geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
+      ).rejects.toThrow('Image generation requires a paid tier');
+    });
+
+    it('does not retry free_tier 429 errors (quota is 0)', async () => {
+      const errorJson = JSON.stringify({
+        error: {
+          code: 429,
+          message: 'Quota exceeded for free_tier_requests, limit: 0',
+          status: 'RESOURCE_EXHAUSTED',
+        },
+      });
+      fetchMock.mockResolvedValueOnce(new Response(errorJson, { status: 429 }));
+
+      await expect(
+        geminiProvider.generateImage!('A cat', { apiKey: 'AIzaTest123' })
+      ).rejects.toThrow('paid tier');
+
+      // Should have only made 1 request (no retries for free_tier 429)
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('retry with exponential backoff', () => {

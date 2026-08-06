@@ -491,7 +491,7 @@ describe('ChatPanel', () => {
     it('shows image generation button when gemini is active', () => {
       render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
 
-      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      const imageButton = screen.getByTitle('Generate image with Gemini Nano Banana (requires billing enabled in Google AI Studio)');
       expect(imageButton).toBeInTheDocument();
     });
 
@@ -528,7 +528,7 @@ describe('ChatPanel', () => {
       const textarea = screen.getByPlaceholderText(/Type a message/);
       fireEvent.change(textarea, { target: { value: 'A cat on a keyboard' } });
 
-      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      const imageButton = screen.getByTitle('Generate image with Gemini Nano Banana (requires billing enabled in Google AI Studio)');
       fireEvent.click(imageButton);
 
       await waitFor(() => {
@@ -582,7 +582,7 @@ describe('ChatPanel', () => {
     it('disables image button when input is empty', () => {
       render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
 
-      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      const imageButton = screen.getByTitle('Generate image with Gemini Nano Banana (requires billing enabled in Google AI Studio)');
       expect(imageButton).toBeDisabled();
     });
 
@@ -591,7 +591,7 @@ describe('ChatPanel', () => {
 
       render(<ChatPanel isOpen={true} onClose={vi.fn()} />);
 
-      const imageButton = screen.getByTitle('Generate image with Gemini (Nano Banana)');
+      const imageButton = screen.getByTitle('Generate image with Gemini Nano Banana (requires billing enabled in Google AI Studio)');
       expect(imageButton).toBeDisabled();
     });
   });
