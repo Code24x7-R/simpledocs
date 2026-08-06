@@ -54,9 +54,10 @@ export default function App() {
   }, [editor, setLinkOpen, savedLinkSelection, setSavedLinkSelection]);
 
   // Image modal handler
-  const handleImageSubmit = useCallback((src: string, alt: string) => {
+  const handleImageSubmit = useCallback((src: string, alt: string, width: number, height: number) => {
     if (!editor) return;
-    editor.chain().focus().setImage({ src, alt }).run();
+    // Store natural pixel dimensions as attributes for accurate PDF export
+    editor.chain().focus().setImage({ src, alt, width: width > 0 ? width : undefined, height: height > 0 ? height : undefined }).run();
     setImageOpen(false);
   }, [editor, setImageOpen]);
 

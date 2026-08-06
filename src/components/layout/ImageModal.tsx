@@ -6,7 +6,7 @@ import { X, Image, Upload, Link } from 'lucide-react';
 interface ImageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (src: string, alt: string) => void;
+  onSubmit: (src: string, alt: string, width: number, height: number) => void;
 }
 
 type Tab = 'upload' | 'url';
@@ -23,6 +23,8 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
   const [altText, setAltText] = useState('');
   const [fileName, setFileName] = useState('');
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [naturalWidth, setNaturalWidth] = useState(0);
+  const [naturalHeight, setNaturalHeight] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset state when modal opens
@@ -33,6 +35,8 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
       setAltText('');
       setFileName('');
       setPreviewSrc(null);
+      setNaturalWidth(0);
+      setNaturalHeight(0);
     }
   }, [isOpen]);
 
@@ -60,6 +64,13 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
     reader.onload = (event) => {
       const result = event.target?.result as string;
       setPreviewSrc(result);
+      // Load image to get natural dimensions for PDF export
+      const img = new window.Image();
+      img.onload = () => {
+        setNaturalWidth(img.naturalWidth);
+        setNaturalHeight(img.naturalHeight);
+      };
+      img.src = result;
     };
     reader.readAsDataURL(file);
   };
@@ -68,8 +79,21 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
     setUrl(value);
     if (value) {
       setPreviewSrc(value);
+      // Load image to get natural dimensions for PDF export
+      const img = new window.Image();
+      img.onload = () => {
+        setNaturalWidth(img.naturalWidth);
+        setNaturalHeight(img.naturalHeight);
+      };
+      img.onerror = () => {
+        setNaturalWidth(0);
+        setNaturalHeight(0);
+      };
+      img.src = value;
     } else {
       setPreviewSrc(null);
+      setNaturalWidth(0);
+      setNaturalHeight(0);
     }
   };
 
@@ -77,7 +101,7 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
     e.preventDefault();
     const src = tab === 'upload' ? previewSrc : url;
     if (src) {
-      onSubmit(src, altText.trim());
+      onSubmit(src, altText.trim(), naturalWidth, naturalHeight);
     }
   };
 

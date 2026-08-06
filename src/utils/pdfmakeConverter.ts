@@ -302,9 +302,12 @@ function convertNode(node: TiptapNode): unknown {
           const src = String(child.attrs?.src || '');
           if (src) {
             // Inline image — use same dimension calculation as block images
+            const inlineNodeWidth = child.attrs?.width ? Number(child.attrs.width) : undefined;
+            const inlineNodeHeight = child.attrs?.height ? Number(child.attrs.height) : undefined;
             const natural = imageDimensions[src];
-            const naturalWidth = natural && natural.width > 0 ? natural.width : 800;
-            const naturalHeight = natural && natural.height > 0 ? natural.height : 400;
+            const useNodeAttrs = inlineNodeWidth && inlineNodeWidth > 0 && inlineNodeHeight && inlineNodeHeight > 0;
+            const naturalWidth = useNodeAttrs ? inlineNodeWidth! : (natural && natural.width > 0 ? natural.width : 800);
+            const naturalHeight = useNodeAttrs ? inlineNodeHeight! : (natural && natural.height > 0 ? natural.height : 400);
             const { width, height } = calculateFillDimensions(
               naturalWidth,
               naturalHeight,
@@ -390,11 +393,24 @@ function convertNode(node: TiptapNode): unknown {
 
     case 'image': {
       const src = String(node.attrs?.src || '');
+      const nodeWidth = node.attrs?.width ? Number(node.attrs.width) : undefined;
+      const nodeHeight = node.attrs?.height ? Number(node.attrs.height) : undefined;
 
-      // Get the natural dimensions of the image (loaded before PDF generation)
+      // Priority: TipTap stored dimensions > loaded from DOM > defaults
+      // TipTap stores natural pixel dimensions when image is imported
+      const naturalFromNode = nodeWidth && nodeWidth > 0 && nodeHeight && nodeHeight > 0;
       const natural = imageDimensions[src];
-      const naturalWidth = natural && natural.width > 0 ? natural.width : 800;
-      const naturalHeight = natural && natural.height > 0 ? natural.height : 400;
+
+      const naturalWidth = naturalFromNode
+        ? nodeWidth!
+        : natural && natural.width > 0
+          ? natural.width
+          : 800;
+      const naturalHeight = naturalFromNode
+        ? nodeHeight!
+        : natural && natural.height > 0
+          ? natural.height
+          : 400;
 
       // Calculate dimensions to fill the content area while maintaining aspect ratio.
       const { width, height } = calculateFillDimensions(
