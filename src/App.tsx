@@ -10,7 +10,7 @@ import TableGridModal from './components/layout/TableGridModal';
 import InsertFieldModal from './components/layout/InsertFieldModal';
 import LinkModal from './components/layout/LinkModal';
 import ImageModal from './components/layout/ImageModal';
-import DriveModal from './components/layout/DriveModal';
+import CloudStorageModal from './components/layout/CloudStorageModal';
 import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
 import SearchReplaceModal from './components/layout/SearchReplaceModal';
@@ -147,7 +147,7 @@ export default function App() {
         onClose={() => setImageOpen(false)}
         onSubmit={handleImageSubmit}
       />
-      <DriveModal
+      <CloudStorageModal
         isOpen={driveOpen}
         onClose={() => setDriveOpen(false)}
         mode={driveMode}

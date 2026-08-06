@@ -268,13 +268,13 @@ export default function Navbar() {
               onClick={() => { setDriveOpen(true, 'save'); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
-              <Cloud className="w-4 h-4" /> Save to Drive
+              <Cloud className="w-4 h-4" /> Save to Cloud
             </button>
             <button
               onClick={() => { setDriveOpen(true, 'open'); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
-              <Cloud className="w-4 h-4" /> Open from Drive
+              <Cloud className="w-4 h-4" /> Open from Cloud
             </button>
             <button
               onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}

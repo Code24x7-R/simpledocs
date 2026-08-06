@@ -16,6 +16,7 @@
     "setup:fonts": "tsx scripts/generateFontVfs.ts"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.18.0",
     "@tanstack/react-virtual": "^3.5.0",
     "@tiptap/extension-bubble-menu": "^3.29.2",
     "@tiptap/extension-character-count": "^3.29.2",
