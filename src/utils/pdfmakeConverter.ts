@@ -85,9 +85,9 @@ export const PX_TO_MM = 25.4 / 96;
 export const MM_TO_PT = 72 / 25.4;
 
 /**
- * Calculate dimensions to fill the content area while maintaining aspect ratio.
- * This matches CSS `object-fit: contain` — scales the image to fit entirely
- * within the box, filling whichever dimension is constraining.
+ * Calculate dimensions to fit within the content area while maintaining aspect
+ * ratio. Matches CSS `max-width: 100%` — only scales DOWN images that are too
+ * large; small images remain at their natural size.
  *
  * @param naturalWidthPx - Image natural width in pixels
  * @param naturalHeightPx - Image natural height in pixels
@@ -109,12 +109,8 @@ export function calculateFillDimensions(
   const naturalWidthMm = naturalWidthPx * PX_TO_MM;
   const naturalHeightMm = naturalHeightPx * PX_TO_MM;
 
-  // Calculate scale factors for both dimensions
-  const scaleX = maxWidthMm / naturalWidthMm;
-  const scaleY = maxHeightMm / naturalHeightMm;
-
-  // Use the smaller scale factor to ensure the image fits entirely
-  const scale = Math.min(scaleX, scaleY);
+  // Only scale DOWN, never up (CSS max-width: 100% behavior)
+  const scale = Math.min(1, maxWidthMm / naturalWidthMm, maxHeightMm / naturalHeightMm);
 
   return {
     width: Math.round(naturalWidthMm * scale * 100) / 100,

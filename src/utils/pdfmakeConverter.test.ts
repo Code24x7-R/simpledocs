@@ -390,17 +390,33 @@ describe('pdfmakeConverter', () => {
       expect(img.height).toBeCloseTo(225.7, 0);
     });
 
+    it('does NOT scale up small images', () => {
+      const doc = convertToPdfmake(
+        makeDoc([{
+          type: 'image',
+          attrs: { src: 'data:image/png;base64,small', width: 265, height: 151 },
+        }]),
+        defaultPageSetup
+      );
+      const img = doc.content[0] as { image: string; width: number; height: number };
+      // Natural 265x151 at 96 DPI = 69.9x39.9mm, smaller than content area
+      // Should NOT scale up: stays at 69.9mm = 198.8pt (265 * 0.75)
+      expect(img.width).toBeCloseTo(198.8, 0);
+      expect(img.height).toBeCloseTo(113.3, 0);
+    });
+
     it('uses landscape content area for landscape pages', () => {
       const doc = convertToPdfmake(
         makeDoc([{
           type: 'image',
-          attrs: { src: 'data:image/png;base64,xyz' },
+          attrs: { src: 'data:image/png;base64,xyz', width: 1000, height: 500 },
         }]),
         { ...defaultPageSetup, orientation: 'landscape' }
       );
       const img = doc.content[0] as { image: string; width: number; height: number };
       // Landscape A4: content width = 297 - 50.8 = 246.2mm, height = 210 - 50.8 = 159.2mm
-      // Wide image scaled to fit width: width = 246.2mm = 697.9pt
+      // Natural 1000x500 at 96 DPI = 264.6x132.3mm, wider than content
+      // Scaled to fit width: width = 246.2mm = 697.9pt
       expect(img.width).toBeCloseTo(697.9, 0);
     });
   });
