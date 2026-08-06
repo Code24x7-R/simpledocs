@@ -28,6 +28,14 @@
 
 ## Fixed Bugs
 
+### 2026-08-06
+
+| ID | Title | Description | Fix |
+|----|-------|-------------|-----|
+| B-020 | PDF images rendered at 1/3 width | Images in PDF export rendered at ~56mm instead of ~160mm (full content area width). Root cause: pdfmake interprets `width`/`height` as points (pt), not millimeters (mm). 160mm was treated as 160pt = 56.4mm. | Added `MM_TO_PT` conversion factor (72/25.4 = 2.835) so mm values are correctly converted before passing to pdfmake. |
+| B-021 | PDF images scaled up small images | Small images (e.g., 265×151px) were scaled UP to fill content area width, causing blurry output. | Changed `calculateFillDimensions` to CSS `max-width: 100%` behavior — only scales DOWN images that exceed content area; small images remain at natural size. |
+| B-022 | PDF font 'Roboto' not defined error | Exporting PDF threw "Font 'Roboto' in style 'bold' is not defined" error. | Changed default font from 'Roboto' to 'Arial' (always embedded). Embedded 6 standard web font families (24 variants) in `pdfFonts.json`. |
+
 ### 2026-08-03
 
 | ID | Title | Description | Fix |

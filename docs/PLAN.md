@@ -38,6 +38,7 @@
 | 32 | Lint Cleanup (zero warnings) | COMPLETE ✅ |
 | 33 | Multi-Provider Chat (Gemini + LM Studio) | COMPLETE ✅ |
 | 34 | PDF Export Overhaul (Searchable pdfmake) | COMPLETE ✅ |
+| 35 | Font Embedding + Image Sizing Fixes | COMPLETE ✅ |
 
 - [ ] Update PLAN.md with results and coverage stats
 - [ ] Log completion in PROGRESS_LOG.md
@@ -786,3 +787,42 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 - All TipTap node types converted to real text
 - Page setup (margins, format, orientation, headers, footers, page numbers) fully wired
 - pdfmake lazy-loaded to avoid bloating main bundle
+
+---
+
+## Phase 35: Font Embedding + Image Sizing Fixes — COMPLETE ✅
+
+**2026-08-06** — Embedded standard web fonts into pdfmake's VFS and fixed multiple image sizing bugs in PDF export.
+
+### Font Embedding
+- **Problem**: pdfmake defaults to Roboto which isn't embedded, causing "Font 'Roboto' is not defined" errors
+- **Solution**: Embed 6 standard web font families (Arial, Times New Roman, Courier New, Georgia, Verdana, Helvetica) as base64 in `pdfFonts.json` (~20MB, 24 variants)
+- **Font mapping**: Editor px → pdfmake pt conversion (×0.75)
+- **Helvetica fallback**: Helvetica not on Windows; Arial is metric-compatible substitute
+- **Lazy loading**: `pdfFonts.json` only fetched when user exports to PDF
+
+### Image Sizing Bugs Fixed
+1. **Roboto bold error**: Changed default font from 'Roboto' to 'Arial' (always embedded)
+2. **mm vs pt units**: pdfmake interprets `width`/`height` as points, not millimeters — added `MM_TO_PT` conversion (×2.835)
+3. **fit property broken**: pdfmake's `fit` doesn't work with data URLs — switched to explicit dimension calculation
+4. **Scale up/down behavior**: Changed to CSS `max-width: 100%` behavior — only scale DOWN images that exceed content area, small images stay at natural size
+5. **Image dimensions at import**: Store natural dimensions on TipTap node via `ImageModal` → `new Image()` → `naturalWidth`/`naturalHeight`
+
+### Files
+| File | Action |
+|------|--------|
+| `src/utils/pdfmakeConverter.ts` | px→pt font conversion, `calculateFillDimensions` with scale-down-only logic, `MM_TO_PT` conversion for images |
+| `src/utils/pdfmakeConverter.test.ts` | Updated image sizing tests |
+| `src/utils/pdfExport.ts` | Custom font loading with fallback, `logImageNodes` for debugging |
+| `src/utils/pdfFonts.json` | **NEW** — ~20MB base64 font data (24 variants, 6 families) |
+| `scripts/generateFontVfs.ts` | **NEW** — TTF → JSON generator script |
+| `src/components/layout/ImageModal.tsx` | Loads image via `new Image()` to get natural dimensions, passes to `onSubmit` |
+| `src/App.tsx` | `handleImageSubmit` stores `{src, alt, width, height}` on TipTap node |
+| `package.json` | Added `setup:fonts` script |
+| `.gitignore` | Added `fonts/` (Windows system fonts licensing) |
+
+### Results
+- **562 tests pass** (29 suites)
+- Lint clean, type-check clean, build succeeds
+- PDFs now embed standard web fonts for consistent cross-platform rendering
+- Images in PDF export respect content area margins with correct scaling

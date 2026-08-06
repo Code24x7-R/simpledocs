@@ -418,9 +418,9 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 
 | Metric | Value |
 |--------|-------|
-| Total Phases | 30 (all complete) |
-| Test Suites | 22 files |
-| Total Tests | 388 passing |
+| Total Phases | 35 (all complete) |
+| Test Suites | 29 files |
+| Total Tests | 562 passing |
 | Type-check | Clean |
 | Lint | 0 errors, 0 warnings |
 | Build | Succeeds |
@@ -448,3 +448,47 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 - `src/App.tsx` — Removed broken page-canvas DOM scraping, removed unused `useRef`
 
 **Results**: 552 tests pass (28 suites), lint clean, type-check clean, build succeeds.
+
+## 2026-08-06 — Font Embedding + Image Sizing Fixes (Phase 35)
+
+### [BUGFIX] PDF Image Sizing — mm vs pt units
+
+**Problem**: Images in PDF export rendered at ~56mm wide instead of ~160mm (full content area). Root cause: pdfmake interprets `width`/`height` values as points (pt), not millimeters. Code set `width: 160` (meaning 160mm) but pdfmake rendered it as 160pt = 56.4mm.
+
+**Fix**: Added `MM_TO_PT = 72/25.4 = 2.835` conversion factor. Now `160mm × 2.835 = 453.6pt`, which pdfmake correctly renders as 160mm.
+
+**Files**: `src/utils/pdfmakeConverter.ts`
+
+### [BUGFIX] PDF Images — scale down only, not up
+
+**Problem**: Small images (265×151px) were scaled UP to fill content area width, causing blurry output.
+
+**Fix**: Changed `calculateFillDimensions` to CSS `max-width: 100%` behavior — only scales DOWN images that exceed content area; small images remain at natural size.
+
+**Files**: `src/utils/pdfmakeConverter.ts`, `src/utils/pdfmakeConverter.test.ts`
+
+### [BUGFIX] PDF Font 'Roboto' not defined
+
+**Problem**: Exporting PDF threw "Font 'Roboto' in style 'bold' is not defined" error because setting `pdfMakeInstance.fonts = fonts` overwrites the default registry.
+
+**Fix**: Changed default font from 'Roboto' to 'Arial' (always embedded). Embedded 6 standard web font families (24 variants) in `pdfFonts.json`.
+
+**Files**: `src/utils/pdfmakeConverter.ts`, `src/utils/pdfExport.ts`, `src/utils/pdfFonts.json`, `scripts/generateFontVfs.ts`
+
+### [FEATURE] Image dimensions stored at import
+
+**Problem**: PDF converter had no access to image natural dimensions for proper scaling.
+
+**Fix**: `ImageModal` loads image via `new Image()` to get `naturalWidth`/`naturalHeight`, passes to `onSubmit`. `App.tsx` stores as `width`/`height` TipTap attributes. Priority: node attrs > DOM load > 800×400 default.
+
+**Files**: `src/components/layout/ImageModal.tsx`, `src/App.tsx`
+
+### [FEATURE] Gemini Nano Banana image generation
+
+**Problem**: Users requested AI image generation in chat.
+
+**Fix**: Added `generateImage()` to `LlmProvider` interface, implemented in `geminiProvider.ts` using `gemini-3.1-flash-lite-image`. Added Image button, aspect ratio selector, image display with Insert/Save buttons to `ChatPanel.tsx`. Filters models to flash family + Nano Banana with 24h caching.
+
+**Files**: `src/utils/providers/geminiProvider.ts`, `src/components/layout/ChatPanel.tsx`, `src/store/useChatStore.ts`, `src/types/chat.ts`, `src/types/provider.ts`
+
+**Results**: 562 tests pass (29 suites), lint clean, type-check clean, build succeeds.
