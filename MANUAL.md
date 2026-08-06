@@ -15,6 +15,7 @@
 - [Page Navigation](#page-navigation)
 - [Search & Replace](#search--replace)
 - [File Operations](#file-operations)
+  - [Google Drive Integration](#google-drive-integration)
 - [AI Chat Panel](#ai-chat-panel)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Planned Features](#planned-features)
@@ -72,7 +73,7 @@ SimpleDocs is a browser-based WYSIWYG document editor — no installation requir
 
 | Menu | Purpose |
 |------|---------|
-| **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Recent Files |
+| **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Google Drive (Save/Open), Recent Files |
 | **Edit** | Copy, Cut, Paste |
 | **Insert** | Image, Link, Table, Field, Merge Fields, Page Break |
 | **View** | Zoom levels (75%, 100%, 125%) |
@@ -410,6 +411,15 @@ Merge replaces all template fields with their resolved values:
 | **Open JSON** | File → Open JSON | Open a previously saved `.json` document |
 | **Import Word** | File → Import Word | Import a `.docx` file (converts to editor content) |
 
+### Google Drive (Cloud Storage)
+
+| Operation | Menu Path | Description |
+|-----------|-----------|-------------|
+| **Save to Drive** | File → Save to Drive | Save document as `.sdjson` to Google Drive |
+| **Open from Drive** | File → Open from Drive | Browse and open documents from Drive |
+
+> **Note:** First-time use requires connecting to Google Drive via OAuth. See [Google Drive Integration](#google-drive-integration) for setup instructions.
+
 ### Exporting
 
 | Format | Menu Path | Description |
@@ -417,6 +427,66 @@ Merge replaces all template fields with their resolved values:
 | **PDF** | File → Export PDF | Generate PDF via html2pdf.js with exact margins |
 | **Markdown** | File → Export Markdown | Download document as `.md` file |
 | **Print** | File → Print | Native browser print dialog |
+
+### Google Drive Integration
+
+SimpleDocs can save and open documents directly from Google Drive.
+
+#### Setup (First Time Only)
+
+Before using Google Drive, you need to configure OAuth credentials:
+
+1. **Create a Google Cloud project** (or use an existing one):
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+
+2. **Enable the required APIs:**
+   - Enable **Google Drive API**
+   - Enable **Google Picker API**
+
+3. **Create OAuth 2.0 credentials:**
+   - Go to **Credentials** → **Create Credentials** → **OAuth Client ID**
+   - Choose **Application type: Web application**
+   - Add your origin URL to **Authorized JavaScript origins**:
+     - For local development: `http://localhost:5173`
+     - For production: `https://code24x7-r.github.io`
+   - Click **Create** and copy the Client ID
+
+4. **Configure SimpleDocs:**
+   - Create a `.env` file in the project root (if not exists)
+   - Add: `VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com`
+   - Restart the development server
+
+#### Saving to Drive
+
+1. Make sure you're connected (see below)
+2. **File → Save to Drive**
+3. Enter a filename (`.sdjson` extension is added automatically)
+4. Click **Save to Drive**
+5. Your document is saved to the root of your Google Drive
+
+#### Opening from Drive
+
+1. Make sure you're connected (see below)
+2. **File → Open from Drive**
+3. Browse your Drive files using the built-in picker
+4. Or view a list of recently saved SimpleDocs files
+5. Click **Open** to load the document into the editor
+
+#### Connecting to Drive
+
+1. Click **File → Save to Drive** or **File → Open from Drive**
+2. Click **Connect to Google Drive**
+3. A Google consent popup will appear
+4. Grant permission for the app to access your Drive files
+5. Once connected, you can save/open documents
+
+#### Disconnecting
+
+- Click **Disconnect** at the bottom of the Drive modal to revoke access
+- Your access token is cleared from the browser
+
+> **Privacy:** SimpleDocs uses the `drive.file` scope, which only allows access to files created or opened by this app. It cannot access your other Google Drive files.
 
 ### Recent Files
 
@@ -563,7 +633,7 @@ The following features are on the roadmap for future releases:
 | **Fit-to-Width Zoom** | Auto-zoom to fit page width |
 | **Spell Check** | Built-in spell checking |
 | **Collaborative Editing** | Real-time multi-user editing |
-| **Cloud Storage** | Integration with cloud providers |
+| **Cloud Storage** | ~~Integration with cloud providers~~ — **Google Drive** support added (save/open documents) |
 | **DOCX Export** | Export to Microsoft Word format |
 | **Markdown Import** | Paste markdown → convert to editor content |
 | **Floating Menu** | Insert menu on empty line |
