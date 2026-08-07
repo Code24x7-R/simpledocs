@@ -7,6 +7,7 @@ import { createExtensions } from '../../extensions';
 import { useDocStore } from '../../store/useDocStore';
 import TableContextMenu from './TableContextMenu';
 import EditorBubbleMenu from './BubbleMenu';
+import { useLinkPreview } from './useLinkPreview';
 
 interface ContextMenuState {
   x: number;
@@ -28,6 +29,7 @@ export default function DocumentEditor() {
     y: 0,
     visible: false,
   });
+  const { preview: linkPreview, linkHandlers } = useLinkPreview();
 
   const editor = useEditor({
     extensions: createExtensions(),
@@ -130,7 +132,11 @@ export default function DocumentEditor() {
   }, [docState.content, editor]);
 
   return (
-    <div ref={editorRef} className="document-editor">
+    <div
+      ref={editorRef}
+      className="document-editor"
+      {...linkHandlers}
+    >
       <EditorBubbleMenu editor={editor} />
       <EditorContent editor={editor} />
       {contextMenu.visible && editor && (
@@ -140,6 +146,18 @@ export default function DocumentEditor() {
           editor={editor}
           onClose={closeContextMenu}
         />
+      )}
+      {/* Link URL preview tooltip */}
+      {linkPreview.visible && (
+        <div
+          className="fixed z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg pointer-events-none max-w-xs truncate"
+          style={{
+            left: linkPreview.x + 12,
+            top: linkPreview.y + 12,
+          }}
+        >
+          {linkPreview.href}
+        </div>
       )}
     </div>
   );
