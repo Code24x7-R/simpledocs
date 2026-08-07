@@ -40,13 +40,28 @@ export default function DocumentEditor() {
         class: 'tiptap',
       },
       handleClick(_view: EditorView, _pos: number, event: MouseEvent) {
-        // Ctrl/Cmd+Click (or plain click) on a link → open in new tab
         const target = event.target as HTMLElement;
         const anchor = target.closest('a');
         if (anchor) {
           const href = anchor.getAttribute('href');
           if (href) {
             event.preventDefault();
+            // Internal anchor links (#heading) — scroll to target
+            if (href.startsWith('#')) {
+              const targetId = href.slice(1);
+              const editorEl = editorRef.current;
+              if (editorEl) {
+                // Find the anchor target within the editor content
+                const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
+                if (targetEl) {
+                  targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  return true;
+                }
+              }
+              // Target not found — don't navigate
+              return true;
+            }
+            // External links → open in new tab
             window.open(href, '_blank', 'noopener,noreferrer');
             return true;
           }
@@ -62,14 +77,26 @@ export default function DocumentEditor() {
           }
           return true;
         }
-        // Plain Enter on a link → open in new tab
+        // Plain Enter on a link → open in new tab (or scroll for internal)
         if (event.key === 'Enter' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
           if (editor?.isActive('link')) {
             const attrs = editor.getAttributes('link');
             const href = attrs.href as string | undefined;
             if (href) {
               event.preventDefault();
-              window.open(href, '_blank', 'noopener,noreferrer');
+              if (href.startsWith('#')) {
+                // Internal anchor — scroll to target
+                const targetId = href.slice(1);
+                const editorEl = editorRef.current;
+                if (editorEl) {
+                  const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
+                  if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }
+              } else {
+                window.open(href, '_blank', 'noopener,noreferrer');
+              }
               return true;
             }
           }
