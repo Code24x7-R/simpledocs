@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import type { EditorView } from '@tiptap/pm/view';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { createExtensions } from '../../extensions';
 import { useDocStore } from '../../store/useDocStore';
 import TableContextMenu from './TableContextMenu';
@@ -147,18 +148,20 @@ export default function DocumentEditor() {
           onClose={closeContextMenu}
         />
       )}
-      {/* Link URL preview tooltip */}
-      {linkPreview.visible && (
-        <div
-          className="fixed z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg pointer-events-none max-w-xs truncate"
-          style={{
-            left: linkPreview.x + 12,
-            top: linkPreview.y + 12,
-          }}
-        >
-          {linkPreview.href}
-        </div>
-      )}
+      {/* Link URL preview tooltip — portaled to body to escape the scaled viewport */}
+      {linkPreview.visible &&
+        createPortal(
+          <div
+            className="fixed z-[9999] px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg pointer-events-none max-w-xs truncate"
+            style={{
+              left: linkPreview.x + 12,
+              top: linkPreview.y + 12,
+            }}
+          >
+            {linkPreview.href}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
