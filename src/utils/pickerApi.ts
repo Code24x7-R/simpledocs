@@ -90,13 +90,13 @@ export async function openPicker(options: PickerOptions = {}): Promise<PickerDoc
   const token = await requestAccessToken();
 
   return new Promise((resolve) => {
-    const pickerBuilder = new google.picker.PickerBuilder()
+    const pickerBuilder = new window.google!.picker.PickerBuilder()
       .setOAuthToken(token)
       .setDeveloperKey(import.meta.env.VITE_GOOGLE_API_KEY as string | undefined || '')
       .setCallback((data: PickerCallback) => {
-        if (data.action === google.picker.Action.PICKED) {
+        if (data.action === window.google!.picker.Action.PICKED) {
           resolve(data.docs);
-        } else if (data.action === google.picker.Action.CANCEL) {
+        } else if (data.action === window.google!.picker.Action.CANCEL) {
           resolve([]);
         }
       });
@@ -108,19 +108,19 @@ export async function openPicker(options: PickerOptions = {}): Promise<PickerDoc
 
     // Show folders for navigation
     if (options.showFolders !== false) {
-      pickerBuilder.addView(new google.picker.DocsView()
+      pickerBuilder.addView(new window.google!.picker.DocsView()
         .setIncludeFolders(true)
         .setMimeTypes(SIMPLEDOCS_MIME)
         .setSelectFolderEnabled(false));
     } else {
       // Documents only
-      pickerBuilder.addView(new google.picker.DocsView()
+      pickerBuilder.addView(new window.google!.picker.DocsView()
         .setMimeTypes(SIMPLEDOCS_MIME));
     }
 
     // Start in specific folder
     if (options.parentId) {
-      pickerBuilder.addView(new google.picker.DocsView()
+      pickerBuilder.addView(new window.google!.picker.DocsView()
         .setIncludeFolders(true)
         .setParent(options.parentId)
         .setMimeTypes(SIMPLEDOCS_MIME));
@@ -128,7 +128,7 @@ export async function openPicker(options: PickerOptions = {}): Promise<PickerDoc
 
     // Multiple selection
     if (options.multiselect) {
-      pickerBuilder.enableFeature(google.picker.Feature.MULTISELECT_ENABLED);
+      pickerBuilder.enableFeature(window.google!.picker.Feature.MULTISELECT_ENABLED);
     }
 
     const picker = pickerBuilder.build();
@@ -136,46 +136,68 @@ export async function openPicker(options: PickerOptions = {}): Promise<PickerDoc
   });
 }
 
-// Type declarations for Google Picker API
+// Type declarations for Google Picker API and Identity Services
 declare global {
   interface Window {
     gapi?: {
       load: (api: string, config: { callback: () => void }) => void;
     };
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: TokenResponse) => void;
+          }) => TokenClient;
+          revoke: (token: string, callback: () => void) => void;
+        };
+      };
+      picker: {
+        Action: { PICKED: 'picked'; CANCEL: 'cancel' };
+        Feature: { MULTISELECT_ENABLED: 'multiselectEnabled' };
+        PickerBuilder: new () => PickerBuilder;
+        Picker: new () => Picker;
+        DocsView: new () => DocsView;
+      };
+    };
   }
 
-  namespace google.picker {
-    enum Action {
-      PICKED = 'picked',
-      CANCEL = 'cancel',
-    }
+  interface TokenResponse {
+    access_token: string;
+    expires_in?: number;
+    error?: string;
+    scope?: string;
+    token_type?: string;
+  }
 
-    enum Feature {
-      MULTISELECT_ENABLED = 'multiselectEnabled',
-    }
-
-    class PickerBuilder {
-      setOAuthToken(token: string): PickerBuilder;
-      setDeveloperKey(key: string): PickerBuilder;
-      setTitle(title: string): PickerBuilder;
-      setCallback(callback: (data: PickerCallback) => void): PickerBuilder;
-      addView(view: View): PickerBuilder;
-      enableFeature(feature: Feature): PickerBuilder;
-      build(): Picker;
-    }
-
-    class Picker {
-      setVisible(visible: boolean): void;
-    }
-
-    class DocsView {
-      constructor();
-      setIncludeFolders(include: boolean): DocsView;
-      setMimeTypes(mimeTypes: string): DocsView;
-      setSelectFolderEnabled(enabled: boolean): DocsView;
-      setParent(parentId: string): DocsView;
-    }
-
-    type View = DocsView;
+  interface TokenClient {
+    callback: (response: TokenResponse) => void;
+    requestAccessToken: (config?: { prompt?: string }) => void;
   }
 }
+
+interface PickerBuilder {
+  setOAuthToken(token: string): PickerBuilder;
+  setDeveloperKey(key: string): PickerBuilder;
+  setTitle(title: string): PickerBuilder;
+  setCallback(callback: (data: PickerCallback) => void): PickerBuilder;
+  addView(view: View): PickerBuilder;
+  enableFeature(feature: Feature): PickerBuilder;
+  build(): Picker;
+}
+
+interface Picker {
+  setVisible(visible: boolean): void;
+}
+
+interface DocsView {
+  setIncludeFolders(include: boolean): DocsView;
+  setMimeTypes(mimeTypes: string): DocsView;
+  setSelectFolderEnabled(enabled: boolean): DocsView;
+  setParent(parentId: string): DocsView;
+}
+
+type View = DocsView;
+
+type Feature = 'multiselectEnabled';

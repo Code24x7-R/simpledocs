@@ -52,7 +52,7 @@ export default function DriveModal({
         loadFiles();
       }
     }
-  }, [isOpen, documentTitle, isConnected]);
+  }, [isOpen, documentTitle, isConnected, clearError]);
 
   const loadFiles = async () => {
     setLoadingFiles(true);

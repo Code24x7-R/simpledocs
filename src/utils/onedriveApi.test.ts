@@ -76,9 +76,7 @@ describe('onedriveApi', () => {
         '@microsoft.graph.downloadUrl': 'https://download.url/file',
       };
 
-      let callCount = 0;
       vi.spyOn(global, 'fetch').mockImplementation((url) => {
-        callCount++;
         if (url === 'https://download.url/file') {
           return Promise.resolve(new Response('{"fast": true}', { status: 200 }));
         }
@@ -93,9 +91,7 @@ describe('onedriveApi', () => {
 
     it('falls back to content endpoint when no download URL', async () => {
       // First call for metadata returns no downloadUrl
-      let callCount = 0;
       vi.spyOn(global, 'fetch').mockImplementation((url) => {
-        callCount++;
         if (typeof url === 'string' && url.includes('/content')) {
           return Promise.resolve(new Response('{"fallback": true}', { status: 200 }));
         }

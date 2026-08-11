@@ -21,7 +21,7 @@
 const GIS_LOAD_URL = 'https://accounts.google.com/gsi/client';
 
 /** Google Identity Services token client (initialized once). */
-let tokenClient: google.accounts.oauth2.TokenClient | null = null;
+let tokenClient: TokenClient | null = null;
 
 /** Cached access token (refreshed automatically by GIS). */
 let accessToken: string | null = null;
@@ -78,7 +78,7 @@ export async function initDriveAuth(): Promise<void> {
       throw new Error('VITE_GOOGLE_CLIENT_ID not configured. Set it in your .env file.');
     }
 
-    tokenClient = google.accounts.oauth2.initTokenClient({
+    tokenClient = window.google!.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: 'https://www.googleapis.com/auth/drive.file',
       callback: () => {}, // handled via promise below
@@ -140,7 +140,7 @@ export async function signOut(): Promise<void> {
   tokenExpiry = 0;
 
   if (tokenClient) {
-    google.accounts.oauth2.revoke(accessToken || '', () => {});
+    window.google!.accounts.oauth2.revoke(accessToken || '', () => {});
   }
 }
 
@@ -158,43 +158,4 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
-// Type declarations for Google Identity Services
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (config: {
-            client_id: string;
-            scope: string;
-            callback: (response: google.accounts.oauth2.TokenResponse) => void;
-          }) => google.accounts.oauth2.TokenClient;
-          revoke: (token: string, callback: () => void) => void;
-        };
-      };
-    };
-  }
 
-  namespace google.accounts.oauth2 {
-    interface TokenResponse {
-      access_token: string;
-      expires_in?: number;
-      error?: string;
-      scope?: string;
-      token_type?: string;
-    }
-
-    interface TokenClient {
-      callback: (response: TokenResponse) => void;
-      requestAccessToken: (config?: { prompt?: string }) => void;
-    }
-
-    function revoke(token: string, callback: () => void): void;
-
-    function initTokenClient(config: {
-      client_id: string;
-      scope: string;
-      callback: (response: TokenResponse) => void;
-    }): TokenClient;
-  }
-}
