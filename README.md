@@ -344,5 +344,5 @@ MIT
 
 ## Related Apps
 
-- [SimpleSheet](https://code24x7-r.github.io/simplesheets/) — Spreadsheet web app from the same author
+- [SimpleSheet](https://simplesheets.mouseclick.au) — Spreadsheet web app from the same author
 - [Simple Web Apps](https://sites.google.com/view/simplewebapps/home) — Project homepage

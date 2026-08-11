@@ -93,7 +93,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
           <div className="pt-3 border-t border-gray-100">
             <p className="text-xs text-gray-500 mb-2">Related Apps</p>
             <a
-              href="https://code24x7-r.github.io/simplesheets/"
+              href="https://simplesheets.mouseclick.au"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group"

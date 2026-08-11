@@ -61,7 +61,7 @@ describe('AboutModal', () => {
     expect(span).toBeInTheDocument();
     const link = span.closest('a');
     expect(link).not.toBeNull();
-    expect(link).toHaveAttribute('href', 'https://code24x7-r.github.io/simplesheets/');
+    expect(link).toHaveAttribute('href', 'https://simplesheets.mouseclick.au');
     expect(link).toHaveAttribute('target', '_blank');
   });
 

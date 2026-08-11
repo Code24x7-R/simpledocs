@@ -445,7 +445,7 @@ export default function Navbar() {
               </button>
               <div className="border-t border-gray-100 my-1" />
               <a
-                href="https://code24x7-r.github.io/simplesheets/"
+                href="https://simplesheets.mouseclick.au"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setHelpMenuOpen(false)}
