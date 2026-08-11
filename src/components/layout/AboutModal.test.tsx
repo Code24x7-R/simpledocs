@@ -48,7 +48,7 @@ describe('AboutModal', () => {
 
   it('displays the support link with correct href', () => {
     render(<AboutModal isOpen={true} onClose={vi.fn()} />);
-    const link = screen.getByText('https://sites.google.com/view/simplewebapps/home');
+    const link = screen.getByText('Documentation & Support');
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', 'https://sites.google.com/view/simplewebapps/home');
     expect(link).toHaveAttribute('target', '_blank');
@@ -57,7 +57,7 @@ describe('AboutModal', () => {
 
   it('displays a Help icon adjacent to the support link', () => {
     render(<AboutModal isOpen={true} onClose={vi.fn()} />);
-    const link = screen.getByText('https://sites.google.com/view/simplewebapps/home');
+    const link = screen.getByText('Documentation & Support');
     const helpIcon = link.querySelector('svg');
     expect(helpIcon).not.toBeNull();
   });

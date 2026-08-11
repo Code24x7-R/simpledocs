@@ -127,7 +127,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
               className="inline-flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-700 underline"
             >
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
-              https://sites.google.com/view/simplewebapps/home
+              Documentation & Support
             </a>
           </div>
         </div>
