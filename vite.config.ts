@@ -45,7 +45,7 @@ export default defineConfig({
       },
     },
   ],
-  base: process.env.GITHUB_PAGES === 'true' ? '/simpledocs/' : '/',
+  base: '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

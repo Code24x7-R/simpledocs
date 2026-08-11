@@ -38,6 +38,9 @@ jobs:
         env:
           GITHUB_PAGES: 'true'
 
+      - name: Add CNAME for custom domain
+        run: echo 'simpledocs.mouseclick.au' > dist/CNAME
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
