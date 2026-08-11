@@ -55,9 +55,16 @@ describe('AboutModal', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
-  it('displays the related SimpleSheet app link', () => {
+  it('displays a Help icon adjacent to the support link', () => {
     render(<AboutModal isOpen={true} onClose={vi.fn()} />);
-    const span = screen.getByText('SimpleSheet');
+    const link = screen.getByText('https://sites.google.com/view/simplewebapps/home');
+    const helpIcon = link.querySelector('svg');
+    expect(helpIcon).not.toBeNull();
+  });
+
+  it('displays the related SimpleSheets app link', () => {
+    render(<AboutModal isOpen={true} onClose={vi.fn()} />);
+    const span = screen.getByText('SimpleSheets');
     expect(span).toBeInTheDocument();
     const link = span.closest('a');
     expect(link).not.toBeNull();

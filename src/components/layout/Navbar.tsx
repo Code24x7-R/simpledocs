@@ -451,7 +451,7 @@ export default function Navbar() {
                 onClick={() => setHelpMenuOpen(false)}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
-                <FileSpreadsheet className="w-4 h-4 text-green-600" /> SimpleSheet
+                <FileSpreadsheet className="w-4 h-4 text-green-600" /> SimpleSheets
               </a>
             </div>
           )}

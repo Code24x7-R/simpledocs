@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { X } from 'lucide-react';
+import { HelpCircle, X } from 'lucide-react';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -104,7 +104,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
                   <path d="M8 10h16v2H8zm0 5h16v2H8zm0 5h16v2H8z" fill="white" />
                 </svg>
                 <div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">SimpleSheet</span>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">SimpleSheets</span>
                   <p className="text-xs text-gray-400">Spreadsheet web app</p>
                 </div>
               </div>
@@ -124,8 +124,9 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
               href="https://sites.google.com/view/simplewebapps/home"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-500 hover:text-blue-700 underline"
+              className="inline-flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-700 underline"
             >
+              <HelpCircle className="w-3.5 h-3.5 shrink-0" />
               https://sites.google.com/view/simplewebapps/home
             </a>
           </div>
