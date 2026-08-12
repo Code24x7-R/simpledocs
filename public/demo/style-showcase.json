@@ -1,0 +1,1499 @@
+{
+  "id": "style-showcase-001",
+  "title": "Style Showcase",
+  "createdAt": "2026-08-12T12:00:00.000Z",
+  "updatedAt": "2026-08-12T12:00:00.000Z",
+  "totalPages": 1,
+  "settings": {
+    "pageFormat": "A4",
+    "orientation": "portrait",
+    "margins": {
+      "top": "20mm",
+      "bottom": "20mm",
+      "left": "25mm",
+      "right": "25mm"
+    },
+    "header": {
+      "enabled": true,
+      "content": ""
+    },
+    "footer": {
+      "enabled": true,
+      "showPageNumbers": true
+    },
+    "pageGap": 24,
+    "orphans": 2,
+    "widows": 2,
+    "defaultFullBleedMode": false
+  },
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 1
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Style Showcase"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "paragraphSpacing": {
+            "before": 0,
+            "after": 12
+          }
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ],
+            "text": "SimpleDocs "
+          },
+          {
+            "type": "text",
+            "text": "supports a full range of paragraph and text formatting. This document demonstrates every heading level, line spacing option, indent level, and paragraph spacing preset."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Heading Levels"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "lineHeight": "1.5"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Six heading levels are available, from H1 (largest) to H6 (smallest). Use them to structure your document with clear hierarchy."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 1
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Heading 1 \u00e2\u20ac\u201d Document Title"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Heading 2 \u00e2\u20ac\u201d Major Section"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 3
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Heading 3 \u00e2\u20ac\u201d Subsection"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 4
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Heading 4 \u00e2\u20ac\u201d Sub-subsection"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 5
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Heading 5 \u00e2\u20ac\u201d Minor heading"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 6
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Heading 6 \u00e2\u20ac\u201d Smallest heading"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Line Spacing"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "lineHeight": "1"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph uses single line spacing (1.0). Text is compact with minimal space between lines. Ideal for dense documents where space is at a premium."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "lineHeight": "1.15"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph uses 1.15 line spacing \u00e2\u20ac\u201d the default word processing standard. It provides a small amount of breathing room between lines without wasting space."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "lineHeight": "1.5"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph uses 1.5 line spacing. Generous white space between lines improves readability, especially for longer documents and academic papers."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "lineHeight": "2"
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ],
+            "text": "Double spacing (2.0). "
+          },
+          {
+            "type": "text",
+            "text": "Maximum separation between lines. Common requirements for manuscript review, essay drafts, and annotated documents where reviewers need room for notes."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Indent / Outdent"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph has no indent \u00e2\u20ac\u201d it sits flush with the left margin. All paragraphs start here by default."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "indent": 40
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph is indented once (40px). Indenting helps visually separate ideas or denote quoted material."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "indent": 80
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph is indented twice (80px). Useful for nested lists, block quotes within quotes, or hierarchical content structures."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "indent": 120
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph is indented three times (120px). Deep indentation for complex outlines or deeply nested information."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Paragraph Spacing"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "paragraphSpacing": {
+            "before": 0,
+            "after": 0
+          }
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "No extra spacing before or after this paragraph. Text runs together densely, like in a novel or continuous prose."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "paragraphSpacing": {
+            "before": 16,
+            "after": 8
+          }
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "This paragraph has 16px spacing before and 8px after. Useful for separating sections without a full heading break."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "paragraphSpacing": {
+            "before": 24,
+            "after": 24
+          }
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ],
+            "text": "Generous spacing both before and after (24px). "
+          },
+          {
+            "type": "text",
+            "text": "Creates a dramatic pause between ideas, often used before important statements or to separate distinct topics."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Combined Styles"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "center",
+          "lineHeight": "2",
+          "paragraphSpacing": {
+            "before": 16,
+            "after": 16
+          }
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              },
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#4a86e8",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Centered, double-spaced, colored heading-like paragraph."
+          }
+        ]
+      },
+      {
+        "type": "blockquote",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null,
+              "lineHeight": "1.5",
+              "indent": 40
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "italic"
+                  }
+                ],
+                "text": "Blockquotes can also be styled with line height and indent. This example uses 1.5 spacing and a 40px indent."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "codeBlock",
+        "content": [
+          {
+            "type": "text",
+            "text": "// Code blocks preserve formatting\nconst styled = {\n  lineHeight: '1.5',\n  indent: 40,\n  paragraphSpacing: { before: 16, after: 8 }\n};"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Inline Text Styles"
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Bold"
+                  },
+                  {
+                    "type": "text",
+                    "text": " for emphasis, "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ],
+                    "text": "italic"
+                  },
+                  {
+                    "type": "text",
+                    "text": " for nuance, "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "underline"
+                      }
+                    ],
+                    "text": "underline"
+                  },
+                  {
+                    "type": "text",
+                    "text": " for importance, "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "strike"
+                      }
+                    ],
+                    "text": "strikethrough"
+                  },
+                  {
+                    "type": "text",
+                    "text": " for deletion."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "textStyle",
+                        "attrs": {
+                          "fontFamily": null,
+                          "fontSize": null,
+                          "color": "#ff0000",
+                          "backgroundColor": null
+                        }
+                      }
+                    ],
+                    "text": "Red text"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "textStyle",
+                        "attrs": {
+                          "fontFamily": null,
+                          "fontSize": null,
+                          "color": null,
+                          "backgroundColor": "#fef08a"
+                        }
+                      }
+                    ],
+                    "text": "highlighted text"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", and "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "textStyle",
+                        "attrs": {
+                          "fontFamily": null,
+                          "fontSize": "24px",
+                          "color": null,
+                          "backgroundColor": null
+                        }
+                      }
+                    ],
+                    "text": "large text"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Font families: "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "textStyle",
+                        "attrs": {
+                          "fontFamily": "Georgia",
+                          "fontSize": null,
+                          "color": null,
+                          "backgroundColor": null
+                        }
+                      }
+                    ],
+                    "text": "Georgia"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "textStyle",
+                        "attrs": {
+                          "fontFamily": "Courier New",
+                          "fontSize": null,
+                          "color": null,
+                          "backgroundColor": null
+                        }
+                      }
+                    ],
+                    "text": "Courier New"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "textStyle",
+                        "attrs": {
+                          "fontFamily": "Arial",
+                          "fontSize": null,
+                          "color": null,
+                          "backgroundColor": null
+                        }
+                      }
+                    ],
+                    "text": "Arial"
+                  },
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Alignment Options"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "left"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Left-aligned text \u00e2\u20ac\u201d the default for most documents. Comfortable to read and expected in formal correspondence."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "center"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Center-aligned text \u00e2\u20ac\u201d ideal for titles, epigraphs, and short statements that deserve attention."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "right"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Right-aligned text \u00e2\u20ac\u201d useful for signatures, dates, and formal letter formatting."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "justify"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Justified text \u00e2\u20ac\u201d creates clean edges on both left and right margins. Common in newspapers, magazines, and formal publications for a polished, professional appearance."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Tables with Colors"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Tables support colored headers, individual cell styling, and inline formatting within cells."
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "attrs": {
+          "indent": 0,
+          "responsive": false
+        },
+        "content": [
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableHeader",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "center"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "bold"
+                          },
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": null,
+                              "fontSize": null,
+                              "color": "#ffffff",
+                              "backgroundColor": null
+                            }
+                          }
+                        ],
+                        "text": "Feature"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableHeader",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "center"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "bold"
+                          },
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": null,
+                              "fontSize": null,
+                              "color": "#ffffff",
+                              "backgroundColor": null
+                            }
+                          }
+                        ],
+                        "text": "Line Spacing"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableHeader",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "center"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "bold"
+                          },
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": null,
+                              "fontSize": null,
+                              "color": "#ffffff",
+                              "backgroundColor": null
+                            }
+                          }
+                        ],
+                        "text": "Use Case"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "Single"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "center"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "1.0"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Dense reports, footnotes"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "Standard"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "center"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "1.15"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Business documents"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "One and a half"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "center"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "1.5"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Academic papers"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "Double"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "center"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "2.0"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Manuscripts for review"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Color Palette"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#980000",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Red"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#ff9900",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Orange"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#ffff00",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Yellow"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#00ff00",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Green"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#00ffff",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Cyan"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#4a86e8",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Blue"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#9900ff",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Purple"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": "#ff00ff",
+                  "backgroundColor": null
+                }
+              }
+            ],
+            "text": "Magenta"
+          },
+          {
+            "type": "text",
+            "text": "."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": null,
+                  "backgroundColor": "#fef08a"
+                }
+              }
+            ],
+            "text": "Yellow highlight"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": null,
+                  "backgroundColor": "#86efac"
+                }
+              }
+            ],
+            "text": "Green highlight"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": null,
+                  "backgroundColor": "#60a5fa"
+                }
+              }
+            ],
+            "text": "Blue highlight"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": null,
+                  "backgroundColor": "#f87171"
+                }
+              }
+            ],
+            "text": "Red highlight"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": null,
+                  "backgroundColor": "#fdba74"
+                }
+              }
+            ],
+            "text": "Orange highlight"
+          },
+          {
+            "type": "text",
+            "text": ", "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "fontFamily": null,
+                  "fontSize": null,
+                  "color": null,
+                  "backgroundColor": "#e879f9"
+                }
+              }
+            ],
+            "text": "Purple highlight"
+          },
+          {
+            "type": "text",
+            "text": "."
+          }
+        ]
+      },
+      {
+        "type": "horizontalRule"
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "paragraphSpacing": {
+            "before": 16,
+            "after": 0
+          }
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ],
+            "text": "Keyboard Shortcuts"
+          },
+          {
+            "type": "text",
+            "text": ": H1-H6 (Ctrl+Alt+1-6), Bold (Ctrl+B), Italic (Ctrl+I), Underline (Ctrl+U), Strikethrough (Ctrl+Shift+S), Code (Ctrl+E), Link (Ctrl+K), Full-Bleed View (Ctrl+Shift+F)."
+          }
+        ]
+      }
+    ]
+  }
+}

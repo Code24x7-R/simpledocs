@@ -187,7 +187,7 @@ export default function Navbar() {
   const handleLoadDemo = async () => {
     try {
       const base = import.meta.env.BASE_URL || '/';
-      const url = `${base}demo/Superbus-Maximus-Distracticus.json`;
+      const url = `${base}demo/style-showcase.json`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to load demo file');
       const doc = await res.json();
