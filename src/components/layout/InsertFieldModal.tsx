@@ -49,7 +49,7 @@ export default function InsertFieldModal() {
               className="w-full text-left px-3 py-2 text-sm rounded hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2"
             >
               <span className="font-mono text-blue-600">{`{{${field.value}}}`}</span>
-              <span className="text-gray-400">— {field.label}</span>
+              <span className="text-gray-400">- {field.label}</span>
             </button>
           ))}
         </div>
