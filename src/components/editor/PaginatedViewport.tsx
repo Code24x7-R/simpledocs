@@ -120,13 +120,13 @@ function PaginatedViewportInner() {
       <div
         id="paginated-viewport"
         ref={handleRef}
-        className="flex-1 overflow-y-auto relative min-h-0"
+        className={`flex-1 overflow-y-auto relative min-h-0 ${fullBleedMode ? 'overflow-x-hidden' : ''}`}
         onScroll={handleScroll}
       >
         <div
           style={{
             transform: `scale(${zoom})`,
-            transformOrigin: 'top center',
+            transformOrigin: fullBleedMode ? 'top left' : 'top center',
           }}
         >
           {/* Editor content */}
