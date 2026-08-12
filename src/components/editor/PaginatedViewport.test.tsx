@@ -89,4 +89,35 @@ describe('PaginatedViewport', () => {
     const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
     expect(content.classList.contains('mx-auto')).toBe(false);
   });
+
+  it('uses top-left transform origin in full-bleed mode (prevents LHS truncation on zoom)', () => {
+    mockFullBleedMode = true;
+    render(<PaginatedViewport />);
+    // The zoom scale container is the parent of the content div
+    const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
+    const zoomContainer = content.parentElement as HTMLElement;
+    expect(zoomContainer.style.transformOrigin).toBe('top left');
+  });
+
+  it('uses top-center transform origin in paginated mode', () => {
+    mockFullBleedMode = false;
+    render(<PaginatedViewport />);
+    const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
+    const zoomContainer = content.parentElement as HTMLElement;
+    expect(zoomContainer.style.transformOrigin).toBe('top center');
+  });
+
+  it('clips horizontal overflow in full-bleed mode (prevents scrollbar on zoom)', () => {
+    mockFullBleedMode = true;
+    render(<PaginatedViewport />);
+    const viewport = document.getElementById('paginated-viewport') as HTMLElement;
+    expect(viewport.classList.contains('overflow-x-hidden')).toBe(true);
+  });
+
+  it('does not clip horizontal overflow in paginated mode', () => {
+    mockFullBleedMode = false;
+    render(<PaginatedViewport />);
+    const viewport = document.getElementById('paginated-viewport') as HTMLElement;
+    expect(viewport.classList.contains('overflow-x-hidden')).toBe(false);
+  });
 });
