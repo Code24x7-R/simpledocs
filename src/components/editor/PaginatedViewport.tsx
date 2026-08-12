@@ -73,8 +73,17 @@ function PaginatedViewportInner() {
     if (!containerRef.current || isNavigatingRef.current) return;
 
     const scrollTop = containerRef.current.scrollTop;
+    const maxScroll = containerRef.current.scrollHeight - containerRef.current.clientHeight;
     const stride = pageHeightPx + pageGapPx;
-    const pageIndex = Math.floor(scrollTop / stride) + 1;
+
+    // When at the bottom of the buffer, always report the last page
+    // (scroll position may not reach the exact last-page target)
+    let pageIndex: number;
+    if (maxScroll > 0 && scrollTop >= maxScroll - 1) {
+      pageIndex = pageCount;
+    } else {
+      pageIndex = Math.floor(scrollTop / stride) + 1;
+    }
     const clampedPage = Math.max(1, Math.min(pageIndex, pageCount));
 
     if (clampedPage !== currentPage) {
@@ -87,7 +96,8 @@ function PaginatedViewportInner() {
     if (!containerRef.current) return;
 
     const stride = pageHeightPx + pageGapPx;
-    const targetScroll = (currentPage - 1) * stride;
+    const maxScroll = containerRef.current.scrollHeight - containerRef.current.clientHeight;
+    const targetScroll = Math.min((currentPage - 1) * stride, maxScroll);
     const currentScroll = containerRef.current.scrollTop;
 
     if (Math.abs(currentScroll - targetScroll) > 5) {
