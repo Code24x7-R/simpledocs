@@ -27,6 +27,7 @@ const createMockDocState = (overrides?: Partial<DocState>): DocState => ({
     pageGap: 24,
     orphans: 2,
     widows: 2,
+    defaultFullBleedMode: false,
   },
   content: {
     type: 'doc',

@@ -21,6 +21,7 @@ function PaginatedViewportInner() {
     setCurrentPage,
     setTotalPages,
     docState,
+    fullBleedMode,
   } = useDocStore();
   const {
     pageHeightPx,
@@ -131,21 +132,31 @@ function PaginatedViewportInner() {
           {/* Editor content */}
           <div
             ref={contentRef}
-            className="document-content relative bg-white mx-auto"
-            style={{
-              maxWidth: pageWidthPx,
-              marginTop: '24px',
-              marginBottom: '24px',
-              paddingTop: marginTopPx + headerHeightPx,
-              paddingBottom: footerHeightPx,
-              paddingLeft: marginLeftPx,
-              paddingRight: marginRightPx,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              borderRadius: '2px',
-              // CSS custom properties for widow/orphan control
-              ['--orphans' as string]: docState.settings.orphans,
-              ['--widows' as string]: docState.settings.widows,
-            }}
+            className={`document-content relative bg-white ${fullBleedMode ? '' : 'mx-auto'}`}
+            style={
+              fullBleedMode
+                ? {
+                    // Full-bleed: fill viewport width, no page margins, no shadow
+                    paddingLeft: '80px',
+                    paddingRight: '80px',
+                    paddingTop: '40px',
+                    paddingBottom: '40px',
+                  }
+                : {
+                    maxWidth: pageWidthPx,
+                    marginTop: '24px',
+                    marginBottom: '24px',
+                    paddingTop: marginTopPx + headerHeightPx,
+                    paddingBottom: footerHeightPx,
+                    paddingLeft: marginLeftPx,
+                    paddingRight: marginRightPx,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    borderRadius: '2px',
+                    // CSS custom properties for widow/orphan control
+                    ['--orphans' as string]: docState.settings.orphans,
+                    ['--widows' as string]: docState.settings.widows,
+                  }
+            }
           >
             <DocumentEditor />
           </div>

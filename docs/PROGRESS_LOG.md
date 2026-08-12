@@ -1,5 +1,25 @@
 # simpledocs — Progress Log
 
+## 2026-08-12 — [FEATURE] Phase 37: Full-Bleed / Distraction-Free View
+
+### Summary
+Added a full-bleed view mode where text fills the entire viewport with no margins or width constraint. Users can toggle it from the View menu or with Ctrl+Shift+F, and optionally set it as the default launch mode.
+
+### Changes
+- `src/store/useDocStore.ts` — Added `fullBleedMode` runtime state + `setFullBleedMode` action; added `defaultFullBleedMode` to DocSettings (persisted); `loadDocument` syncs `fullBleedMode` from settings; migration ensures old documents get the new default
+- `src/components/editor/PaginatedViewport.tsx` — Conditional styling: full-bleed removes `maxWidth`, page margins, box-shadow, and border-radius; applies 80px horizontal padding
+- `src/components/editor/DocumentEditor.tsx` — Added `Ctrl+Shift+F` keyboard shortcut handler
+- `src/components/layout/Navbar.tsx` — View menu now has a "Full-Bleed View" toggle with checkmark indicator and a "Launch in Full-Bleed by Default" option
+- `src/components/layout/KeyboardShortcutsModal.tsx` — New "View" shortcut category documenting Ctrl+Shift+F
+- `src/store/useDocStore.test.ts` — 5 new tests covering default state, toggle, init from settings, persistence via updateSettings, isolation from other settings
+- `src/components/editor/PaginatedViewport.test.tsx` — **NEW** 5 tests: paginated layout default, editor rendering, viewport container, full-bleed styles (no maxWidth, padding applied), no mx-auto class
+
+### Results
+- **680 tests pass** (39 suites) — up from 670
+- Lint clean, type-check clean, build succeeds
+
+---
+
 ## 2026-08-02 — Initial Implementation
 
 ### Phase 1: Setup & Dependencies

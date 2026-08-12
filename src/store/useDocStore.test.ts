@@ -20,6 +20,7 @@ const baseDoc = {
     pageGap: 24,
     orphans: 2,
     widows: 2,
+    defaultFullBleedMode: false,
   },
   content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
 };
@@ -131,6 +132,7 @@ describe('useDocStore', () => {
         pageGap: 24,
         orphans: 2,
         widows: 2,
+    defaultFullBleedMode: false,
       },
       content: { type: 'doc', content: [] },
     };
@@ -355,6 +357,43 @@ describe('useDocStore', () => {
       useDocStore.getState().loadDocument(modernDoc);
       const state = useDocStore.getState();
       expect(state.docState.content).toEqual(modernDoc.content);
+    });
+  });
+
+  // Full-bleed / distraction-free view
+  describe('fullBleedMode', () => {
+    it('defaults to false', () => {
+      expect(useDocStore.getState().fullBleedMode).toBe(false);
+    });
+
+    it('toggles fullBleedMode on and off', () => {
+      useDocStore.getState().setFullBleedMode(true);
+      expect(useDocStore.getState().fullBleedMode).toBe(true);
+      useDocStore.getState().setFullBleedMode(false);
+      expect(useDocStore.getState().fullBleedMode).toBe(false);
+    });
+
+    it('initializes fullBleedMode from settings.defaultFullBleedMode', () => {
+      const docWithFullBleed = {
+        ...baseDoc,
+        settings: { ...baseDoc.settings, defaultFullBleedMode: true },
+      };
+      useDocStore.getState().loadDocument(docWithFullBleed);
+      expect(useDocStore.getState().fullBleedMode).toBe(true);
+    });
+
+    it('persists defaultFullBleedMode via updateSettings', () => {
+      useDocStore.getState().updateSettings({ defaultFullBleedMode: true });
+      const settings = useDocStore.getState().docState.settings;
+      expect(settings.defaultFullBleedMode).toBe(true);
+    });
+
+    it('does not change fullBleedMode when updating other settings', () => {
+      useDocStore.getState().setFullBleedMode(true);
+      useDocStore.getState().updateSettings({
+        margins: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' },
+      });
+      expect(useDocStore.getState().fullBleedMode).toBe(true);
     });
   });
 });

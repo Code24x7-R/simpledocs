@@ -39,6 +39,8 @@ export default function Navbar() {
     docState,
     editor,
     zoom,
+    fullBleedMode,
+    setFullBleedMode,
     updateTitle,
     newDocument,
     loadDocument,
@@ -400,7 +402,7 @@ export default function Navbar() {
             View
           </button>
           {viewMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-36 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
               <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Zoom
               </div>
@@ -417,6 +419,37 @@ export default function Navbar() {
                   {level.label}
                 </button>
               ))}
+              <div className="border-t border-gray-100 my-1" />
+              <button
+                onClick={() => setFullBleedMode(!fullBleedMode)}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <span className="w-4 h-4 inline-flex items-center justify-center shrink-0">
+                  {fullBleedMode && (
+                    <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </span>
+                Full-Bleed View
+              </button>
+              <button
+                onClick={() => {
+                  const { updateSettings, docState } = useDocStore.getState();
+                  updateSettings({ defaultFullBleedMode: !docState.settings.defaultFullBleedMode });
+                  setViewMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <span className="w-4 h-4 inline-flex items-center justify-center shrink-0">
+                  {docState.settings.defaultFullBleedMode && (
+                    <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </span>
+                Launch in Full-Bleed by Default
+              </button>
             </div>
           )}
         </div>

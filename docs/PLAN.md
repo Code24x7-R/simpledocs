@@ -838,6 +838,42 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 
 ---
 
+## Phase 37: Full-Bleed / Distraction-Free View — COMPLETE ✅
+
+**2026-08-12** — Added a view mode where text fills the entire viewport with no width constraint and no margins. Includes an option to launch in full-bleed mode by default.
+
+### Features
+| Feature | Description |
+|---------|-------------|
+| Full-bleed toggle | Switch between paginated view (A4/Letter with margins) and full-bleed view (edge-to-edge text) |
+| View menu item | Toggle in Navbar View menu |
+| Keyboard shortcut | `Ctrl+Shift+F` toggles full-bleed view |
+| Default launch mode | "Launch in Full-Bleed by Default" persisted setting |
+
+### Implementation
+| File | Action |
+|------|--------|
+| `src/store/useDocStore.ts` | Added `fullBleedMode` state, `setFullBleedMode` action, `defaultFullBleedMode` setting |
+| `src/components/editor/PaginatedViewport.tsx` | Conditional styling: full-bleed removes maxWidth/margins/shadow |
+| `src/components/editor/DocumentEditor.tsx` | `Ctrl+Shift+F` keyboard shortcut handler |
+| `src/components/layout/Navbar.tsx` | View menu toggle + "Launch in Full-Bleed by Default" option |
+| `src/components/layout/KeyboardShortcutsModal.tsx` | Documented the new shortcut |
+| `src/store/useDocStore.test.ts` | 5 new store tests for fullBleedMode |
+| `src/components/editor/PaginatedViewport.test.tsx` | **NEW** — 5 component tests |
+
+### Steps
+- [x] 1. Add `fullBleedMode` state and `setFullBleedMode` action to store
+- [x] 2. Add `defaultFullBleedMode` to DocSettings, persist in localStorage
+- [x] 3. Initialize `fullBleedMode` from settings on load
+- [x] 4. Update PaginatedViewport to conditionally render full-bleed layout
+- [x] 5. Add View menu toggle + keyboard shortcut in Navbar
+- [x] 6. Write tests
+- [x] 7. Run full verification pass
+
+**Results:** 680 tests pass (39 suites), lint clean, type-check clean, build succeeds.
+
+---
+
 ## Phase 36: Google Drive Integration — IN PROGRESS 🔄
 
 **2026-08-06** — Implement Google Drive save/load using Google Picker API and Drive API v3.

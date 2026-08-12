@@ -26,6 +26,8 @@ export interface DocSettings {
   orphans: number;
   /** Minimum lines at top of next page after a break (default: 2) */
   widows: number;
+  /** Whether to launch in full-bleed (distraction-free) mode by default */
+  defaultFullBleedMode: boolean;
 }
 
 export interface DocState {
@@ -44,6 +46,8 @@ interface DocStore {
   docState: DocState;
   editor: Editor | null;
   zoom: number;
+  /** Whether full-bleed (distraction-free) mode is currently active */
+  fullBleedMode: boolean;
   pageSetupOpen: boolean;
   insertFieldOpen: boolean;
   tableGridOpen: boolean;
@@ -95,6 +99,7 @@ interface DocStore {
   goToNextPage: () => void;
   goToPrevPage: () => void;
   goToPage: (page: number) => void;
+  setFullBleedMode: (enabled: boolean) => void;
 }
 
 const STORAGE_KEY = 'SIMPLEDOCS_STATE';
@@ -119,6 +124,7 @@ const defaultSettings: DocSettings = {
   pageGap: 24,
   orphans: 2,
   widows: 2,
+  defaultFullBleedMode: false,
 };
 
 const createNewDoc = (): DocState => ({
@@ -154,7 +160,15 @@ const loadFromStorage = (): DocState | null => {
 function migrateToContent(parsed: Record<string, unknown>): DocState {
   // Already in new format
   if (parsed.content && !parsed.pages) {
-    return parsed as unknown as DocState;
+    // Ensure new settings fields have defaults
+    const settings = (parsed.settings as DocSettings) || defaultSettings;
+    return {
+      ...parsed,
+      settings: {
+        ...defaultSettings,
+        ...settings,
+      },
+    } as unknown as DocState;
   }
 
   // Old format: has `pages[]` — merge into single content
@@ -180,9 +194,10 @@ function migrateToContent(parsed: Record<string, unknown>): DocState {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { pages: _pages, ...rest } = parsed;
+    const { pages: _pages, settings: parsedSettings, ...rest } = parsed;
     return {
       ...rest,
+      settings: { ...defaultSettings, ...(parsedSettings as Record<string, unknown>) },
       content: mergedContent,
     } as unknown as DocState;
   }
@@ -211,6 +226,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     docState: initial,
     editor: null,
     zoom: 1,
+    fullBleedMode: initial.settings.defaultFullBleedMode,
     pageSetupOpen: false,
     insertFieldOpen: false,
     tableGridOpen: false,
@@ -274,7 +290,7 @@ export const useDocStore = create<DocStore>((set, get) => {
 
     loadDocument: (doc: DocState) => {
       const migrated = migrateToContent(doc as unknown as Record<string, unknown>);
-      set({ docState: migrated });
+      set({ docState: migrated, fullBleedMode: migrated.settings.defaultFullBleedMode });
       persistToStorage(migrated);
     },
 
@@ -332,5 +348,6 @@ export const useDocStore = create<DocStore>((set, get) => {
       if (isNaN(page)) return;
       set({ currentPage: Math.max(1, Math.min(Math.floor(page), totalPages)) });
     },
+    setFullBleedMode: (enabled) => set({ fullBleedMode: enabled }),
   };
 });

@@ -114,6 +114,12 @@ export default function DocumentEditor() {
           }
           return true;
         }
+        // Ctrl+Shift+F → toggle full-bleed view
+        if (event.key === 'f' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
+          event.preventDefault();
+          useDocStore.getState().setFullBleedMode(!useDocStore.getState().fullBleedMode);
+          return true;
+        }
         return false;
       },
       handleDOMEvents: {

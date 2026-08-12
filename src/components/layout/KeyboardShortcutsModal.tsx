@@ -57,6 +57,9 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'Enter'], description: 'Replace current match' },
     { keys: ['Escape'], description: 'Close search panel' },
   ]},
+  { category: 'View', items: [
+    { keys: ['Ctrl', 'Shift', 'F'], description: 'Toggle full-bleed view' },
+  ]},
   { category: 'Document', items: [
     { keys: ['Ctrl', 'S'], description: 'Save (browser default)' },
     { keys: ['Ctrl', 'P'], description: 'Print' },

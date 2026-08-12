@@ -2,7 +2,7 @@
 
 A modern, browser-based paginated WYSIWYG document editor with Microsoft Word / Google Docs feature parity. Fully client-side — no backend.
 
-**Live demo:** [https://Code24x7-R.github.io/simpledocs/](https://Code24x7-R.github.io/simpledocs/)
+**Live demo:** [[https://simpledocs.mouseclick.au](https://simpledocs.mouseclick.au)]
 **User manual:** [MANUAL.md](./MANUAL.md)
 
 ## Overview

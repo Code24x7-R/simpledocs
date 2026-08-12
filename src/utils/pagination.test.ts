@@ -21,6 +21,7 @@ const mockDocState: DocState = {
     pageGap: 24,
     orphans: 2,
     widows: 2,
+    defaultFullBleedMode: false,
   },
   content: {
     type: 'doc',
