@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import type { Editor } from '@tiptap/react';
 import { getMRUList, addMRUEntry, removeMRUEntry } from '../utils/mru';
+import { sanitizeDocument } from '../utils/sanitizeDocument';
 
 export interface DocSettings {
   pageFormat: 'A4' | 'Letter';
@@ -290,6 +291,8 @@ export const useDocStore = create<DocStore>((set, get) => {
 
     loadDocument: (doc: DocState) => {
       const migrated = migrateToContent(doc as unknown as Record<string, unknown>);
+      // Sanitize content to remove malicious attributes (XSS, CSS injection)
+      migrated.content = sanitizeDocument(migrated.content as Record<string, unknown>);
       set({ docState: migrated, fullBleedMode: migrated.settings.defaultFullBleedMode });
       persistToStorage(migrated);
     },
