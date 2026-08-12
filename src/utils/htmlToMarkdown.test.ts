@@ -180,6 +180,38 @@ describe('htmlToMarkdown', () => {
     });
   });
 
+  describe('styled paragraphs (line height, indent, paragraph spacing)', () => {
+    it('handles paragraph with line-height style', () => {
+      const input = '<p style="line-height: 2;">Double spaced text</p>';
+      const result = htmlToMarkdown(input);
+      expect(result).toBe('Double spaced text');
+    });
+
+    it('handles paragraph with indent (margin-left) style', () => {
+      const input = '<p style="margin-left: 40px;">Indented text</p>';
+      const result = htmlToMarkdown(input);
+      expect(result).toBe('Indented text');
+    });
+
+    it('handles paragraph with paragraph spacing style', () => {
+      const input = '<p style="margin-top: 12px; margin-bottom: 12px;">Spaced text</p>';
+      const result = htmlToMarkdown(input);
+      expect(result).toBe('Spaced text');
+    });
+
+    it('handles paragraph with combined styles', () => {
+      const input = '<p style="line-height: 1.5; margin-left: 80px; margin-top: 16px; margin-bottom: 16px;">Styled paragraph</p>';
+      const result = htmlToMarkdown(input);
+      expect(result).toBe('Styled paragraph');
+    });
+
+    it('handles heading with line-height style', () => {
+      const input = '<h2 style="line-height: 2;">Styled heading</h2>';
+      const result = htmlToMarkdown(input);
+      expect(result).toBe('## Styled heading');
+    });
+  });
+
   describe('HTML entity unescaping', () => {
     it('unescapes &amp;', () => {
       expect(htmlToMarkdown('<p>Tom &amp; Jerry</p>')).toBe('Tom & Jerry');

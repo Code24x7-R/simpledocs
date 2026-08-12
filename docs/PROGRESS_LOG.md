@@ -1,5 +1,26 @@
 # simpledocs — Progress Log
 
+## 2026-08-12 — [FEATURE] Phase 38: Additional Common Styles
+
+### Summary
+Added heading levels H4-H6, line spacing, indent/outdent, and paragraph spacing. Fixed markdown export to handle styled paragraphs.
+
+### Changes
+- `src/extensions/ParagraphStyle.ts` — **NEW** Custom extension adding lineHeight, indent, paragraphSpacing attributes to paragraph/heading nodes
+- `src/extensions/index.ts` — Added ParagraphStyle, extended heading levels to H1-H6
+- `src/components/layout/Toolbar/Toolbar.tsx` — Line height dropdown, indent/outdent buttons (IndentIncrease/IndentDecrease icons), paragraph spacing dropdown
+- `src/components/editor/DocumentEditor.tsx` — Ctrl+Alt+4/5/6 keyboard shortcuts for H4-H6
+- `src/components/layout/KeyboardShortcutsModal.tsx` — New shortcuts documented
+- `src/utils/htmlToMarkdown.ts` — Fixed regexes for `<p>` and `<h1-h6>` to handle optional `style` attributes (was breaking export for styled paragraphs)
+- `src/extensions/ParagraphStyle.test.tsx` — **NEW** 10 tests covering all commands
+- `src/utils/htmlToMarkdown.test.ts` — 5 new tests for styled paragraph export
+
+### Results
+- **699 tests pass** (40 suites) — up from 680
+- Lint clean, type-check clean, build succeeds
+
+---
+
 ## 2026-08-12 — [FEATURE] Phase 37: Full-Bleed / Distraction-Free View
 
 ### Summary

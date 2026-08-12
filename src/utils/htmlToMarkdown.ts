@@ -32,7 +32,7 @@ export function htmlToMarkdown(html: string): string {
   let result = html;
 
   // Remove empty paragraphs first
-  result = result.replace(/<p>\s*<\/p>/g, '');
+  result = result.replace(/<p(?:\s+style="[^"]*")?>\s*<\/p>/g, '');
 
   // Fenced code blocks: <pre><code class="lang">...</code></pre>
   result = result.replace(
@@ -54,7 +54,7 @@ export function htmlToMarkdown(html: string): string {
   for (let level = 6; level >= 1; level--) {
     const tag = `h${level}`;
     const hashes = '#'.repeat(level);
-    const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'g');
+    const regex = new RegExp(`<${tag}(?:\\s+style="[^"]*")?>([\\s\\S]*?)<\\/${tag}>`, 'g');
     result = result.replace(regex, (_match, text: string) => {
       const inner = stripTagsInline(text).trim();
       return `\n\n${hashes} ${inner}\n\n`;
@@ -110,7 +110,7 @@ export function htmlToMarkdown(html: string): string {
   result = result.replace(/<hr\s*\/?>/g, '\n\n---\n\n');
 
   // Paragraphs: <p>text</p>
-  result = result.replace(/<p>([\s\S]*?)<\/p>/g, (_match, text: string) => {
+  result = result.replace(/<p(?:\s+style="[^"]*")?>([\s\S]*?)<\/p>/g, (_match, text: string) => {
     const content = stripTagsInline(text).trim();
     if (!content) return ''; // skip empty paragraphs
     return content + '\n\n';

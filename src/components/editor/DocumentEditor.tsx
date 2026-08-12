@@ -120,6 +120,14 @@ export default function DocumentEditor() {
           useDocStore.getState().setFullBleedMode(!useDocStore.getState().fullBleedMode);
           return true;
         }
+        // Ctrl+Alt+4/5/6 → Heading 4/5/6
+        if (event.key >= '4' && event.key <= '6' && (event.ctrlKey || event.metaKey) && event.altKey) {
+          event.preventDefault();
+          if (editor) {
+            editor.chain().focus().toggleHeading({ level: parseInt(event.key) as 4 | 5 | 6 }).run();
+          }
+          return true;
+        }
         return false;
       },
       handleDOMEvents: {

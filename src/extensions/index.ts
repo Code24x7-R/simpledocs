@@ -19,11 +19,12 @@ import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
 import { TemplateField } from './TemplateField';
 import { PageBreak } from './PageBreak';
+import { ParagraphStyle } from './ParagraphStyle';
 
 export function createExtensions() {
   return [
     StarterKit.configure({
-      heading: { levels: [1, 2, 3] },
+      heading: { levels: [1, 2, 3, 4, 5, 6] },
       link: false,
     }),
     TextStyle,
@@ -46,6 +47,7 @@ export function createExtensions() {
     TableHeader,
     TemplateField,
     PageBreak,
+    ParagraphStyle,
     Image.configure({
       inline: false,
       allowBase64: true,

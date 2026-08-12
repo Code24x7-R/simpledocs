@@ -20,6 +20,9 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'Alt', '1'], description: 'Heading 1' },
     { keys: ['Ctrl', 'Alt', '2'], description: 'Heading 2' },
     { keys: ['Ctrl', 'Alt', '3'], description: 'Heading 3' },
+    { keys: ['Ctrl', 'Alt', '4'], description: 'Heading 4' },
+    { keys: ['Ctrl', 'Alt', '5'], description: 'Heading 5' },
+    { keys: ['Ctrl', 'Alt', '6'], description: 'Heading 6' },
   ]},
   { category: 'Paragraph Styles', items: [
     { keys: ['Ctrl', 'Shift', 'B'], description: 'Blockquote' },

@@ -40,6 +40,7 @@
 | 34 | PDF Export Overhaul (Searchable pdfmake) | COMPLETE ✅ |
 | 35 | Font Embedding + Image Sizing Fixes | COMPLETE ✅ |
 | 36 | Google Drive Integration | IN PROGRESS 🔄 |
+| 38 | Additional Common Styles (Headings H1-H6, Line Spacing, Indent/Outdent, Paragraph Spacing) | COMPLETE ✅ |
 
 ### Final Results (2026-08-06)
 - **565 tests pass** (29 suites)
@@ -871,6 +872,42 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 - [x] 7. Run full verification pass
 
 **Results:** 680 tests pass (39 suites), lint clean, type-check clean, build succeeds.
+
+---
+
+## Phase 38: Additional Common Styles — COMPLETE ✅
+
+**2026-08-12** — Added heading levels H4-H6, line spacing, indent/outdent, and paragraph spacing.
+
+### Features
+| Feature | Description |
+|---------|-------------|
+| Heading levels H4-H6 | Extended from H1-H3 to full H1-H6 range |
+| Line spacing | Preset line heights (1.0, 1.15, 1.5, 2.0, 2.5, 3.0) |
+| Indent / Outdent | 40px incremental indent with min 0 |
+| Paragraph spacing | Preset space before/after paragraphs |
+
+### Implementation
+| File | Action |
+|------|--------|
+| `src/extensions/ParagraphStyle.ts` | **NEW** — Custom extension for lineHeight, indent, paragraphSpacing |
+| `src/extensions/index.ts` | Added ParagraphStyle, extended heading levels to H1-H6 |
+| `src/components/layout/Toolbar/Toolbar.tsx` | Added line height dropdown, indent/outdent buttons, paragraph spacing dropdown |
+| `src/components/editor/DocumentEditor.tsx` | Ctrl+Alt+4/5/6 keyboard shortcuts for H4-H6 |
+| `src/components/layout/KeyboardShortcutsModal.tsx` | Documented new shortcuts |
+| `src/utils/htmlToMarkdown.ts` | Fixed regexes to handle `style` attributes on `<p>` and `<h1-h6>` |
+| Tests | **15 new tests** — 10 for ParagraphStyle + 5 for markdown export
+
+### Steps
+- [x] 1. Create ParagraphStyle extension
+- [x] 2. Extend heading levels to H1-H6
+- [x] 3. Add toolbar controls (line height, indent/outdent, paragraph spacing)
+- [x] 4. Add keyboard shortcuts for H4-H6
+- [x] 5. Fix markdown export for styled paragraphs
+- [x] 6. Write tests
+- [x] 7. Run full verification pass
+
+**Results:** 699 tests pass (40 suites), lint clean, type-check clean, build succeeds.
 
 ---
 
