@@ -39,7 +39,7 @@
 | 33 | Multi-Provider Chat (Gemini + LM Studio) | COMPLETE ✅ |
 | 34 | PDF Export Overhaul (Searchable pdfmake) | COMPLETE ✅ |
 | 35 | Font Embedding + Image Sizing Fixes | COMPLETE ✅ |
-| 36 | Google Drive Integration | IN PROGRESS 🔄 |
+| 36 | Cloud Storage Integration (Google Drive + OneDrive + S3) | COMPLETE ✅ |
 | 38 | Additional Common Styles (Headings H1-H6, Line Spacing, Indent/Outdent, Paragraph Spacing) | COMPLETE ✅ |
 
 ### Final Results (2026-08-06)
@@ -911,22 +911,24 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 
 ---
 
-## Phase 36: Google Drive Integration — IN PROGRESS 🔄
+## Phase 36: Cloud Storage Integration — COMPLETE ✅
 
-**2026-08-06** — Implement Google Drive save/load using Google Picker API and Drive API v3.
+**2026-08-06 → 2026-08-13** — Unified cloud storage supporting three providers: Google Drive, Microsoft OneDrive, and S3-compatible object storage.
 
 ### Features
 | Feature | Description |
 |---------|-------------|
-| Save to Drive | Save current document as JSON to Google Drive |
-| Open from Drive | Browse and open documents from Drive using Picker API |
-| File management | Create folders, rename, delete documents in Drive |
+| Save to Cloud | Save current document as JSON to the selected cloud provider |
+| Open from Cloud | Browse and open documents from the connected provider |
+| File management | List, open, delete documents; refresh file list |
+| Provider switching | Switch between Google Drive, OneDrive, and S3 without closing the modal |
+| S3 configuration | Configure endpoint, bucket, credentials, prefix, and path-style addressing |
 
 ### Architecture
-- Google Picker API — native Drive file browser
-- Google Drive API v3 — REST API for CRUD operations
-- Google Identity Services (GIS) — OAuth 2.0 client-side auth
-- drive.file scope (only files created by the app)
+- **Google Drive** — Google Picker API (native browser), Drive API v3 (CRUD), Google Identity Services (OAuth 2.0)
+- **OneDrive** — Microsoft Graph API v1.0 (CRUD), MSAL.js (OAuth 2.0 Authorization Code + PKCE)
+- **S3-compatible** — REST API with SigV4 request signing (no SDK); supports AWS S3, MinIO, Wasabi, DigitalOcean Spaces, Backblaze B2, Cloudflare R2
+- **Unified UI** — Single `CloudStorageModal` with provider selection, connected state, and mode switching (save/open)
 
 ### Files
 | File | Action |
@@ -934,8 +936,25 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 | `src/utils/driveAuth.ts` | **NEW** — Google OAuth 2.0 token management |
 | `src/utils/driveApi.ts` | **NEW** — Drive API wrapper (list, create, read, update, delete) |
 | `src/utils/pickerApi.ts` | **NEW** — Google Picker API wrapper |
-| `src/components/layout/DriveModal.tsx` | **NEW** — Open/save dialog with Picker |
-| `src/store/useDriveStore.ts` | **NEW** — Drive connection state |
-| `src/components/layout/Navbar.tsx` | **EDIT** — Save/Open Drive menu items |
-| `index.html` | **EDIT** — Load Google API scripts |
-| Tests | **NEW** — Unit tests for drive utils |
+| `src/utils/onedriveAuth.ts` | **NEW** — MSAL.js authentication (sign-in, sign-out, silent token) |
+| `src/utils/onedriveApi.ts` | **NEW** — Microsoft Graph API wrapper (CRUD operations) |
+| `src/utils/s3Api.ts` | **NEW** — S3-compatible REST API wrapper with SigV4 signing |
+| `src/utils/s3Config.ts` | **NEW** — S3 configuration storage (localStorage) |
+| `src/utils/s3SigV4.ts` | **NEW** — AWS SigV4 request signing |
+| `src/components/layout/CloudStorageModal.tsx` | **NEW** — Unified cloud storage dialog (3 providers) |
+| `src/components/layout/S3ConfigModal.tsx` | **NEW** — S3 configuration form |
+| `src/components/layout/Navbar.tsx` | **EDIT** — Save/Open Cloud menu items |
+| `src/App.tsx` | **EDIT** — Wire CloudStorageModal |
+| Tests | **NEW** — Tests for driveApi, driveAuth, pickerApi, onedriveApi, onedriveAuth, s3Api, s3Config, s3SigV4, CloudStorageModal, S3ConfigModal |
+
+### Removed
+| File | Reason |
+|------|--------|
+| `src/components/layout/DriveModal.tsx` | Superseded by unified CloudStorageModal |
+| `src/components/layout/DriveModal.test.tsx` | Removed with component |
+| `src/store/useDriveStore.ts` | CloudStorageModal manages state internally |
+
+### Results
+- **743 tests pass** (42 suites)
+- Lint clean, type-check clean, build succeeds
+- CloudStorageModal (39 tests), S3ConfigModal (21 tests), pickerApi (9 tests)
