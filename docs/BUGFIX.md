@@ -28,6 +28,12 @@
 
 ## Fixed Bugs
 
+### 2026-08-13
+
+| ID | Title | Description | Fix |
+|----|-------|-------------|-----|
+| B-023 | Editor not focused on page load | When opening the simpledocs URL, the Tiptap editor did not have focus after the page loaded. Users had to manually click into the editor before they could start typing. | Added `autofocus: 'end'` to the `useEditor` options in `DocumentEditor.tsx` so Tiptap automatically focuses the editor at the end of content on mount. Added 2 tests in `DocumentEditor.test.tsx` verifying the autofocus option is passed and the editor mounts focused. |
+
 ### 2026-08-06
 
 | ID | Title | Description | Fix |

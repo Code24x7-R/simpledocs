@@ -35,6 +35,7 @@ export default function DocumentEditor() {
   const editor = useEditor({
     extensions: createExtensions(),
     content: docState.content,
+    autofocus: 'end',
     editorProps: {
       attributes: {
         class: 'tiptap',
