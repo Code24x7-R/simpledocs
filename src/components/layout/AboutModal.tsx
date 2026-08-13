@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { HelpCircle, X } from 'lucide-react';
+import { useState } from 'react';
+import { HelpCircle, X, Copy, Check } from 'lucide-react';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -26,9 +28,21 @@ function getBuildInfo() {
 }
 
 export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
+  const [copied, setCopied] = useState(false);
+
   if (!isOpen) return null;
 
   const { commit, version, date, time, raw } = getBuildInfo();
+
+  const handleCopyBuildInfo = async () => {
+    const buildLine = raw ? `${date} ${time} (${raw})` : date;
+    const text = `Version: ${version}\nBuild: ${buildLine}\nCommit: ${commit}`;
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
 
   return (
     <div
@@ -70,9 +84,22 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
               <span className="text-gray-500">Build</span>
               <span className="font-mono text-gray-800">{date}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-gray-500">Commit</span>
-              <span className="font-mono text-gray-800">{commit}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-gray-800">{commit}</span>
+                <button
+                  onClick={handleCopyBuildInfo}
+                  className="p-0.5 text-gray-400 hover:text-blue-600 transition-colors rounded hover:bg-gray-100"
+                  title="Copy build info to clipboard"
+                >
+                  {copied ? (
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

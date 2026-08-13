@@ -1,5 +1,20 @@
 # simpledocs — Progress Log
 
+## 2026-08-13 — [FEATURE] Copy build info icon in About modal
+
+### Summary
+Added a copy icon next to the version info in the Help > About modal. Copies Version, Build, and Commit with labels to the clipboard for easier bug reporting.
+
+### Changes
+- `src/components/layout/AboutModal.tsx` — Added Copy/Check icons from lucide-react, `useState` for copied feedback, `handleCopyBuildInfo` function that formats `Version: x\nBuild: date\nCommit: hash` and copies via the existing `copyToClipboard` utility. Button shows green check for 1.5s after successful copy.
+- `src/components/layout/AboutModal.test.tsx` — 4 new tests: renders copy button, clicking copies labeled text with all three fields, shows check icon after copy, button positioned next to commit value.
+
+### Results
+- **743 tests pass** (42 suites) — up from 739
+- Lint clean, type-check clean, build succeeds
+
+---
+
 ## 2026-08-13 — [BUGFIX] B-023: Editor not focused on page load
 
 ### Summary

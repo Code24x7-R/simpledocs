@@ -1,10 +1,63 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import AboutModal from './AboutModal';
 
+// Mock clipboard utility
+const mockCopyToClipboard = vi.fn();
+vi.mock('../../utils/clipboard', () => ({
+  copyToClipboard: (...args: unknown[]) => mockCopyToClipboard(...args),
+}));
+
 describe('AboutModal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCopyToClipboard.mockResolvedValue(true);
+  });
+
+  it('renders a copy button next to the commit info', () => {
+    render(<AboutModal isOpen={true} onClose={vi.fn()} />);
+    const copyButton = screen.getByTitle('Copy build info to clipboard');
+    expect(copyButton).toBeInTheDocument();
+    // Verify it contains the Copy icon initially
+    expect(copyButton.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('clicking copy button copies version, build, and commit with labels', async () => {
+    render(<AboutModal isOpen={true} onClose={vi.fn()} />);
+    const copyButton = screen.getByTitle('Copy build info to clipboard');
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
+    expect(mockCopyToClipboard).toHaveBeenCalledTimes(1);
+    const copiedText = mockCopyToClipboard.mock.calls[0][0] as string;
+    expect(copiedText).toContain('Version:');
+    expect(copiedText).toContain('Build:');
+    expect(copiedText).toContain('Commit:');
+    expect(copiedText).toContain('1.0.0');
+  });
+
+  it('shows a check icon after successful copy', async () => {
+    render(<AboutModal isOpen={true} onClose={vi.fn()} />);
+    const copyButton = screen.getByTitle('Copy build info to clipboard');
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
+    // After copy, the check icon should appear (green)
+    const checkIcon = copyButton.querySelector('svg.text-green-500');
+    expect(checkIcon).toBeInTheDocument();
+  });
+
+  it('copy button is positioned next to the commit value', () => {
+    render(<AboutModal isOpen={true} onClose={vi.fn()} />);
+    const commitRow = screen.getByText('Commit').closest('.flex');
+    expect(commitRow).toBeInTheDocument();
+    const copyButton = commitRow!.querySelector('button');
+    expect(copyButton).toBeInTheDocument();
+    expect(copyButton).toHaveAttribute('title', 'Copy build info to clipboard');
+  });
+
   it('renders nothing when isOpen is false', () => {
     const { container } = render(<AboutModal isOpen={false} onClose={vi.fn()} />);
     expect(container.firstChild).toBeNull();
