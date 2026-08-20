@@ -40,15 +40,16 @@
 | 34 | PDF Export Overhaul (Searchable pdfmake) | COMPLETE ✅ |
 | 35 | Font Embedding + Image Sizing Fixes | COMPLETE ✅ |
 | 36 | Cloud Storage Integration (Google Drive + OneDrive + S3) | COMPLETE ✅ |
+| 37 | Full-Bleed / Distraction-Free View | COMPLETE ✅ |
 | 38 | Additional Common Styles (Headings H1-H6, Line Spacing, Indent/Outdent, Paragraph Spacing) | COMPLETE ✅ |
+| 39 | Text-to-Speech (TTS) Reader | PLANNED 📋 |
 
-### Final Results (2026-08-06)
-- **565 tests pass** (29 suites)
+### Final Results (2026-08-20)
+- **843 tests pass** (47 suites)
 - **Lint**: 0 errors, 0 warnings
 - **Type-check**: Clean
 - **Build**: Succeeds
-- **Coverage**: 93.45% line / 81.35% branch (global)
-- **Phases**: 35 complete
+- **Phases**: 38 complete, 1 planned
 
 - [x] Update PLAN.md with results and coverage stats
 - [x] Log completion in PROGRESS_LOG.md
@@ -958,3 +959,164 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 - **743 tests pass** (42 suites)
 - Lint clean, type-check clean, build succeeds
 - CloudStorageModal (39 tests), S3ConfigModal (21 tests), pickerApi (9 tests)
+
+---
+
+## Phase 39: Text-to-Speech (TTS) Reader — PLANNED 📋
+
+**Inspired by:** [GlowReadTTS](https://github.com/lavellehatcherjr/GlowReadTTS) (Chrome extension using Kokoro-82M ONNX model)
+
+**2026-08-20** — Plan created. Implementation pending approval.
+
+### Overview
+
+Add a TTS reader that reads document text aloud using the browser's built-in **Web Speech API** (`window.speechSynthesis`). This approach:
+- **Zero dependencies** — uses native browser capabilities
+- **Works offline** — no network calls or model downloads
+- **Supports all modern browsers** — Chrome, Edge, Safari, Firefox
+- **Provides voice selection, speed (rate), and volume control**
+- **Can be upgraded later** to a neural model (e.g., Kokoro via ONNX Runtime Web) for higher quality
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| Read Document | Reads the entire document text from the editor |
+| Read Selection | Reads only the currently selected text |
+| Play / Pause / Stop | Standard playback controls |
+| Voice Selector | Dropdown of all available system voices |
+| Speed Control | Slider from 0.5x to 2x (maps to SpeechSynthesis rate) |
+| Volume Control | Slider from 0% to 100% |
+| Progress Indicator | Visual indicator of current reading position |
+| Toolbar Button | Quick-access TTS button in the main toolbar |
+| Keyboard Shortcut | `Ctrl+Shift+T` to toggle reading |
+
+### UI Design
+
+The TTS control panel will be a **floating panel** (similar to SearchReplaceModal's bottom-docked approach) that appears when the user clicks the TTS button or uses the keyboard shortcut:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  🔊 Text-to-Speech                    ▶ ▶▶ ■  ✕   │
+│                                                     │
+│  Voice: [English (US) — Alex           ▼]          │
+│                                                     │
+│  Speed:  ●━━━━━━━━━━━━━━━━━━━━━━○  1.0x            │
+│  Volume: ●━━━━━━━━━━━━━━━━━━━━━━○  100%            │
+│                                                     │
+│  [Read All]  [Read Selection]        Status: Ready  │
+└─────────────────────────────────────────────────────┘
+```
+
+The panel docks to the bottom-center of the viewport (same position as SearchReplaceModal).
+
+### Architecture
+
+```
+src/
+├── utils/
+│   └── tts/
+│       ├── TtsService.ts        # Core TTS service wrapping SpeechSynthesis
+│       └── ttsTypes.ts          # Shared types/interfaces
+├── components/
+│   └── layout/
+│       └── TtsPanel.tsx         # TTS control panel UI
+├── components/
+│   └── editor/
+│       └── DocumentEditor.tsx   # Wires Ctrl+Shift+T shortcut
+├── components/
+│   └── layout/
+│       └── Toolbar/
+│           └── Toolbar.tsx      # Adds TTS button
+└── store/
+    └── useDocStore.ts           # Adds ttsOpen state + setTtsOpen action
+```
+
+### Key Design Decisions
+
+1. **Web Speech API** for v1 — pragmatic, zero-dep. Kokoro/ONNX neural TTS would add ~100MB and significant complexity. Can be added as a premium feature later.
+
+2. **Text extraction** — use `editor.getText()` to get plain text from the Tiptap editor. For selection, use `editor.state.doc.textBetween(from, to)`.
+
+3. **Sentence-level chunking** — split text into sentences for:
+   - Better pause handling at punctuation
+   - Progress tracking
+   - Ability to pause/resume mid-sentence
+
+4. **Queue-based playback** — maintain a queue of utterances. `speechSynthesis` handles its own queue, but we manage sentence boundaries for progress tracking and to handle the `onend` event chain.
+
+5. **State management** — TTS state (isPlaying, currentVoice, rate, volume) lives in the `TtsService` class (a singleton), not in React state. The panel subscribes to service events for UI updates.
+
+### Implementation Steps
+
+#### Step 1: Types and Service
+- [ ] Create `src/utils/tts/ttsTypes.ts` with `TtsState`, `TtsVoice`, `TtsOptions` interfaces
+- [ ] Create `src/utils/tts/TtsService.ts` — singleton class wrapping `SpeechSynthesis`
+- [ ] Implement: `getVoices()`, `speak(text)`, `pause()`, `resume()`, `stop()`
+- [ ] Implement: `setVoice(voiceURI)`, `setRate(rate)`, `setVolume(volume)`
+- [ ] Implement: event emitters for `stateChange`, `boundary` (sentence progress), `end`
+- [ ] Handle voice loading async (`speechSynthesis.onvoiceschanged`)
+- [ ] Handle chunking long text into sentence-level utterances
+
+#### Step 2: TTS Panel Component
+- [ ] Create `src/components/layout/TtsPanel.tsx`
+- [ ] Implement floating panel (bottom-center, matching SearchReplaceModal style)
+- [ ] Voice selector dropdown (populated from `TtsService.getVoices()`)
+- [ ] Speed slider (0.5x – 2x, step 0.1)
+- [ ] Volume slider (0% – 100%, step 5)
+- [ ] Play/Pause/Stop buttons with proper icon states
+- [ ] "Read All" and "Read Selection" buttons
+- [ ] Progress/status text
+- [ ] Close button
+- [ ] Subscribe to `TtsService` events for live UI updates
+
+#### Step 3: Store Integration
+- [ ] Add `ttsOpen` state to `useDocStore`
+- [ ] Add `setTtsOpen` action
+
+#### Step 4: Toolbar & Shortcuts
+- [ ] Add TTS button (🔊 speaker icon) to Toolbar
+- [ ] Add `Ctrl+Shift+T` keyboard shortcut in DocumentEditor
+
+#### Step 5: App Wiring
+- [ ] Wire `TtsPanel` into `App.tsx` (conditional render on `ttsOpen`)
+
+#### Step 6: Tests
+- [ ] Unit tests for `TtsService` (mock `SpeechSynthesis`)
+- [ ] Component tests for `TtsPanel`
+- [ ] Integration tests for store + shortcut
+
+#### Step 7: Documentation & Polish
+- [ ] Add TTS entry to KeyboardShortcutsModal
+- [ ] Add TTS section to MANUAL.md
+- [ ] Full verification pass
+
+### Files
+
+| File | Action |
+|------|--------|
+| `src/utils/tts/ttsTypes.ts` | **NEW** — TTS type definitions |
+| `src/utils/tts/TtsService.ts` | **NEW** — Core TTS service (Web Speech API wrapper) |
+| `src/utils/tts/TtsService.test.ts` | **NEW** — Service unit tests |
+| `src/components/layout/TtsPanel.tsx` | **NEW** — TTS control panel |
+| `src/components/layout/TtsPanel.test.tsx` | **NEW** — Panel component tests |
+| `src/components/layout/Toolbar/Toolbar.tsx` | **EDIT** — Add TTS button |
+| `src/components/editor/DocumentEditor.tsx` | **EDIT** — Ctrl+Shift+T shortcut |
+| `src/components/layout/Navbar.tsx` | **EDIT** — Add TTS to Tools menu |
+| `src/components/layout/KeyboardShortcutsModal.tsx` | **EDIT** — Document shortcut |
+| `src/store/useDocStore.ts` | **EDIT** — Add ttsOpen state |
+| `src/App.tsx` | **EDIT** — Wire TtsPanel |
+| `tests/TTS_INTEGRATION.md` | **NEW** — Integration test plan |
+
+### Estimated Test Count
+- TtsService: 12 tests (voices, speak, pause, resume, stop, rate, volume, chunking, events)
+- TtsPanel: 10 tests (render, voice select, sliders, play/pause/stop, read all/selection)
+- Store/shortcut: 3 tests
+- **Total: ~25 new tests**
+
+### Future Enhancements (v2+)
+- Neural TTS via Kokoro-82M + ONNX Runtime Web (bundled model, ~100MB)
+- Highlight-as-you-read (track current sentence in editor, apply highlight mark)
+- Export audio (record synthesis output to WAV)
+- Voice pitch control
+- Per-paragraph navigation (skip forward/back by paragraph)

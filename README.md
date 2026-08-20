@@ -13,16 +13,20 @@ The editor uses a continuous-scroll architecture where a single Tiptap instance 
 
 ### Key Capabilities
 
-- Rich text editing (bold, italic, underline, strikethrough, colors, highlight, fonts)
-- Page layout (A4/Letter, margins, headers, footers, page breaks)
+- Rich text editing (bold, italic, underline, strikethrough, colors, highlight, fonts, line spacing, indent/outdent)
+- Page layout (A4/Letter, margins, headers, footers, page breaks, full-bleed view)
 - Tables with context-menu operations (merge/split cells, add/delete rows/columns)
 - Template fields (`{{variable}}` badges with merge support)
 - Image insertion (upload as base64 or URL)
-- Hyperlinks (insert/edit/remove, auto-link on paste)
+- Hyperlinks (insert/edit/remove, auto-link on paste, internal TOC anchors)
+- Table of Contents generation with heading anchor links
 - Search & replace (regex, case-sensitive, whole-word)
 - File I/O (JSON save/load, PDF export, Markdown export, Word import)
+- Cloud storage (Google Drive, OneDrive, S3-compatible)
 - AI chat panel (multi-provider: LM Studio, Google Gemini)
-- Zoom (75%, 100%, 125%), undo/redo, localStorage auto-save
+- Named ranges (Excel-like named cell references)
+- Text-to-Speech reader (planned)
+- Zoom (50%–200% with step controls), undo/redo, localStorage auto-save
 
 For detailed usage instructions, see **[MANUAL.md](./MANUAL.md)**.
 
@@ -94,10 +98,12 @@ App
 ├─ SearchReplaceModal (find/replace with regex)
 ├─ PageSetupModal (page format, margins, headers, footers)
 ├─ TableGridModal (visual 10x10 grid picker)
+├─ TableOfContentsModal (TOC preview + insert/replace)
 ├─ InsertFieldModal (standard + custom template fields)
 ├─ FieldMergeModal (merge all fields with values)
 ├─ ImageModal (upload or URL with preview)
 ├─ LinkModal (URL + display text + validation)
+├─ CloudStorageModal (Google Drive, OneDrive, S3)
 ├─ ChatPanel (LM Studio + Gemini, multi-provider)
 ├─ ProviderSetupModal (3-step provider wizard)
 ├─ KeyboardShortcutsModal (shortcut reference)
@@ -108,12 +114,12 @@ App
 
 | Extension | File | Purpose |
 |-----------|------|---------|
-| `FontSize` | `src/extensions/FontStyle.ts` | Font size attribute on textStyle mark |
-| `FontFamily` | Built into textStyle | Font family attribute |
-| `Color` | Built into textStyle | Text color attribute |
+| `FontSize` | `src/extensions/FontSize.ts` | Font size attribute on textStyle mark |
+| `ParagraphStyle` | `src/extensions/ParagraphStyle.ts` | Line height, indent, paragraph spacing |
 | `BackgroundColor` | Built into textStyle | Highlight (replaces old separate Highlight mark) |
 | `TemplateField` | `src/extensions/TemplateField.ts` | Inline atomic node for `{{variables}}` |
 | `PageBreak` | `src/extensions/PageBreak.ts` | Hard page break node with `Ctrl+Enter` |
+| `TableOfContents` | `src/extensions/TableOfContents.ts` | Block node wrapping auto-generated TOC |
 
 ### Data Flow
 
@@ -239,14 +245,20 @@ simpledocs/
 │   │       ├── SearchReplaceModal.tsx
 │   │       ├── PageSetupModal.tsx
 │   │       ├── TableGridModal.tsx
+│   │       ├── TableOfContentsModal.tsx
 │   │       ├── InsertFieldModal.tsx
 │   │       ├── FieldMergeModal.tsx
 │   │       ├── ImageModal.tsx
 │   │       ├── LinkModal.tsx
+│   │       ├── CloudStorageModal.tsx
+│   │       ├── S3ConfigModal.tsx
 │   │       ├── ChatPanel.tsx
 │   │       ├── ProviderSetupModal.tsx
 │   │       ├── KeyboardShortcutsModal.tsx
 │   │       └── AboutModal.tsx
+│   ├── constants.ts                 # Shared color palettes
+│   ├── hooks/                       # Shared hooks
+│   │   └── useEditorClipboard.ts        # Consolidated copy/cut/paste
 │   ├── extensions/                  # Custom Tiptap extensions
 │   │   ├── index.ts                     # Extension registry
 │   │   ├── FontSize.ts

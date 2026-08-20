@@ -1,5 +1,50 @@
 # simpledocs — Progress Log
 
+## 2026-08-20 — [FEATURE] TTS Integration Audit & Code Consolidation
+
+### Summary
+
+Comprehensive audit of all Tiptap integration points identified and resolved navigation jumps, duplicated code, and inconsistent UX across the editor. See `docs/TIPTAP_INTEGRATION_AUDIT.md` for full analysis.
+
+### Changes
+- `src/hooks/useEditorClipboard.ts` — **NEW** Consolidated copy/cut/paste logic (was duplicated in Toolbar + Navbar)
+- `src/constants.ts` — **NEW** Shared color palettes (was duplicated in Toolbar + BubbleMenu)
+- `src/components/editor/PaginatedViewport.tsx` — Page navigation now moves editor caret to target page; shared `programmaticScrollUntil` lock prevents search scrolling from fighting page tracker
+- `src/components/layout/SearchReplaceModal.tsx` — Uses `beginProgrammaticScroll()` before scrolling so page indicator doesn't jump during find navigation
+- `src/components/editor/BubbleMenu.tsx` — Link button opens modal via custom event instead of `window.prompt`
+- `src/components/editor/DocumentEditor.tsx` — Removed redundant native DOM click listener (editorProps.handleClick is single handler)
+- `src/components/layout/Navbar.tsx` — Uses shared clipboard hook; zoom expanded to 50%–200% with +/- step buttons
+- `src/components/layout/Toolbar/Toolbar.tsx` — Uses shared clipboard hook and color constants
+- `src/store/useDocStore.ts` — Added `ttsOpen`, `programmaticScrollUntil`, `beginProgrammaticScroll`, `setTtsOpen`
+- `src/components/editor/BubbleMenu.test.tsx` — Updated to test event-based link modal opening
+- `docs/TIPTAP_INTEGRATION_AUDIT.md` — **NEW** Full audit document
+
+### Results
+- **843 tests pass** (47 suites) — up from 743
+- Lint clean, type-check clean, build succeeds
+
+---
+
+## 2026-08-20 — [FEATURE] Table of Contents + Hyperlink Fix
+
+### Summary
+
+Added TOC generation modal with internal anchor hyperlinks. Fixed race condition where TOC insertion was overwritten by content sync, and wired anchor link clicks to scroll to headings.
+
+### Changes
+- `src/extensions/TableOfContents.ts` — Custom node wrapping TOC content
+- `src/utils/tableOfContents.ts` — Extract headings, build TOC with links, assign anchors
+- `src/components/layout/TableOfContentsModal.tsx` — Preview + insert/replace UI
+- `src/App.tsx` — Fixed `handleTocInsert` to apply all changes atomically
+- `src/components/editor/DocumentEditor.tsx` — Anchor link click handling
+- `src/extensions/ParagraphStyle.ts` — Added `id` attribute for heading anchors
+
+### Results
+- **845 → 843 tests** (after BubbleMenu test refactor)
+- TOC hyperlinks navigate to headings within the document
+
+---
+
 ## 2026-08-13 — [FEATURE] Copy build info icon in About modal
 
 ### Summary

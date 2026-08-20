@@ -12,6 +12,7 @@
 - [Template Fields](#template-fields)
 - [Images](#images)
 - [Hyperlinks](#hyperlinks)
+- [Table of Contents](#table-of-contents)
 - [Page Navigation](#page-navigation)
 - [Search & Replace](#search--replace)
 - [File Operations](#file-operations)
@@ -78,7 +79,7 @@ SimpleDocs is a browser-based WYSIWYG document editor — no installation requir
 | **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Cloud Storage (Save/Open), Recent Files |
 | **Edit** | Copy, Cut, Paste |
 | **Insert** | Image, Link, Table, Field, Merge Fields, Page Break |
-| **View** | Zoom levels (75%, 100%, 125%) |
+| **View** | Zoom levels (50%–200% with +/− step buttons), Full-Bleed view toggle, Launch in Full-Bleed by Default |
 | **Help** | Keyboard Shortcuts, About SimpleDocs, SimpleSheet link |
 
 ### Toolbar
@@ -212,8 +213,10 @@ SimpleDocs supports all standard text formatting options.
 
 ### Zoom
 
-- **View → Zoom** → Choose 75%, 100%, or 125%.
-- 75% gives a full-page overview; 125% is ideal for detail work.
+- **View → Zoom** → Choose 50%, 75%, 100%, 125%, 150%, or 200%.
+- Use the **+/−** buttons for 10% increments.
+- 50% gives an overview of multiple pages; 200% is ideal for detail work.
+- 100% is the default (actual size).
 
 ---
 
@@ -334,6 +337,31 @@ Merge replaces all template fields with their resolved values:
 ### Auto-Link
 
 - URLs pasted as plain text are automatically converted into clickable links.
+
+---
+
+## Table of Contents
+
+SimpleDocs can auto-generate a Table of Contents (TOC) from your document's heading styles.
+
+### Inserting a Table of Contents
+
+1. Go to **Insert → Table of Contents**.
+2. Adjust the **From level** and **To level** filters to control which headings appear (e.g., H1–H3 only).
+3. Review the **Preview** panel showing all matched headings with page numbers.
+4. Click **Insert TOC** to add it at the cursor position.
+
+### Replacing a TOC
+
+- If a TOC already exists, the modal shows a warning and the button changes to **Replace TOC**.
+- Replacing removes the old TOC and inserts a new one with updated page numbers.
+
+### How It Works
+
+- The TOC scans your document for heading styles (H1–H6).
+- Each heading gets a unique anchor ID.
+- TOC entries are internal hyperlinks — click any entry to jump to that heading.
+- You can manually edit the TOC content after insertion.
 
 ---
 
@@ -696,15 +724,14 @@ The following features are on the roadmap for future releases:
 
 | Feature | Description |
 |---------|-------------|
+| **Text-to-Speech (TTS)** | Read document or selection aloud with voice, speed, and volume controls |
 | **Subscript/Superscript** | Subscript and superscript text formatting |
 | **Syntax Highlighting** | Code syntax highlighting in code blocks |
-| **Document Outlines** | Headings tree navigation panel |
 | **Table Formatting** | Border thickness, cell background color |
 | **Print-Optimized CSS** | `@media print` styles for better print output |
 | **Fit-to-Width Zoom** | Auto-zoom to fit page width |
 | **Spell Check** | Built-in spell checking |
 | **Collaborative Editing** | Real-time multi-user editing |
-| **Cloud Storage** | ~~Integration with cloud providers~~ — **Google Drive** and **OneDrive** support added (save/open documents) |
 | **DOCX Export** | Export to Microsoft Word format |
 | **Markdown Import** | Paste markdown → convert to editor content |
 | **Floating Menu** | Insert menu on empty line |
@@ -765,7 +792,7 @@ The following features are on the roadmap for future releases:
 
 5. **Page breaks persist.** Manual page breaks are saved in your document and restore on reload.
 
-6. **Use zoom for overview.** Drop to 75% to see the full page layout, or 125% for detail work.
+6. **Use zoom for overview.** Drop to 50% to see multiple pages at once, or go to 200% for fine detail work.
 
 7. **The bubble menu is context-aware.** Select text to see a floating toolbar with Bold, Italic, Underline, Highlight, and Link — no need to move your cursor to the main toolbar.
 
