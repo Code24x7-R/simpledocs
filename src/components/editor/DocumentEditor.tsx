@@ -211,38 +211,6 @@ export default function DocumentEditor() {
     }
   }, [docState.content, editor]);
 
-  // Handle anchor link clicks (TOC internal links) via native event delegation.
-  // This is more reliable than editorProps.handleClick for catching clicks on
-  // links inside custom nodes like tableOfContents.
-  useEffect(() => {
-    const editorEl = editorRef.current;
-    if (!editorEl) return;
-
-    const handleAnchorClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      const anchor = target.closest('a');
-      if (!anchor) return;
-
-      const href = anchor.getAttribute('href');
-      if (!href) return;
-
-      event.preventDefault();
-
-      if (href.startsWith('#')) {
-        const targetId = href.slice(1);
-        const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
-        if (targetEl) {
-          scrollToElement(targetEl);
-        }
-      } else {
-        window.open(href, '_blank', 'noopener,noreferrer');
-      }
-    };
-
-    editorEl.addEventListener('click', handleAnchorClick);
-    return () => editorEl.removeEventListener('click', handleAnchorClick);
-  }, []);
-
   return (
     <div
       ref={editorRef}

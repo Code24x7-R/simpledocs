@@ -33,7 +33,8 @@ import {
   Rows,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
-import { copyToClipboard, pasteFromClipboard } from '../../../utils/clipboard';
+import { useEditorClipboard } from '../../../hooks/useEditorClipboard';
+import { TEXT_COLORS, HIGHLIGHT_COLORS } from '../../../constants';
 
 const FONT_FAMILIES = [
   'Arial',
@@ -76,26 +77,11 @@ const PARAGRAPH_SPACING = [
   { label: '6pt / 12pt', before: 8, after: 16 },
 ];
 
-const TEXT_COLORS = [
-  '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
-  '#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff', '#4a86e8', '#0000ff', '#9900ff', '#ff00ff',
-  '#e6b8af', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc',
-];
-
-const HIGHLIGHT_COLORS = [
-  '#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04', // Yellows
-  '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', // Greens
-  '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', // Blues (light blue included)
-  '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', // Indigos
-  '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', // Reds
-  '#f0abfc', '#e879f9', '#d946ef', '#c026d3', '#a21caf', // Purples
-  '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', // Oranges
-];
-
 
 
 export default function Toolbar() {
   const { editor, setSearchReplaceOpen, setChatOpen, chatOpen } = useDocStore();
+  const { handleCopy, handleCut, handlePaste } = useEditorClipboard(editor);
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
@@ -145,39 +131,6 @@ export default function Toolbar() {
     return editor.getAttributes('paragraph').paragraphSpacing
       ?? editor.getAttributes('heading').paragraphSpacing
       ?? null;
-  };
-
-  // Clipboard handlers
-  const handleCopy = async () => {
-    const { state } = editor;
-    const { from, to } = state.selection;
-    const selectedText = state.doc.textBetween(from, to, '\n');
-    const selectedHtml = editor.state.doc.slice(from, to).content;
-    const htmlContent = selectedHtml.content?.length
-      ? editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? ''
-      : '';
-    if (selectedText) {
-      await copyToClipboard(selectedText, htmlContent);
-    }
-  };
-
-  const handleCut = async () => {
-    const { state } = editor;
-    const { from, to } = state.selection;
-    const selectedText = state.doc.textBetween(from, to, '\n');
-    if (selectedText) {
-      const selectedHtml = editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? '';
-      await copyToClipboard(selectedText, selectedHtml);
-      editor.chain().focus().deleteSelection().run();
-    }
-  };
-
-  const handlePaste = async () => {
-    const { text, html } = await pasteFromClipboard();
-    const content = html || text;
-    if (content) {
-      editor.chain().focus().insertContent(content).run();
-    }
   };
 
   const Button = ({

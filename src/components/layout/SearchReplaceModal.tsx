@@ -27,7 +27,7 @@ interface SearchReplaceModalProps {
  * - Opens with Ctrl+H or Ctrl+F (when no text selected)
  */
 export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceModalProps) {
-  const { editor, docState, updateContent, setSearchReplaceOpen } = useDocStore();
+  const { editor, docState, updateContent, setSearchReplaceOpen, beginProgrammaticScroll } = useDocStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [replaceTerm, setReplaceTerm] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -93,6 +93,9 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
 
         const scrollContainer = document.getElementById('paginated-viewport');
         if (!scrollContainer) return;
+
+        // Signal that this is a programmatic scroll so page tracking doesn't jump
+        beginProgrammaticScroll(600);
 
         const midY = (startCoords.top + endCoords.bottom) / 2;
         const containerRect = scrollContainer.getBoundingClientRect();

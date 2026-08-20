@@ -24,16 +24,21 @@ import {
   List,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import { useEditorClipboard } from '../../hooks/useEditorClipboard';
 import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
-import { copyToClipboard, pasteFromClipboard } from '../../utils/clipboard';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
 
 const ZOOM_LEVELS = [
+  { label: '50%', value: 0.5 },
   { label: '75%', value: 0.75 },
   { label: '100%', value: 1 },
   { label: '125%', value: 1.25 },
+  { label: '150%', value: 1.5 },
+  { label: '200%', value: 2 },
 ];
+
+const ZOOM_STEP = 0.1;
 
 export default function Navbar() {
   const {
@@ -66,6 +71,8 @@ export default function Navbar() {
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
+
+  const { handleCopy, handleCut, handlePaste } = useEditorClipboard(editor);
 
   const handleSaveJson = () => {
     saveDocument(docState);
@@ -113,37 +120,7 @@ export default function Navbar() {
     window.print();
   };
 
-  const handleCopy = async () => {
-    if (!editor) return;
-    const { state } = editor;
-    const { from, to } = state.selection;
-    const selectedText = state.doc.textBetween(from, to, '\n');
-    if (selectedText) {
-      const htmlContent = editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? '';
-      await copyToClipboard(selectedText, htmlContent);
-    }
-  };
-
-  const handleCut = async () => {
-    if (!editor) return;
-    const { state } = editor;
-    const { from, to } = state.selection;
-    const selectedText = state.doc.textBetween(from, to, '\n');
-    if (selectedText) {
-      const htmlContent = editor.view.nodeDOM(from)?.parentElement?.innerHTML ?? '';
-      await copyToClipboard(selectedText, htmlContent);
-      editor.chain().focus().deleteSelection().run();
-    }
-  };
-
-  const handlePaste = async () => {
-    if (!editor) return;
-    const { text, html } = await pasteFromClipboard();
-    const content = html || text;
-    if (content) {
-      editor.chain().focus().insertContent(content).run();
-    }
-  };
+  // Clipboard operations use the shared hook (handleCopy/handleCut/handlePaste)
 
   const wordFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -428,6 +405,26 @@ export default function Navbar() {
                 </button>
               ))}
               <div className="border-t border-gray-100 my-1" />
+              <div className="flex items-center justify-between px-4 py-1">
+                <span className="text-xs text-gray-500">Zoom</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setZoom(Math.max(0.5, +(zoom - ZOOM_STEP).toFixed(2)))}
+                    className="w-6 h-6 text-xs rounded hover:bg-gray-200 flex items-center justify-center"
+                    title="Zoom out"
+                  >
+                    −
+                  </button>
+                  <span className="text-xs text-gray-600 w-10 text-center">{Math.round(zoom * 100)}%</span>
+                  <button
+                    onClick={() => setZoom(Math.min(2, +(zoom + ZOOM_STEP).toFixed(2)))}
+                    className="w-6 h-6 text-xs rounded hover:bg-gray-200 flex items-center justify-center"
+                    title="Zoom in"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
               <button
                 onClick={() => setFullBleedMode(!fullBleedMode)}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"

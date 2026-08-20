@@ -16,12 +16,14 @@ import { usePaginationContext } from './usePaginationContext';
  */
 function PaginatedViewportInner() {
   const {
+    editor,
     zoom,
     currentPage,
     setCurrentPage,
     setTotalPages,
     docState,
     fullBleedMode,
+    programmaticScrollUntil,
   } = useDocStore();
   const {
     pageHeightPx,
@@ -36,8 +38,47 @@ function PaginatedViewportInner() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const isNavigatingRef = useRef(false);
+  /** True during programmatic scrolls (page nav, search) — suppresses page tracking */
+  const programmaticScrollRef = useRef(false);
   const [pageCount, setPageCount] = useState(1);
+
+  /**
+   * Scroll to a Y offset (layout px, unscaled) and optionally move the
+   * editor caret there. Used by page navigation.
+   */
+  const scrollToOffset = useCallback((targetScroll: number, moveCursor = false) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    programmaticScrollRef.current = true;
+    container.scrollTo({ top: targetScroll, behavior: 'smooth' });
+
+    if (moveCursor && editor && contentRef.current) {
+      // Position the caret at the visual top of the target page
+      requestAnimationFrame(() => {
+        const contentTop = contentRef.current!.getBoundingClientRect().top;
+        const viewportTop = container.getBoundingClientRect().top;
+        // Detect zoom scale
+        const contentWrapper = container.querySelector('[style*="transform"]') as HTMLElement | null;
+        const transform = contentWrapper?.style.transform || '';
+        const scaleMatch = transform.match(/scale\(([\d.]+)\)/);
+        const scale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+        // Place caret 20px (scaled) below the content top
+        const caretY = (viewportTop - contentTop) / scale + 20;
+        const pos = editor.view.posAtCoords({ left: 80, top: caretY });
+        if (pos) {
+          editor.chain().focus().setTextSelection(pos.pos).run();
+        }
+      });
+    }
+
+    // Release the lock after scroll settles (or timeout as fallback)
+    const releaseLock = () => {
+      programmaticScrollRef.current = false;
+    };
+    container.addEventListener('scrollend', releaseLock, { once: true });
+    setTimeout(releaseLock, 1500);
+  }, [editor]);
 
   // Compute page count from content height and page breaks
   useEffect(() => {
@@ -70,7 +111,10 @@ function PaginatedViewportInner() {
 
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
-    if (!containerRef.current || isNavigatingRef.current) return;
+    if (!containerRef.current) return;
+    // Suppress page tracking during programmatic scrolls (page nav, search)
+    if (programmaticScrollRef.current) return;
+    if (Date.now() < programmaticScrollUntil) return;
 
     const scrollTop = containerRef.current.scrollTop;
     const maxScroll = containerRef.current.scrollHeight - containerRef.current.clientHeight;
@@ -89,9 +133,11 @@ function PaginatedViewportInner() {
     if (clampedPage !== currentPage) {
       setCurrentPage(clampedPage);
     }
-  }, [currentPage, pageHeightPx, pageGapPx, pageCount, setCurrentPage]);
+  }, [currentPage, pageHeightPx, pageGapPx, pageCount, setCurrentPage, programmaticScrollUntil]);
 
-  // Scroll to current page when it changes via navigation controls
+  // Scroll to current page when it changes via navigation controls.
+  // Also moves the editor caret to the top of the target page so typing
+  // doesn't snap the view back to the old cursor position.
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -101,22 +147,9 @@ function PaginatedViewportInner() {
     const currentScroll = containerRef.current.scrollTop;
 
     if (Math.abs(currentScroll - targetScroll) > 5) {
-      isNavigatingRef.current = true;
-      containerRef.current.scrollTo({
-        top: targetScroll,
-        behavior: 'smooth',
-      });
-
-      const onScrollEnd = () => {
-        isNavigatingRef.current = false;
-        clearTimeout(scrollTimeout);
-        containerRef.current?.removeEventListener('scrollend', onScrollEnd);
-      };
-
-      const scrollTimeout: ReturnType<typeof setTimeout> = setTimeout(onScrollEnd, 1500);
-      containerRef.current.addEventListener('scrollend', onScrollEnd, { once: true });
+      scrollToOffset(targetScroll, true);
     }
-  }, [currentPage, pageHeightPx, pageGapPx]);
+  }, [currentPage, pageHeightPx, pageGapPx, scrollToOffset]);
 
   const handleRef = useCallback(
     (node: HTMLDivElement | null) => {

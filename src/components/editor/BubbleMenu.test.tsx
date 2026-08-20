@@ -18,26 +18,6 @@ const createMockEditor = (overrides: Partial<PartialEditor> = {}): Editor => {
   } as unknown as Editor;
 };
 
-/**
- * Create a chainable mock where every method returns the same object,
- * so `chain().focus().setLink(...).run()` works. Individual methods
- * can be spied on for assertions.
- */
-function createChainableMock(methods: Record<string, ReturnType<typeof vi.fn>> = {}) {
-  const chain: Record<string, ReturnType<typeof vi.fn>> = {
-    focus: vi.fn().mockReturnThis(),
-    run: vi.fn(),
-    ...methods,
-  };
-  // Ensure all methods return the chain object for fluent chaining
-  for (const key of Object.keys(chain)) {
-    if (key !== 'focus' && key !== 'run') {
-      chain[key].mockReturnThis();
-    }
-  }
-  return chain;
-}
-
 // Mock the Tiptap BubbleMenu to capture shouldShow and render children
 vi.mock('@tiptap/react/menus', () => ({
   BubbleMenu: ({
@@ -82,84 +62,56 @@ describe('BubbleMenu', () => {
   });
 
   describe('link button', () => {
-    it('prompts for URL when no link is active', () => {
-      const setLink = vi.fn();
+    it('dispatches open-link event when clicked', () => {
       const editor = createMockEditor({
         isActive: vi.fn().mockReturnValue(false),
-        chain: vi.fn().mockReturnValue(createChainableMock({ setLink })),
+        chain: vi.fn().mockReturnThis(),
       });
       render(<BubbleMenu editor={editor} />);
 
-      vi.spyOn(window, 'prompt').mockReturnValue('https://example.com');
-      const linkBtn = screen.getByTitle('Link');
+      const handler = vi.fn();
+      window.addEventListener('simpledocs:open-link', handler);
+
+      const linkBtn = screen.getByTitle('Link (Ctrl+K)');
       fireEvent.click(linkBtn);
-      expect(window.prompt).toHaveBeenCalledWith('Enter URL:', 'https://');
-      expect(setLink).toHaveBeenCalledWith({ href: 'https://example.com' });
+
+      expect(handler).toHaveBeenCalled();
+
+      window.removeEventListener('simpledocs:open-link', handler);
     });
 
-    it('does not set link when prompt is cancelled', () => {
-      const setLink = vi.fn();
+    it('dispatches open-link event when cursor is on existing link', () => {
+      const editor = createMockEditor({
+        isActive: vi.fn().mockReturnValue(true),
+        getAttributes: vi.fn().mockReturnValue({ href: 'https://example.com' }),
+        chain: vi.fn().mockReturnThis(),
+      });
+      render(<BubbleMenu editor={editor} />);
+
+      const handler = vi.fn();
+      window.addEventListener('simpledocs:open-link', handler);
+
+      const linkBtn = screen.getByTitle('Link (Ctrl+K)');
+      fireEvent.click(linkBtn);
+
+      expect(handler).toHaveBeenCalled();
+
+      window.removeEventListener('simpledocs:open-link', handler);
+    });
+
+    it('does not call window.prompt (uses modal instead)', () => {
       const editor = createMockEditor({
         isActive: vi.fn().mockReturnValue(false),
-        chain: vi.fn().mockReturnValue(createChainableMock({ setLink })),
+        chain: vi.fn().mockReturnThis(),
       });
       render(<BubbleMenu editor={editor} />);
 
-      vi.spyOn(window, 'prompt').mockReturnValue(null);
-      const linkBtn = screen.getByTitle('Link');
+      const promptSpy = vi.spyOn(window, 'prompt');
+      const linkBtn = screen.getByTitle('Link (Ctrl+K)');
       fireEvent.click(linkBtn);
-      expect(setLink).not.toHaveBeenCalled();
-    });
 
-    it('prompts to edit URL when cursor is on a link', () => {
-      const setLink = vi.fn();
-      const unsetLink = vi.fn();
-      const editor = createMockEditor({
-        isActive: vi.fn().mockReturnValue(true),
-        getAttributes: vi.fn().mockReturnValue({ href: 'https://old.com' }),
-        chain: vi.fn().mockReturnValue(createChainableMock({ setLink, unsetLink })),
-      });
-      render(<BubbleMenu editor={editor} />);
-
-      vi.spyOn(window, 'prompt').mockReturnValue('https://new.com');
-      const linkBtn = screen.getByTitle('Link');
-      fireEvent.click(linkBtn);
-      expect(window.prompt).toHaveBeenCalledWith('Edit URL (leave empty to remove):', 'https://old.com');
-      expect(setLink).toHaveBeenCalledWith({ href: 'https://new.com' });
-      expect(unsetLink).not.toHaveBeenCalled();
-    });
-
-    it('removes link when prompt returns empty string', () => {
-      const setLink = vi.fn();
-      const unsetLink = vi.fn();
-      const editor = createMockEditor({
-        isActive: vi.fn().mockReturnValue(true),
-        getAttributes: vi.fn().mockReturnValue({ href: 'https://old.com' }),
-        chain: vi.fn().mockReturnValue(createChainableMock({ setLink, unsetLink })),
-      });
-      render(<BubbleMenu editor={editor} />);
-
-      vi.spyOn(window, 'prompt').mockReturnValue('');
-      const linkBtn = screen.getByTitle('Link');
-      fireEvent.click(linkBtn);
-      expect(unsetLink).toHaveBeenCalled();
-    });
-
-    it('keeps existing link when prompt is cancelled', () => {
-      const setLink = vi.fn();
-      const unsetLink = vi.fn();
-      const editor = createMockEditor({
-        isActive: vi.fn().mockReturnValue(true),
-        getAttributes: vi.fn().mockReturnValue({ href: 'https://old.com' }),
-        chain: vi.fn().mockReturnValue(createChainableMock({ setLink, unsetLink })),
-      });
-      render(<BubbleMenu editor={editor} />);
-
-      vi.spyOn(window, 'prompt').mockReturnValue(null);
-      const linkBtn = screen.getByTitle('Link');
-      fireEvent.click(linkBtn);
-      expect(setLink).not.toHaveBeenCalled();
-      expect(unsetLink).not.toHaveBeenCalled();
+      expect(promptSpy).not.toHaveBeenCalled();
+      promptSpy.mockRestore();
     });
   });
 });
