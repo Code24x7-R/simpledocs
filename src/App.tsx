@@ -10,6 +10,7 @@ import TableGridModal from './components/layout/TableGridModal';
 import InsertFieldModal from './components/layout/InsertFieldModal';
 import LinkModal from './components/layout/LinkModal';
 import ImageModal from './components/layout/ImageModal';
+import TableOfContentsModal from './components/layout/TableOfContentsModal';
 import CloudStorageModal from './components/layout/CloudStorageModal';
 import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
@@ -21,7 +22,7 @@ import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
   // Link modal handler
@@ -53,6 +54,17 @@ export default function App() {
     setSavedLinkSelection(null);
     setLinkOpen(false);
   }, [editor, setLinkOpen, savedLinkSelection, setSavedLinkSelection]);
+
+  // Table of Contents handler
+  const handleTocInsert = useCallback((tocContent: Record<string, unknown>, docWithAnchors: Record<string, unknown>) => {
+    if (!editor) return;
+    // Update the document content with anchors assigned to headings
+    // and any existing TOC removed
+    useDocStore.getState().updateContent(docWithAnchors);
+    // Insert the TOC at the current cursor position
+    editor.chain().focus().insertContent(tocContent).run();
+    setTocOpen(false);
+  }, [editor, setTocOpen]);
 
   // Drive open handler
   const handleOpenFromDrive = useCallback((content: string, fileName: string) => {
@@ -154,6 +166,11 @@ export default function App() {
         documentTitle={docState.title || 'Untitled'}
         documentContent={JSON.stringify(docState, null, 2)}
         onOpenDocument={handleOpenFromDrive}
+      />
+      <TableOfContentsModal
+        isOpen={tocOpen}
+        onClose={() => setTocOpen(false)}
+        onInsert={handleTocInsert}
       />
     </div>
   );

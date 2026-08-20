@@ -53,6 +53,14 @@ export const ParagraphStyle = Extension.create({
       {
         types: ['paragraph', 'heading'],
         attributes: {
+          id: {
+            default: null,
+            parseHTML: (element) => element.getAttribute('id') || null,
+            renderHTML: (attributes) => {
+              if (!attributes.id) return {};
+              return { id: attributes.id };
+            },
+          },
           lineHeight: {
             default: null,
             parseHTML: (element) => element.style.lineHeight || null,

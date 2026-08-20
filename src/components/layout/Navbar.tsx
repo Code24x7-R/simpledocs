@@ -21,6 +21,7 @@ import {
   Sparkles,
   Minus,
   Cloud,
+  List,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
@@ -55,6 +56,7 @@ export default function Navbar() {
     setDriveOpen,
     setTableGridOpen,
     setInsertFieldOpen,
+    setTocOpen,
     mruList,
     addRecentFile,
   } = useDocStore();
@@ -376,6 +378,12 @@ export default function Navbar() {
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <Sparkles className="w-4 h-4" /> Field
+              </button>
+              <button
+                onClick={() => { setTocOpen(true); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <List className="w-4 h-4" /> Table of Contents
               </button>
               <button
                 onClick={() => { setFieldMergeOpen(true); setInsertMenuOpen(false); }}

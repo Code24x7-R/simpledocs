@@ -137,6 +137,33 @@
   overflow: hidden;
 }
 
+/* Table of Contents container */
+.tiptap .toc-container {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 1em 1.25em;
+  margin: 1em 0;
+  background: #f9fafb;
+}
+
+.tiptap .toc-container ul {
+  margin: 0;
+  padding-left: 1.25em;
+}
+
+.tiptap .toc-container li {
+  margin: 0.25em 0;
+}
+
+.tiptap .toc-container a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.tiptap .toc-container a:hover {
+  text-decoration: underline;
+}
+
 /* Print styles — ensure widow/orphan control applies */
 @media print {
   .tiptap p,

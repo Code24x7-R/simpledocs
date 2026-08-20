@@ -232,6 +232,18 @@ describe('ParagraphStyle extension', () => {
     });
   });
 
+  it('renders id attribute on headings', async () => {
+    const content = '<h2 id="my-heading">Heading text</h2>';
+    render(<TestEditor content={content} />);
+    await waitFor(() => expect(testEditor).not.toBeNull());
+
+    // The id attribute should be parsed and preserved
+    await waitFor(() => {
+      const html = getEditor().getHTML();
+      expect(html).toContain('id="my-heading"');
+    });
+  });
+
   it('preserves other attributes when setting line height', async () => {
     render(<TestEditor />);
     await waitFor(() => expect(testEditor).not.toBeNull());

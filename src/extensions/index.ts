@@ -20,6 +20,7 @@ import CharacterCount from '@tiptap/extension-character-count';
 import { TemplateField } from './TemplateField';
 import { PageBreak } from './PageBreak';
 import { ParagraphStyle } from './ParagraphStyle';
+import { TableOfContents } from './TableOfContents';
 
 export function createExtensions() {
   return [
@@ -48,6 +49,7 @@ export function createExtensions() {
     TemplateField,
     PageBreak,
     ParagraphStyle,
+    TableOfContents,
     Image.configure({
       inline: false,
       allowBase64: true,

@@ -1,0 +1,327 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Richard Robertson
+import { describe, it, expect } from 'vitest';
+import {
+  extractHeadings,
+  buildTocContent,
+  assignHeadingAnchors,
+  wrapTocInContainer,
+  hasExistingToc,
+  removeExistingToc,
+  type TocEntry,
+} from './tableOfContents';
+
+const sampleDoc = {
+  type: 'doc',
+  content: [
+    {
+      type: 'heading',
+      attrs: { level: 1 },
+      content: [{ type: 'text', text: 'Introduction' }],
+    },
+    {
+      type: 'paragraph',
+      content: [{ type: 'text', text: 'Some intro text.' }],
+    },
+    {
+      type: 'heading',
+      attrs: { level: 2 },
+      content: [{ type: 'text', text: 'Background' }],
+    },
+    {
+      type: 'heading',
+      attrs: { level: 3 },
+      content: [{ type: 'text', text: 'History' }],
+    },
+    {
+      type: 'heading',
+      attrs: { level: 2 },
+      content: [{ type: 'text', text: 'Methods' }],
+    },
+    {
+      type: 'heading',
+      attrs: { level: 1 },
+      content: [{ type: 'text', text: 'Results' }],
+    },
+  ],
+};
+
+describe('extractHeadings', () => {
+  it('extracts all headings from a document', () => {
+    const entries = extractHeadings(sampleDoc);
+    expect(entries).toHaveLength(5);
+    expect(entries[0]).toEqual({
+      level: 1,
+      text: 'Introduction',
+      anchorId: 'introduction',
+    });
+    expect(entries[1].text).toBe('Background');
+    expect(entries[1].level).toBe(2);
+  });
+
+  it('filters by minLevel', () => {
+    const entries = extractHeadings(sampleDoc, { minLevel: 2 });
+    expect(entries).toHaveLength(3);
+    expect(entries.every((e) => e.level >= 2)).toBe(true);
+  });
+
+  it('filters by maxLevel', () => {
+    const entries = extractHeadings(sampleDoc, { maxLevel: 2 });
+    expect(entries).toHaveLength(4);
+    expect(entries.every((e) => e.level <= 2)).toBe(true);
+  });
+
+  it('filters by minLevel and maxLevel together', () => {
+    const entries = extractHeadings(sampleDoc, { minLevel: 2, maxLevel: 2 });
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.level === 2)).toBe(true);
+  });
+
+  it('returns empty array for document with no headings', () => {
+    const emptyDoc = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Just text.' }] }],
+    };
+    expect(extractHeadings(emptyDoc)).toEqual([]);
+  });
+
+  it('handles empty document', () => {
+    expect(extractHeadings({ type: 'doc', content: [] })).toEqual([]);
+  });
+
+  it('generates unique anchor IDs for duplicate headings', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Same' }] },
+        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Same' }] },
+        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Same' }] },
+      ],
+    };
+    const entries = extractHeadings(doc);
+    expect(entries[0].anchorId).toBe('same');
+    expect(entries[1].anchorId).toBe('same-1');
+    expect(entries[2].anchorId).toBe('same-2');
+  });
+
+  it('strips special characters from anchor IDs', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 1 },
+          content: [{ type: 'text', text: 'Hello, World! @2024' }],
+        },
+      ],
+    };
+    const entries = extractHeadings(doc);
+    expect(entries[0].anchorId).toBe('hello-world-2024');
+  });
+
+  it('handles headings with nested marks', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 1 },
+          content: [
+            { type: 'text', text: 'Bold', marks: [{ type: 'bold' }] },
+            { type: 'text', text: ' and ' },
+            { type: 'text', text: 'italic', marks: [{ type: 'italic' }] },
+          ],
+        },
+      ],
+    };
+    const entries = extractHeadings(doc);
+    expect(entries[0].text).toBe('Bold and italic');
+  });
+
+  it('generates fallback anchor for empty heading text', () => {
+    const doc = {
+      type: 'doc',
+      content: [{ type: 'heading', attrs: { level: 1 }, content: [] }],
+    };
+    const entries = extractHeadings(doc);
+    expect(entries[0].anchorId).toBe('heading');
+  });
+});
+
+describe('buildTocContent', () => {
+  it('builds a bullet list with links for each entry', () => {
+    const entries: TocEntry[] = [
+      { level: 1, text: 'Intro', anchorId: 'intro' },
+      { level: 2, text: 'Background', anchorId: 'background' },
+    ];
+    const content = buildTocContent(entries);
+    expect(content.type).toBe('bulletList');
+    expect(content.content).toHaveLength(2);
+  });
+
+  it('creates link marks with anchor hrefs', () => {
+    const entries: TocEntry[] = [{ level: 1, text: 'Intro', anchorId: 'intro' }];
+    const content = buildTocContent(entries);
+    const firstItem = (content.content as Record<string, unknown>[])[0];
+    const paragraph = (firstItem.content as Record<string, unknown>[])[0];
+    const textNode = (paragraph.content as Record<string, unknown>[])[0];
+    expect(textNode.text).toBe('Intro');
+    const marks = textNode.marks as Record<string, unknown>[];
+    expect(marks[0].type).toBe('link');
+    expect((marks[0].attrs as Record<string, unknown>).href).toBe('#intro');
+  });
+
+  it('indents entries based on heading level', () => {
+    const entries: TocEntry[] = [
+      { level: 1, text: 'Top', anchorId: 'top' },
+      { level: 3, text: 'Deep', anchorId: 'deep' },
+    ];
+    const content = buildTocContent(entries);
+    const items = content.content as Record<string, unknown>[];
+    expect((items[0].attrs as Record<string, unknown> | undefined)).toBeUndefined();
+    expect((items[1].attrs as Record<string, unknown>).indent).toBe(2);
+  });
+
+  it('returns placeholder when no entries', () => {
+    const content = buildTocContent([]);
+    expect(content.type).toBe('bulletList');
+    const firstItem = (content.content as Record<string, unknown>[])[0];
+    const paragraph = (firstItem.content as Record<string, unknown>[])[0];
+    const textNode = (paragraph.content as Record<string, unknown>[])[0];
+    expect(textNode.text).toBe('No headings found in document.');
+  });
+});
+
+describe('assignHeadingAnchors', () => {
+  it('assigns id attributes to heading nodes', () => {
+    const entries: TocEntry[] = [
+      { level: 1, text: 'Intro', anchorId: 'intro' },
+      { level: 2, text: 'Background', anchorId: 'background' },
+    ];
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Background' }] },
+      ],
+    };
+    const result = assignHeadingAnchors(doc, entries);
+    const headings = (result.content as Record<string, unknown>[]).filter(
+      (n) => n.type === 'heading'
+    );
+    expect((headings[0].attrs as Record<string, unknown>).id).toBe('intro');
+    expect((headings[1].attrs as Record<string, unknown>).id).toBe('background');
+  });
+
+  it('does not mutate the original document', () => {
+    const entries: TocEntry[] = [{ level: 1, text: 'Intro', anchorId: 'intro' }];
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
+    assignHeadingAnchors(doc, entries);
+    expect((doc.content as Record<string, unknown>[])[0].attrs).toEqual({ level: 1 });
+  });
+
+  it('handles empty entries array', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
+    const result = assignHeadingAnchors(doc, []);
+    expect(result).toEqual(JSON.parse(JSON.stringify(doc)));
+  });
+});
+
+describe('wrapTocInContainer', () => {
+  it('wraps TOC content in a tableOfContents node', () => {
+    const tocContent = { type: 'bulletList', content: [] };
+    const wrapped = wrapTocInContainer(tocContent);
+    expect(wrapped.type).toBe('tableOfContents');
+    expect((wrapped.content as unknown[])[0]).toEqual(tocContent);
+  });
+});
+
+describe('hasExistingToc', () => {
+  it('returns true when document has a TOC node', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'tableOfContents', content: [{ type: 'bulletList', content: [] }] },
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
+    expect(hasExistingToc(doc)).toBe(true);
+  });
+
+  it('returns false when document has no TOC node', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
+    expect(hasExistingToc(doc)).toBe(false);
+  });
+
+  it('returns false for empty document', () => {
+    expect(hasExistingToc({ type: 'doc', content: [] })).toBe(false);
+  });
+
+  it('detects nested TOC nodes', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'blockquote',
+          content: [
+            { type: 'tableOfContents', content: [{ type: 'bulletList', content: [] }] },
+          ],
+        },
+      ],
+    };
+    expect(hasExistingToc(doc)).toBe(true);
+  });
+});
+
+describe('removeExistingToc', () => {
+  it('removes TOC nodes from the document', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'tableOfContents', content: [{ type: 'bulletList', content: [] }] },
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
+    const result = removeExistingToc(doc);
+    expect((result.content as unknown[]).length).toBe(1);
+    expect(((result.content as unknown[])[0] as Record<string, unknown>).type).toBe('heading');
+  });
+
+  it('does not mutate the original document', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'tableOfContents', content: [{ type: 'bulletList', content: [] }] },
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
+    removeExistingToc(doc);
+    expect((doc.content as unknown[]).length).toBe(2);
+  });
+
+  it('returns unchanged document when no TOC exists', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
+    const result = removeExistingToc(doc);
+    expect((result.content as unknown[]).length).toBe(1);
+  });
+});

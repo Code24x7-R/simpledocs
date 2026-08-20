@@ -61,6 +61,7 @@ interface DocStore {
   fieldMergeOpen: boolean;
   linkOpen: boolean;
   imageOpen: boolean;
+  tocOpen: boolean;
   driveOpen: boolean;
   driveMode: 'save' | 'open';
   chatOpen: boolean;
@@ -91,6 +92,7 @@ interface DocStore {
   setFieldMergeOpen: (open: boolean) => void;
   setLinkOpen: (open: boolean) => void;
   setImageOpen: (open: boolean) => void;
+  setTocOpen: (open: boolean) => void;
   setDriveOpen: (open: boolean, mode?: 'save' | 'open') => void;
   setSavedLinkSelection: (sel: { from: number; to: number } | null) => void;
   setChatOpen: (open: boolean) => void;
@@ -240,6 +242,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     fieldMergeOpen: false,
     linkOpen: false,
     imageOpen: false,
+    tocOpen: false,
     driveOpen: false,
     driveMode: 'save',
     chatOpen: false,
@@ -318,6 +321,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     setFieldMergeOpen: (open) => set({ fieldMergeOpen: open }),
     setLinkOpen: (open) => set({ linkOpen: open }),
     setImageOpen: (open) => set({ imageOpen: open }),
+    setTocOpen: (open) => set({ tocOpen: open }),
     setDriveOpen: (open, mode = 'save') => set({ driveOpen: open, driveMode: mode }),
     setSavedLinkSelection: (sel) => set({ savedLinkSelection: sel }),
     setChatOpen: (open) => set({ chatOpen: open }),
