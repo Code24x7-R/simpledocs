@@ -11,6 +11,7 @@ import InsertFieldModal from './components/layout/InsertFieldModal';
 import LinkModal from './components/layout/LinkModal';
 import ImageModal from './components/layout/ImageModal';
 import TableOfContentsModal from './components/layout/TableOfContentsModal';
+import TtsPanel from './components/layout/TtsPanel';
 import CloudStorageModal from './components/layout/CloudStorageModal';
 import AboutModal from './components/layout/AboutModal';
 import KeyboardShortcutsModal from './components/layout/KeyboardShortcutsModal';
@@ -22,7 +23,7 @@ import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
+  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
   // Link modal handler
@@ -178,6 +179,11 @@ export default function App() {
         isOpen={tocOpen}
         onClose={() => setTocOpen(false)}
         onInsert={handleTocInsert}
+      />
+      <TtsPanel
+        isOpen={ttsOpen}
+        onClose={() => setTtsOpen(false)}
+        editor={editor}
       />
     </div>
   );

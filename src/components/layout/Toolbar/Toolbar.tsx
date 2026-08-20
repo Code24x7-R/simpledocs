@@ -31,6 +31,7 @@ import {
   IndentDecrease,
   WrapText,
   Rows,
+  Volume2,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
 import { useEditorClipboard } from '../../../hooks/useEditorClipboard';
@@ -80,7 +81,7 @@ const PARAGRAPH_SPACING = [
 
 
 export default function Toolbar() {
-  const { editor, setSearchReplaceOpen, setChatOpen, chatOpen } = useDocStore();
+  const { editor, setSearchReplaceOpen, setChatOpen, chatOpen, setTtsOpen } = useDocStore();
   const { handleCopy, handleCut, handlePaste } = useEditorClipboard(editor);
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
@@ -560,6 +561,12 @@ export default function Toolbar() {
       {/* Tools */}
       <Button onClick={() => setSearchReplaceOpen(true)} title="Search & Replace">
         <Search className="w-4 h-4" />
+      </Button>
+      <Button
+        onClick={() => setTtsOpen(true)}
+        title="Text-to-Speech (Ctrl+Shift+T)"
+      >
+        <Volume2 className="w-4 h-4" />
       </Button>
       <Button
         onClick={() => setChatOpen(!chatOpen)}

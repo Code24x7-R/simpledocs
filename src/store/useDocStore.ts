@@ -62,6 +62,7 @@ interface DocStore {
   linkOpen: boolean;
   imageOpen: boolean;
   tocOpen: boolean;
+  ttsOpen: boolean;
   driveOpen: boolean;
   driveMode: 'save' | 'open';
   chatOpen: boolean;
@@ -95,6 +96,7 @@ interface DocStore {
   setLinkOpen: (open: boolean) => void;
   setImageOpen: (open: boolean) => void;
   setTocOpen: (open: boolean) => void;
+  setTtsOpen: (open: boolean) => void;
   setDriveOpen: (open: boolean, mode?: 'save' | 'open') => void;
   setSavedLinkSelection: (sel: { from: number; to: number } | null) => void;
   setChatOpen: (open: boolean) => void;
@@ -247,6 +249,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     linkOpen: false,
     imageOpen: false,
     tocOpen: false,
+    ttsOpen: false,
     driveOpen: false,
     driveMode: 'save',
     chatOpen: false,
@@ -328,6 +331,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     setLinkOpen: (open) => set({ linkOpen: open }),
     setImageOpen: (open) => set({ imageOpen: open }),
     setTocOpen: (open) => set({ tocOpen: open }),
+    setTtsOpen: (open) => set({ ttsOpen: open }),
     setDriveOpen: (open, mode = 'save') => set({ driveOpen: open, driveMode: mode }),
     setSavedLinkSelection: (sel) => set({ savedLinkSelection: sel }),
     setChatOpen: (open) => set({ chatOpen: open }),

@@ -60,6 +60,9 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'Enter'], description: 'Replace current match' },
     { keys: ['Escape'], description: 'Close search panel' },
   ]},
+  { category: 'Text-to-Speech', items: [
+    { keys: ['Ctrl', 'Shift', 'T'], description: 'Toggle TTS panel' },
+  ]},
   { category: 'View', items: [
     { keys: ['Ctrl', 'Shift', 'F'], description: 'Toggle full-bleed view' },
   ]},

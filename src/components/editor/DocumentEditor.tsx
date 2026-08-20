@@ -158,6 +158,12 @@ export default function DocumentEditor() {
           useDocStore.getState().setFullBleedMode(!useDocStore.getState().fullBleedMode);
           return true;
         }
+        // Ctrl+Shift+T → toggle TTS panel
+        if (event.key === 't' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
+          event.preventDefault();
+          useDocStore.getState().setTtsOpen(!useDocStore.getState().ttsOpen);
+          return true;
+        }
         // Ctrl+Alt+4/5/6 → Heading 4/5/6
         if (event.key >= '4' && event.key <= '6' && (event.ctrlKey || event.metaKey) && event.altKey) {
           event.preventDefault();

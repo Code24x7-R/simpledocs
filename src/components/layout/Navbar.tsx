@@ -22,6 +22,7 @@ import {
   Minus,
   Cloud,
   List,
+  Volume2,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { useEditorClipboard } from '../../hooks/useEditorClipboard';
@@ -62,6 +63,7 @@ export default function Navbar() {
     setTableGridOpen,
     setInsertFieldOpen,
     setTocOpen,
+    setTtsOpen,
     mruList,
     addRecentFile,
   } = useDocStore();
@@ -373,6 +375,12 @@ export default function Navbar() {
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <Minus className="w-4 h-4 rotate-90" /> Page Break
+              </button>
+              <button
+                onClick={() => { setTtsOpen(true); setInsertMenuOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Volume2 className="w-4 h-4" /> Read Aloud
               </button>
             </div>
           )}
