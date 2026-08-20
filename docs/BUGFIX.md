@@ -18,15 +18,27 @@
 
 ## Features
 
+### 2026-08-20
+
+| Feature | Description |
+|---------|-------------|
+| TOC Hyperlink Cursor Focus | Clicking a TOC hyperlink now places the cursor at the heading position in addition to scrolling. |
+
+## Features
+
 ### 2026-08-03
 
 | Feature | Description |
 |---------|-------------|
 | Widow/Orphan Control | Added CSS-based widow/orphan control for print/PDF output. Configurable via Page Setup modal (Widows: 1-10, Orphans: 1-10, default: 2 each). Uses CSS `orphans`, `widows`, and `break-inside: avoid` properties. |
 
-*No active bugs.*
-
 ## Fixed Bugs
+
+### 2026-08-20
+
+| ID | Title | Description | Fix |
+|----|-------|-------------|-----|
+| B-024 | TOC hyperlink click doesn't focus heading | Clicking a Table of Contents hyperlink scrolled to the heading but didn't place the cursor there — typing would snap back to the previous cursor position. | Updated `handleClick` and `handleKeyDown` in `DocumentEditor.tsx` to call `editor.view.posAtDOM()` + `setTextSelection()` after `scrollToElement()`. Added test verifying cursor placement. |
 
 ### 2026-08-13
 
