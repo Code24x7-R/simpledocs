@@ -13,6 +13,8 @@ export interface TocEntry {
   text: string;
   /** Unique anchor ID assigned to the heading */
   anchorId: string;
+  /** Page number (1-based) where the heading appears */
+  page: number;
 }
 
 export interface TocOptions {
@@ -59,8 +61,55 @@ function generateAnchorId(text: string, existingIds: Set<string>): string {
 }
 
 /**
+ * Estimate lines consumed by a node for page estimation.
+ * Headings take more visual space; paragraphs estimate based on text length.
+ * Inline/text nodes return 0 since their parent block accounts for them.
+ */
+function estimateNodeLines(node: Record<string, unknown>): number {
+  // Inline nodes — parent block already accounts for their content
+  if (node.type === 'text' || node.type === 'hardBreak') return 0;
+
+  if (node.type === 'heading') {
+    // Headings: level 1 = 2 lines, level 2 = 1.5, others = 1
+    const level = (node.attrs as Record<string, unknown>)?.level as number | undefined;
+    if (level === 1) return 2;
+    if (level === 2) return 1.5;
+    return 1;
+  }
+  if (node.type === 'paragraph') {
+    const text = extractText(node);
+    // Assume ~80 chars per line for default font
+    return Math.max(1, Math.ceil(text.length / 80));
+  }
+  if (node.type === 'bulletList' || node.type === 'orderedList') {
+    const items = (node.content as unknown[] | undefined) ?? [];
+    return items.length;
+  }
+  if (node.type === 'table') {
+    const rows = (node.content as unknown[] | undefined) ?? [];
+    return rows.length;
+  }
+  if (node.type === 'blockquote') {
+    const text = extractText(node);
+    return Math.max(1, Math.ceil(text.length / 70));
+  }
+  if (node.type === 'codeBlock') {
+    const text = extractText(node);
+    return Math.max(1, text.split('\n').length);
+  }
+  if (node.type === 'horizontalRule' || node.type === 'pageBreak') {
+    return 1;
+  }
+  return 1;
+}
+
+/**
  * Walk the document JSON tree and collect all heading nodes with their
- * text and level, filtered by the given level range.
+ * text, level, and page number — filtered by the given level range.
+ *
+ * Page numbers are computed by counting explicit page breaks. If no page
+ * breaks exist, pages are estimated from accumulated line counts assuming
+ * A4 portrait (28 lines per page).
  */
 export function extractHeadings(
   doc: Record<string, unknown>,
@@ -70,16 +119,57 @@ export function extractHeadings(
   const entries: TocEntry[] = [];
   const existingIds = new Set<string>();
 
+  // First pass: count explicit page breaks to determine pagination mode
+  let totalPageBreaks = 0;
+  function scanStats(nodes: unknown[]) {
+    for (const node of nodes) {
+      if (!node || typeof node !== 'object') continue;
+      const n = node as Record<string, unknown>;
+      if (n.type === 'pageBreak') totalPageBreaks++;
+      if (n.content && Array.isArray(n.content)) {
+        scanStats(n.content as unknown[]);
+      }
+    }
+  }
+  if (doc.content && Array.isArray(doc.content)) {
+    scanStats(doc.content as unknown[]);
+  }
+
+  const LINES_PER_PAGE = 28; // A4 portrait default
+  const hasPageBreaks = totalPageBreaks > 0;
+
+  // Second pass: assign page numbers to headings
+  let currentPage = 1;
+  let linesAccumulated = 0;
+
   function walk(nodes: unknown[]) {
     for (const node of nodes) {
       if (!node || typeof node !== 'object') continue;
       const n = node as Record<string, unknown>;
+
+      if (n.type === 'pageBreak') {
+        currentPage++;
+        linesAccumulated = 0;
+        continue;
+      }
+
+      // Estimate lines for this node (for line-based page tracking)
+      if (hasPageBreaks) {
+        // When page breaks exist, track lines to warn about overflow but
+        // rely on explicit breaks for page numbers
+        linesAccumulated += estimateNodeLines(n);
+      } else {
+        // No page breaks — estimate page from accumulated lines
+        linesAccumulated += estimateNodeLines(n);
+        currentPage = Math.floor(linesAccumulated / LINES_PER_PAGE) + 1;
+      }
+
       if (n.type === 'heading') {
         const level = (n.attrs as Record<string, unknown>)?.level as number | undefined;
         if (level && level >= minLevel && level <= maxLevel) {
           const text = extractText(n);
           const anchorId = generateAnchorId(text, existingIds);
-          entries.push({ level, text, anchorId });
+          entries.push({ level, text, anchorId, page: currentPage });
         }
       }
       if (n.content && Array.isArray(n.content)) {
@@ -87,6 +177,10 @@ export function extractHeadings(
       }
     }
   }
+
+  // Reset for the actual walk
+  currentPage = 1;
+  linesAccumulated = 0;
 
   if (doc.content && Array.isArray(doc.content)) {
     walk(doc.content as unknown[]);
@@ -125,6 +219,8 @@ export function buildTocContent(entries: TocEntry[]): Record<string, unknown> {
 
   const listItems = entries.map((entry) => {
     const indent = entry.level - minLevel;
+    // Build the text with a tab/space + page number after the heading text
+    const pageNum = entry.page;
     return {
       type: 'listItem',
       attrs: indent > 0 ? { indent } : undefined,
@@ -145,6 +241,10 @@ export function buildTocContent(entries: TocEntry[]): Record<string, unknown> {
                 },
               ],
               text: entry.text,
+            },
+            {
+              type: 'text',
+              text: `\t${pageNum}`,
             },
           ],
         },

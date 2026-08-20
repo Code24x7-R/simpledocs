@@ -146,10 +146,10 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
                     style={{ paddingLeft: `${(entry.level - minLevel) * 16}px` }}
                   >
                     <span className="text-blue-500">›</span>
-                    <span className="text-blue-600 hover:underline cursor-pointer">
+                    <span className="text-blue-600 hover:underline cursor-pointer flex-1 truncate">
                       {entry.text || '(empty heading)'}
                     </span>
-                    <span className="text-gray-400 ml-auto text-[10px]">H{entry.level}</span>
+                    <span className="text-gray-400 text-[10px] w-8 text-right">p.{entry.page}</span>
                   </li>
                 ))}
               </ul>

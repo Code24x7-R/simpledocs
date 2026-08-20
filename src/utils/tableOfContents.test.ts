@@ -54,6 +54,7 @@ describe('extractHeadings', () => {
       level: 1,
       text: 'Introduction',
       anchorId: 'introduction',
+      page: 1,
     });
     expect(entries[1].text).toBe('Background');
     expect(entries[1].level).toBe(2);
@@ -104,6 +105,43 @@ describe('extractHeadings', () => {
     expect(entries[2].anchorId).toBe('same-2');
   });
 
+  it('assigns page 1 to all headings when no page breaks', () => {
+    const entries = extractHeadings(sampleDoc);
+    expect(entries.every((e) => e.page === 1)).toBe(true);
+  });
+
+  it('increments page number at page breaks', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Page 1 Heading' }] },
+        { type: 'pageBreak' },
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Page 2 Heading' }] },
+        { type: 'pageBreak' },
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Page 3 Heading' }] },
+      ],
+    };
+    const entries = extractHeadings(doc);
+    expect(entries[0].page).toBe(1);
+    expect(entries[1].page).toBe(2);
+    expect(entries[2].page).toBe(3);
+  });
+
+  it('estimates page numbers from line counts when no page breaks', () => {
+    // Create a document with enough content to span multiple pages
+    // A4 = 28 lines per page. Each paragraph ~1 line, each h1 = 2 lines
+    const content: unknown[] = [];
+    // Fill page 1: 28 lines of paragraphs
+    for (let i = 0; i < 28; i++) {
+      content.push({ type: 'paragraph', content: [{ type: 'text', text: `Line ${i}` }] });
+    }
+    // Heading on page 2
+    content.push({ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Page 2 Heading' }] });
+    const doc = { type: 'doc', content };
+    const entries = extractHeadings(doc);
+    expect(entries[0].page).toBe(2);
+  });
+
   it('strips special characters from anchor IDs', () => {
     const doc = {
       type: 'doc',
@@ -151,8 +189,8 @@ describe('extractHeadings', () => {
 describe('buildTocContent', () => {
   it('builds a bullet list with links for each entry', () => {
     const entries: TocEntry[] = [
-      { level: 1, text: 'Intro', anchorId: 'intro' },
-      { level: 2, text: 'Background', anchorId: 'background' },
+      { level: 1, text: 'Intro', anchorId: 'intro', page: 1 },
+      { level: 2, text: 'Background', anchorId: 'background', page: 1 },
     ];
     const content = buildTocContent(entries);
     expect(content.type).toBe('bulletList');
@@ -160,7 +198,7 @@ describe('buildTocContent', () => {
   });
 
   it('creates link marks with anchor hrefs', () => {
-    const entries: TocEntry[] = [{ level: 1, text: 'Intro', anchorId: 'intro' }];
+    const entries: TocEntry[] = [{ level: 1, text: 'Intro', anchorId: 'intro', page: 1 }];
     const content = buildTocContent(entries);
     const firstItem = (content.content as Record<string, unknown>[])[0];
     const paragraph = (firstItem.content as Record<string, unknown>[])[0];
@@ -173,8 +211,8 @@ describe('buildTocContent', () => {
 
   it('indents entries based on heading level', () => {
     const entries: TocEntry[] = [
-      { level: 1, text: 'Top', anchorId: 'top' },
-      { level: 3, text: 'Deep', anchorId: 'deep' },
+      { level: 1, text: 'Top', anchorId: 'top', page: 1 },
+      { level: 3, text: 'Deep', anchorId: 'deep', page: 2 },
     ];
     const content = buildTocContent(entries);
     const items = content.content as Record<string, unknown>[];
@@ -195,8 +233,8 @@ describe('buildTocContent', () => {
 describe('assignHeadingAnchors', () => {
   it('assigns id attributes to heading nodes', () => {
     const entries: TocEntry[] = [
-      { level: 1, text: 'Intro', anchorId: 'intro' },
-      { level: 2, text: 'Background', anchorId: 'background' },
+      { level: 1, text: 'Intro', anchorId: 'intro', page: 1 },
+      { level: 2, text: 'Background', anchorId: 'background', page: 1 },
     ];
     const doc = {
       type: 'doc',
@@ -214,7 +252,7 @@ describe('assignHeadingAnchors', () => {
   });
 
   it('does not mutate the original document', () => {
-    const entries: TocEntry[] = [{ level: 1, text: 'Intro', anchorId: 'intro' }];
+    const entries: TocEntry[] = [{ level: 1, text: 'Intro', anchorId: 'intro', page: 1 }];
     const doc = {
       type: 'doc',
       content: [

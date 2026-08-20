@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 
 // Capture the options passed to useEditor
-let capturedOptions: Record<string, unknown> = {};
+let capturedOptions: Record<string, unknown> & { editorProps?: Record<string, unknown> } = {};
 const mockSetEditor = vi.fn();
 
 vi.mock('@tiptap/react', () => ({
@@ -78,5 +78,50 @@ describe('DocumentEditor', () => {
     await waitFor(() => {
       expect(getByTestId('editor-content')).toBeTruthy();
     });
+  });
+
+  it('handleClick intercepts internal anchor links', async () => {
+    render(<DocumentEditor />);
+    await waitFor(() => expect(capturedOptions).toBeTruthy());
+
+    const handleClick = (capturedOptions.editorProps as { handleClick: (_view: unknown, _pos: number, event: MouseEvent) => boolean })?.handleClick;
+
+    expect(handleClick).toBeDefined();
+
+    // Create a mock anchor element with href="#my-heading"
+    const mockAnchor = document.createElement('a');
+    mockAnchor.setAttribute('href', '#my-heading');
+
+    const mockEvent = {
+      target: mockAnchor,
+      preventDefault: vi.fn(),
+    } as unknown as MouseEvent;
+
+    const result = handleClick({}, 0, mockEvent);
+
+    // Should intercept the click (return true) and prevent default navigation
+    expect(result).toBe(true);
+    expect(mockEvent.preventDefault).toHaveBeenCalled();
+  });
+
+  it('handleClick does not intercept non-anchor clicks', async () => {
+    render(<DocumentEditor />);
+    await waitFor(() => expect(capturedOptions).toBeTruthy());
+
+    const handleClick = (capturedOptions.editorProps as { handleClick: (_view: unknown, _pos: number, event: MouseEvent) => boolean })?.handleClick;
+
+    // Create a mock non-anchor element
+    const mockDiv = document.createElement('div');
+
+    const mockEvent = {
+      target: mockDiv,
+      preventDefault: vi.fn(),
+    } as unknown as MouseEvent;
+
+    const result = handleClick({}, 0, mockEvent);
+
+    // Should not intercept (return false)
+    expect(result).toBe(false);
+    expect(mockEvent.preventDefault).not.toHaveBeenCalled();
   });
 });
