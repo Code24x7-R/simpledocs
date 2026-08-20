@@ -1,5 +1,31 @@
 # simpledocs — Progress Log
 
+## 2026-08-20 — [FEATURE] Phase 39: Text-to-Speech (TTS) Reader
+
+### Summary
+
+Implemented a TTS reader using the Web Speech API (zero dependencies, works offline). Inspired by GlowReadTTS but uses browser-native speech synthesis instead of bundled neural models.
+
+### Changes
+- `src/utils/tts/ttsTypes.ts` — TTS type definitions (TtsVoice, TtsState, TtsPlaybackState)
+- `src/utils/tts/TtsService.ts` — Singleton service wrapping SpeechSynthesis with sentence-level chunking, queue-based playback, and event-driven state
+- `src/components/layout/TtsPanel.tsx` — Floating bottom-center panel with play/pause/stop, voice selector, speed slider (0.5x–2x), volume slider (0%–100%), Read All/Selection buttons
+- `src/components/layout/Toolbar/Toolbar.tsx` — Added 🔊 TTS button
+- `src/components/editor/DocumentEditor.tsx` — Ctrl+Shift+T keyboard shortcut
+- `src/components/layout/Navbar.tsx` — Insert → Read Aloud menu item
+- `src/components/layout/KeyboardShortcutsModal.tsx` — Documented Ctrl+Shift+T
+- `src/store/useDocStore.ts` — Added ttsOpen state + setTtsOpen action
+- `src/App.tsx` — Wired TtsPanel
+- `src/utils/tts/TtsService.test.ts` — 26 unit tests
+- `src/components/layout/TtsPanel.test.tsx` — 15 component tests
+
+### Results
+- **884 tests pass** (49 suites) — up from 843
+- Lint clean, type-check clean, build succeeds
+- Zero dependencies added
+
+---
+
 ## 2026-08-20 — [FEATURE] TTS Integration Audit & Code Consolidation
 
 ### Summary

@@ -15,6 +15,7 @@
 - [Table of Contents](#table-of-contents)
 - [Page Navigation](#page-navigation)
 - [Search & Replace](#search--replace)
+- [Text-to-Speech (TTS)](#text-to-speech-tts)
 - [File Operations](#file-operations)
   - [Cloud Storage](#cloud-storage)
     - [Google Drive Setup](#google-drive-setup)
@@ -430,6 +431,62 @@ SimpleDocs can auto-generate a Table of Contents (TOC) from your document's head
 
 ---
 
+## Text-to-Speech (TTS)
+
+SimpleDocs can read your document aloud using your browser's built-in speech synthesis. No internet connection required.
+
+### Opening the TTS Panel
+
+| Method | Action |
+|--------|--------|
+| Keyboard | `Ctrl + Shift + T` |
+| Toolbar | Click the **🔊** icon |
+| Menu | Insert → Read Aloud |
+
+### Reading Text
+
+- **Read All** — reads the entire document from start to finish.
+- **Selection** — reads only the currently selected text (disabled when nothing is selected).
+
+### Playback Controls
+
+| Control | Description |
+|---------|-------------|
+| ▶ Play / ⏸ Pause | Toggle playback |
+| ⏹ Stop | Stop reading and reset to beginning |
+| 🔊 / 🔇 | Toggle mute |
+
+### Voice Selection
+
+- The **Voice** dropdown shows all voices installed on your system.
+- Voices marked with ☁ are remote/network voices (require internet).
+- Local voices work offline.
+- The default voice uses your browser's default.
+
+### Speed and Volume
+
+- **Speed** slider: 0.5× (slow) to 2.0× (fast), in 0.1× steps.
+- **Volume** slider: 0% (mute) to 100% (max), in 5% steps.
+- Settings apply immediately to current and future speech.
+
+### Status
+
+The status bar shows:
+- **Ready** — panel open, nothing playing
+- **Reading... (XX%)** — actively reading with progress percentage
+- **Paused (XX%)** — paused at current position
+- **Finished** — reading complete
+- **Error: [message]** — an error occurred
+
+### Tips
+
+- TTS uses your operating system's installed voices. For more/better voices, install language packs in your OS settings.
+- Long documents are split into sentences for natural pauses at punctuation.
+- You can continue editing while TTS reads — the panel stays docked at the bottom.
+- Press `Escape` or click ✕ to close the panel (stops playback).
+
+---
+
 ## File Operations
 
 ### Saving & Opening
@@ -724,7 +781,6 @@ The following features are on the roadmap for future releases:
 
 | Feature | Description |
 |---------|-------------|
-| **Text-to-Speech (TTS)** | Read document or selection aloud with voice, speed, and volume controls |
 | **Subscript/Superscript** | Subscript and superscript text formatting |
 | **Syntax Highlighting** | Code syntax highlighting in code blocks |
 | **Table Formatting** | Border thickness, cell background color |
