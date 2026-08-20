@@ -58,11 +58,18 @@ export default function App() {
   // Table of Contents handler
   const handleTocInsert = useCallback((tocContent: Record<string, unknown>, docWithAnchors: Record<string, unknown>) => {
     if (!editor) return;
-    // Update the document content with anchors assigned to headings
-    // and any existing TOC removed
-    useDocStore.getState().updateContent(docWithAnchors);
-    // Insert the TOC at the current cursor position
+
+    // Step 1: Apply heading anchors to the editor content
+    editor.commands.setContent(docWithAnchors, { emitUpdate: false });
+
+    // Step 2: Insert the TOC at the current cursor position
     editor.chain().focus().insertContent(tocContent).run();
+
+    // Step 3: Update the store with the COMPLETE document (anchors + TOC)
+    // This prevents the content-sync useEffect from overwriting our changes
+    const finalContent = editor.getJSON();
+    useDocStore.getState().updateContent(finalContent);
+
     setTocOpen(false);
   }, [editor, setTocOpen]);
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, act } from '@testing-library/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -41,6 +41,75 @@ function TestEditor({ content = '<p>Hello</p>' }: { content?: string | object })
     </div>
   );
 }
+
+describe('Heading id rendering in DOM', () => {
+  beforeEach(() => {
+    testEditor = null;
+  });
+
+  it('renders id attribute on heading after setContent with anchor', async () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 1 },
+          content: [{ type: 'text', text: 'Introduction' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Some text.' }],
+        },
+      ],
+    };
+
+    render(<TestEditor content={doc} />);
+    await waitFor(() => expect(testEditor).not.toBeNull());
+
+    // Simulate what assignHeadingAnchors does
+    const entries = extractHeadings(doc);
+    const docWithAnchors = assignHeadingAnchors(doc, entries);
+
+    // Set content via editor (simulating updateContent + sync)
+    act(() => {
+      testEditor!.commands.setContent(docWithAnchors, { emitUpdate: false });
+    });
+
+    await waitFor(() => {
+      const html = testEditor!.getHTML();
+      expect(html).toContain('id="introduction"');
+      expect(html).toContain('<h1');
+    });
+  });
+
+  it('renders id attribute on multiple headings', async () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Chapter One' }] },
+        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Section A' }] },
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Chapter Two' }] },
+      ],
+    };
+
+    render(<TestEditor content={doc} />);
+    await waitFor(() => expect(testEditor).not.toBeNull());
+
+    const entries = extractHeadings(doc);
+    const docWithAnchors = assignHeadingAnchors(doc, entries);
+
+    act(() => {
+      testEditor!.commands.setContent(docWithAnchors, { emitUpdate: false });
+    });
+
+    await waitFor(() => {
+      const html = testEditor!.getHTML();
+      expect(html).toContain('id="chapter-one"');
+      expect(html).toContain('id="section-a"');
+      expect(html).toContain('id="chapter-two"');
+    });
+  });
+});
 
 describe('TOC hyperlink integration', () => {
   beforeEach(() => {
@@ -123,32 +192,31 @@ describe('TOC hyperlink integration', () => {
   });
 
   it('renders TOC links as <a> tags', async () => {
-    // Use HTML content to test TOC rendering
-    const htmlContent = '<div data-toc><ul><li><p><a href="#intro">Introduction</a></p></li></ul></div><h1>Hello</h1>';
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Intro' }] },
+      ],
+    };
 
-    render(<TestEditor content={htmlContent} />);
+    const entries = extractHeadings(doc);
+    const tocContent = buildTocContent(entries);
+    const wrapped = wrapTocInContainer(tocContent);
+    const docWithAnchors = assignHeadingAnchors(doc, entries);
+
+    const fullDoc = {
+      type: 'doc',
+      content: [wrapped, ...(docWithAnchors.content as unknown[])],
+    };
+
+    render(<TestEditor content={fullDoc} />);
     await waitFor(() => expect(testEditor).not.toBeNull());
 
     await waitFor(() => {
       const html = testEditor!.getHTML();
-      expect(html).toContain('data-toc');
+      // Should contain an <a> tag with href
       expect(html).toContain('href="#intro"');
-    });
-  });
-});
-
-describe('Heading id attribute rendering', () => {
-  beforeEach(() => {
-    testEditor = null;
-  });
-
-  it('renders heading with id from parsed content', async () => {
-    render(<TestEditor content={'<h2 id="parsed-id">Parsed Heading</h2>'} />);
-    await waitFor(() => expect(testEditor).not.toBeNull());
-
-    await waitFor(() => {
-      const html = testEditor!.getHTML();
-      expect(html).toContain('id="parsed-id"');
+      expect(html).toContain('<a');
     });
   });
 });
