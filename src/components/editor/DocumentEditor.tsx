@@ -84,7 +84,7 @@ export default function DocumentEditor() {
           const href = anchor.getAttribute('href');
           if (href) {
             event.preventDefault();
-            // Internal anchor links (#heading) — scroll to target
+            // Internal anchor links (#heading) — scroll to target and focus cursor
             if (href.startsWith('#')) {
               const targetId = href.slice(1);
               const editorEl = editorRef.current;
@@ -93,6 +93,11 @@ export default function DocumentEditor() {
                 const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
                 if (targetEl) {
                   scrollToElement(targetEl);
+                  // Place the editor cursor at the heading so typing continues there
+                  if (editor) {
+                    const pos = editor.view.posAtDOM(targetEl, 0);
+                    editor.chain().focus().setTextSelection(pos).run();
+                  }
                   return true;
                 }
               }
@@ -123,13 +128,15 @@ export default function DocumentEditor() {
             if (href) {
               event.preventDefault();
               if (href.startsWith('#')) {
-                // Internal anchor — scroll to target
+                // Internal anchor — scroll to target and focus cursor
                 const targetId = href.slice(1);
                 const editorEl = editorRef.current;
                 if (editorEl) {
                   const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
                   if (targetEl) {
                     scrollToElement(targetEl);
+                    const pos = editor.view.posAtDOM(targetEl, 0);
+                    editor.chain().focus().setTextSelection(pos).run();
                   }
                 }
               } else {
