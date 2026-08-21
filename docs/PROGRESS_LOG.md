@@ -7,12 +7,12 @@
 Fixed clicking a Table of Contents hyperlink to both scroll to the heading AND place the cursor there. Previously only scrolled — typing after navigation snapped back to the old cursor position.
 
 ### Changes
-- `src/components/editor/DocumentEditor.tsx` — `handleClick` and `handleKeyDown` now call `editor.view.posAtDOM()` + `setTextSelection()` after `scrollToElement()`
-- `src/components/editor/DocumentEditor.test.tsx` — Added test verifying cursor placement at heading
+- `src/components/editor/DocumentEditor.tsx` — Replaced custom `scrollToElement` with Tiptap's native `scrollIntoView`. Chain: `editor.chain().focus().setTextSelection(pos).scrollIntoView().run()`
+- `src/components/editor/DocumentEditor.test.tsx` — Added tests verifying cursor placement and native scrollIntoView usage
 - `docs/BUGFIX.md` — Added B-024 entry
 
 ### Results
-- 885 tests pass (49 suites) — up from 884
+- 886 tests pass (49 suites) — up from 884
 - Lint clean, type-check clean, build succeeds
 
 ---

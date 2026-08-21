@@ -38,7 +38,7 @@
 
 | ID | Title | Description | Fix |
 |----|-------|-------------|-----|
-| B-024 | TOC hyperlink click doesn't focus heading | Clicking a Table of Contents hyperlink scrolled to the heading but didn't place the cursor there — typing would snap back to the previous cursor position. | Updated `handleClick` and `handleKeyDown` in `DocumentEditor.tsx` to call `editor.view.posAtDOM()` + `setTextSelection()` after `scrollToElement()`. Added test verifying cursor placement. |
+| B-024 | TOC hyperlink click doesn't focus heading | Clicking a Table of Contents hyperlink scrolled to the heading but didn't place the cursor there — typing would snap back to the previous cursor position. | Replaced custom `scrollToElement` with Tiptap's native `scrollIntoView` command. Chain is now `editor.chain().focus().setTextSelection(pos).scrollIntoView().run()`. Added tests verifying cursor placement and scroll behavior. |
 
 ### 2026-08-13
 
