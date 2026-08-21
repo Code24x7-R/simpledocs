@@ -1,5 +1,22 @@
 # simpledocs — Progress Log
 
+## 2026-08-22 — [BUGFIX] B-025: View menu stays open after item click
+
+### Summary
+
+The View menu (zoom +/− buttons and Full-Bleed View toggle) remained visible after clicking a menu item. Standard menu behavior is to close after the action fires. File, Edit, Insert, and Help menus all correctly closed — only View had the bug.
+
+### Changes
+- `src/components/layout/Navbar.tsx` — Added `setViewMenuOpen(false)` to three onClick handlers that were missing it: zoom out (−), zoom in (+), and Full-Bleed View toggle.
+- `src/components/layout/Navbar.test.tsx` — New test file with 19 tests covering menu-close behavior for all 5 menus (File, Edit, Insert, View, Help). Uses the real Zustand store for Help menu (store-backed) and tests local state menus (File, Edit, Insert, View).
+- `docs/BUGFIX.md` — Added B-025 entry.
+
+### Results
+- 906 tests pass (50 suites) — up from 886
+- Lint clean, type-check clean, build succeeds
+
+---
+
 ## 2026-08-20 — [BUGFIX] B-024: TOC hyperlink click doesn't focus heading
 
 ### Summary

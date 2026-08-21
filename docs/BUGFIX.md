@@ -34,6 +34,12 @@
 
 ## Fixed Bugs
 
+### 2026-08-22
+
+| ID | Title | Description | Fix |
+|----|-------|-------------|-----|
+| B-025 | View menu stays open after item click | The View menu (zoom +/− buttons and Full-Bleed View toggle) remained visible after clicking a menu item — the standard menu pattern is to close after the action fires. Other menus (File, Edit, Insert, Help) correctly closed. | Added `setViewMenuOpen(false)` to the three onClick handlers in `Navbar.tsx` that were missing it: zoom out (−), zoom in (+), and Full-Bleed View toggle. Added 19 tests in `Navbar.test.tsx` covering all 5 menus. |
+
 ### 2026-08-20
 
 | ID | Title | Description | Fix |

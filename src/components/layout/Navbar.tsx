@@ -417,7 +417,7 @@ export default function Navbar() {
                 <span className="text-xs text-gray-500">Zoom</span>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setZoom(Math.max(0.5, +(zoom - ZOOM_STEP).toFixed(2)))}
+                    onClick={() => { setZoom(Math.max(0.5, +(zoom - ZOOM_STEP).toFixed(2))); setViewMenuOpen(false); }}
                     className="w-6 h-6 text-xs rounded hover:bg-gray-200 flex items-center justify-center"
                     title="Zoom out"
                   >
@@ -425,7 +425,7 @@ export default function Navbar() {
                   </button>
                   <span className="text-xs text-gray-600 w-10 text-center">{Math.round(zoom * 100)}%</span>
                   <button
-                    onClick={() => setZoom(Math.min(2, +(zoom + ZOOM_STEP).toFixed(2)))}
+                    onClick={() => { setZoom(Math.min(2, +(zoom + ZOOM_STEP).toFixed(2))); setViewMenuOpen(false); }}
                     className="w-6 h-6 text-xs rounded hover:bg-gray-200 flex items-center justify-center"
                     title="Zoom in"
                   >
@@ -434,7 +434,7 @@ export default function Navbar() {
                 </div>
               </div>
               <button
-                onClick={() => setFullBleedMode(!fullBleedMode)}
+                onClick={() => { setFullBleedMode(!fullBleedMode); setViewMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <span className="w-4 h-4 inline-flex items-center justify-center shrink-0">
