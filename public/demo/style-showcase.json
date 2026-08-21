@@ -24,7 +24,7 @@
     "pageGap": 24,
     "orphans": 2,
     "widows": 2,
-    "defaultFullBleedMode": false
+    "defaultNormalEditorMode": false
   },
   "content": {
     "type": "doc",
@@ -102,7 +102,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Heading 1 \u00e2\u20ac\u201d Document Title"
+            "text": "Heading 1 — Document Title"
           }
         ]
       },
@@ -115,7 +115,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Heading 2 \u00e2\u20ac\u201d Major Section"
+            "text": "Heading 2 — Major Section"
           }
         ]
       },
@@ -128,7 +128,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Heading 3 \u00e2\u20ac\u201d Subsection"
+            "text": "Heading 3 — Subsection"
           }
         ]
       },
@@ -141,7 +141,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Heading 4 \u00e2\u20ac\u201d Sub-subsection"
+            "text": "Heading 4 — Sub-subsection"
           }
         ]
       },
@@ -154,7 +154,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Heading 5 \u00e2\u20ac\u201d Minor heading"
+            "text": "Heading 5 — Minor heading"
           }
         ]
       },
@@ -167,7 +167,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Heading 6 \u00e2\u20ac\u201d Smallest heading"
+            "text": "Heading 6 — Smallest heading"
           }
         ]
       },
@@ -206,7 +206,7 @@
         "content": [
           {
             "type": "text",
-            "text": "This paragraph uses 1.15 line spacing \u00e2\u20ac\u201d the default word processing standard. It provides a small amount of breathing room between lines without wasting space."
+            "text": "This paragraph uses 1.15 line spacing — the default word processing standard. It provides a small amount of breathing room between lines without wasting space."
           }
         ]
       },
@@ -266,7 +266,7 @@
         "content": [
           {
             "type": "text",
-            "text": "This paragraph has no indent \u00e2\u20ac\u201d it sits flush with the left margin. All paragraphs start here by default."
+            "text": "This paragraph has no indent — it sits flush with the left margin. All paragraphs start here by default."
           }
         ]
       },
@@ -704,7 +704,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Left-aligned text \u00e2\u20ac\u201d the default for most documents. Comfortable to read and expected in formal correspondence."
+            "text": "Left-aligned text — the default for most documents. Comfortable to read and expected in formal correspondence."
           }
         ]
       },
@@ -716,7 +716,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Center-aligned text \u00e2\u20ac\u201d ideal for titles, epigraphs, and short statements that deserve attention."
+            "text": "Center-aligned text — ideal for titles, epigraphs, and short statements that deserve attention."
           }
         ]
       },
@@ -728,7 +728,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Right-aligned text \u00e2\u20ac\u201d useful for signatures, dates, and formal letter formatting."
+            "text": "Right-aligned text — useful for signatures, dates, and formal letter formatting."
           }
         ]
       },
@@ -740,7 +740,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Justified text \u00e2\u20ac\u201d creates clean edges on both left and right margins. Common in newspapers, magazines, and formal publications for a polished, professional appearance."
+            "text": "Justified text — creates clean edges on both left and right margins. Common in newspapers, magazines, and formal publications for a polished, professional appearance."
           }
         ]
       },
