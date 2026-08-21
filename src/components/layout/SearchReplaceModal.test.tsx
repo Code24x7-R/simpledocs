@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import SearchReplaceModal from './SearchReplaceModal';
 
 // Mock the store
@@ -12,7 +12,9 @@ const mockEditor = {
   commands: {
     setTextSelection: vi.fn(),
     focus: vi.fn(),
+    scrollIntoView: vi.fn(),
   },
+  chain: vi.fn().mockReturnThis(),
   state: {
     selection: { from: 0, to: 0, empty: true },
     doc: { textBetween: () => '' },
@@ -21,6 +23,8 @@ const mockEditor = {
     coordsAtPos: () => ({ top: 0, bottom: 10, left: 0, right: 100 }),
   },
 };
+
+const mockBeginProgrammaticScroll = vi.fn();
 
 vi.mock('../../store/useDocStore', () => ({
   useDocStore: () => ({
@@ -40,6 +44,7 @@ vi.mock('../../store/useDocStore', () => ({
     },
     updateContent: mockUpdateContent,
     setSearchReplaceOpen: mockSetSearchReplaceOpen,
+    beginProgrammaticScroll: mockBeginProgrammaticScroll,
   }),
 }));
 
@@ -175,5 +180,43 @@ describe('SearchReplaceModal', () => {
     const allButton = screen.getByText('All');
     expect(replaceButton).toBeDisabled();
     expect(allButton).toBeDisabled();
+  });
+
+  it('navigateToMatch uses scrollIntoView in the editor chain', async () => {
+    // Set up a chain mock that tracks method calls
+    const chainMethods: string[] = [];
+    const chainableObj: {
+      focus: () => typeof chainableObj;
+      setTextSelection: () => typeof chainableObj;
+      scrollIntoView: () => typeof chainableObj;
+      run: () => void;
+    } = {
+      focus: () => { chainMethods.push('focus'); return chainableObj; },
+      setTextSelection: () => { chainMethods.push('setTextSelection'); return chainableObj; },
+      scrollIntoView: () => { chainMethods.push('scrollIntoView'); return chainableObj; },
+      run: () => { chainMethods.push('run'); },
+    };
+    mockEditor.chain = vi.fn().mockReturnValue(chainableObj);
+
+    render(<SearchReplaceModal isOpen={true} onClose={() => {}} />);
+
+    // Type a search term and advance debounce
+    const input = screen.getByPlaceholderText('Search for...');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'fox' } });
+      vi.advanceTimersByTime(200);
+    });
+
+    // Click find next to trigger navigateToMatch
+    const findNextButton = screen.getByTitle('Next match (F3)');
+    await act(async () => {
+      fireEvent.click(findNextButton);
+    });
+
+    // Verify the chain includes focus, setTextSelection, scrollIntoView, run
+    expect(chainMethods).toContain('focus');
+    expect(chainMethods).toContain('setTextSelection');
+    expect(chainMethods).toContain('scrollIntoView');
+    expect(chainMethods).toContain('run');
   });
 });

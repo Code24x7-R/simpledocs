@@ -81,37 +81,18 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     };
   }, [searchTerm, caseSensitive, wholeWord, useRegex, isOpen, debouncedSearch, getSearchOptions]);
 
-  const scrollMatchIntoView = (from: number, to: number) => {
-    if (!editor) return;
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const startCoords = editor.view.coordsAtPos(from);
-        const endCoords = editor.view.coordsAtPos(to);
-
-        if (!startCoords || !endCoords) return;
-
-        const scrollContainer = document.getElementById('paginated-viewport');
-        if (!scrollContainer) return;
-
-        // Signal that this is a programmatic scroll so page tracking doesn't jump
-        beginProgrammaticScroll(600);
-
-        const midY = (startCoords.top + endCoords.bottom) / 2;
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const targetScroll = scrollContainer.scrollTop + (midY - containerRect.top - containerRect.height / 2);
-        scrollContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-      });
-    });
-  };
-
   const navigateToMatch = (index: number) => {
     if (!editor || allMatches.length === 0) return;
 
     const match = allMatches[index];
-    editor.commands.setTextSelection({ from: match.from, to: match.to });
-    editor.commands.focus();
-    scrollMatchIntoView(match.from, match.to);
+    // Suppress page tracking during the scroll so currentPage doesn't jump
+    beginProgrammaticScroll(600);
+    // Set selection, focus, and scroll into view in a single chain
+    editor.chain()
+      .focus()
+      .setTextSelection({ from: match.from, to: match.to })
+      .scrollIntoView()
+      .run();
     setCurrentMatchIndex(index);
   };
 
