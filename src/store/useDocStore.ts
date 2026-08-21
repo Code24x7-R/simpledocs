@@ -27,8 +27,8 @@ export interface DocSettings {
   orphans: number;
   /** Minimum lines at top of next page after a break (default: 2) */
   widows: number;
-  /** Whether to launch in full-bleed (distraction-free) mode by default */
-  defaultFullBleedMode: boolean;
+  /** Whether to launch in Normal Editor (edge-to-edge) mode by default */
+  defaultNormalEditorMode: boolean;
 }
 
 export interface DocState {
@@ -47,8 +47,8 @@ interface DocStore {
   docState: DocState;
   editor: Editor | null;
   zoom: number;
-  /** Whether full-bleed (distraction-free) mode is currently active */
-  fullBleedMode: boolean;
+  /** Whether Normal Editor (edge-to-edge) mode is currently active */
+  normalEditorMode: boolean;
   pageSetupOpen: boolean;
   insertFieldOpen: boolean;
   tableGridOpen: boolean;
@@ -106,7 +106,7 @@ interface DocStore {
   goToNextPage: () => void;
   goToPrevPage: () => void;
   goToPage: (page: number) => void;
-  setFullBleedMode: (enabled: boolean) => void;
+  setNormalEditorMode: (enabled: boolean) => void;
   /** Signal that a programmatic scroll is in progress — page tracking should pause */
   beginProgrammaticScroll: (durationMs?: number) => void;
 }
@@ -133,7 +133,7 @@ const defaultSettings: DocSettings = {
   pageGap: 24,
   orphans: 2,
   widows: 2,
-  defaultFullBleedMode: false,
+  defaultNormalEditorMode: false,
 };
 
 const createNewDoc = (): DocState => ({
@@ -235,7 +235,7 @@ export const useDocStore = create<DocStore>((set, get) => {
     docState: initial,
     editor: null,
     zoom: 1,
-    fullBleedMode: initial.settings.defaultFullBleedMode,
+    normalEditorMode: initial.settings.defaultNormalEditorMode,
     pageSetupOpen: false,
     insertFieldOpen: false,
     tableGridOpen: false,
@@ -305,7 +305,7 @@ export const useDocStore = create<DocStore>((set, get) => {
       const migrated = migrateToContent(doc as unknown as Record<string, unknown>);
       // Sanitize content to remove malicious attributes (XSS, CSS injection)
       migrated.content = sanitizeDocument(migrated.content as Record<string, unknown>);
-      set({ docState: migrated, fullBleedMode: migrated.settings.defaultFullBleedMode });
+      set({ docState: migrated, normalEditorMode: migrated.settings.defaultNormalEditorMode });
       persistToStorage(migrated);
     },
 
@@ -365,7 +365,7 @@ export const useDocStore = create<DocStore>((set, get) => {
       if (isNaN(page)) return;
       set({ currentPage: Math.max(1, Math.min(Math.floor(page), totalPages)) });
     },
-    setFullBleedMode: (enabled) => set({ fullBleedMode: enabled }),
+    setNormalEditorMode: (enabled) => set({ normalEditorMode: enabled }),
     beginProgrammaticScroll: (durationMs = 800) =>
       set({ programmaticScrollUntil: Date.now() + durationMs }),
   };

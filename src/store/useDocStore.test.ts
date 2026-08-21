@@ -20,7 +20,7 @@ const baseDoc = {
     pageGap: 24,
     orphans: 2,
     widows: 2,
-    defaultFullBleedMode: false,
+    defaultNormalEditorMode: false,
   },
   content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
 };
@@ -132,7 +132,7 @@ describe('useDocStore', () => {
         pageGap: 24,
         orphans: 2,
         widows: 2,
-    defaultFullBleedMode: false,
+    defaultNormalEditorMode: false,
       },
       content: { type: 'doc', content: [] },
     };
@@ -360,40 +360,40 @@ describe('useDocStore', () => {
     });
   });
 
-  // Full-bleed / distraction-free view
-  describe('fullBleedMode', () => {
+  // Normal Editor / Paginated Editor view
+  describe('normalEditorMode', () => {
     it('defaults to false', () => {
-      expect(useDocStore.getState().fullBleedMode).toBe(false);
+      expect(useDocStore.getState().normalEditorMode).toBe(false);
     });
 
-    it('toggles fullBleedMode on and off', () => {
-      useDocStore.getState().setFullBleedMode(true);
-      expect(useDocStore.getState().fullBleedMode).toBe(true);
-      useDocStore.getState().setFullBleedMode(false);
-      expect(useDocStore.getState().fullBleedMode).toBe(false);
+    it('toggles normalEditorMode on and off', () => {
+      useDocStore.getState().setNormalEditorMode(true);
+      expect(useDocStore.getState().normalEditorMode).toBe(true);
+      useDocStore.getState().setNormalEditorMode(false);
+      expect(useDocStore.getState().normalEditorMode).toBe(false);
     });
 
-    it('initializes fullBleedMode from settings.defaultFullBleedMode', () => {
-      const docWithFullBleed = {
+    it('initializes normalEditorMode from settings.defaultNormalEditorMode', () => {
+      const docWithNormalEditor = {
         ...baseDoc,
-        settings: { ...baseDoc.settings, defaultFullBleedMode: true },
+        settings: { ...baseDoc.settings, defaultNormalEditorMode: true },
       };
-      useDocStore.getState().loadDocument(docWithFullBleed);
-      expect(useDocStore.getState().fullBleedMode).toBe(true);
+      useDocStore.getState().loadDocument(docWithNormalEditor);
+      expect(useDocStore.getState().normalEditorMode).toBe(true);
     });
 
-    it('persists defaultFullBleedMode via updateSettings', () => {
-      useDocStore.getState().updateSettings({ defaultFullBleedMode: true });
+    it('persists defaultNormalEditorMode via updateSettings', () => {
+      useDocStore.getState().updateSettings({ defaultNormalEditorMode: true });
       const settings = useDocStore.getState().docState.settings;
-      expect(settings.defaultFullBleedMode).toBe(true);
+      expect(settings.defaultNormalEditorMode).toBe(true);
     });
 
-    it('does not change fullBleedMode when updating other settings', () => {
-      useDocStore.getState().setFullBleedMode(true);
+    it('does not change normalEditorMode when updating other settings', () => {
+      useDocStore.getState().setNormalEditorMode(true);
       useDocStore.getState().updateSettings({
         margins: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' },
       });
-      expect(useDocStore.getState().fullBleedMode).toBe(true);
+      expect(useDocStore.getState().normalEditorMode).toBe(true);
     });
   });
 });

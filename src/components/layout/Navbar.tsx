@@ -46,8 +46,8 @@ export default function Navbar() {
     docState,
     editor,
     zoom,
-    fullBleedMode,
-    setFullBleedMode,
+    normalEditorMode,
+    setNormalEditorMode,
     updateTitle,
     newDocument,
     loadDocument,
@@ -434,11 +434,11 @@ export default function Navbar() {
                 </div>
               </div>
               <button
-                onClick={() => { setFullBleedMode(true); setViewMenuOpen(false); }}
+                onClick={() => { setNormalEditorMode(true); setViewMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <span className="w-4 h-4 inline-flex items-center justify-center shrink-0">
-                  {fullBleedMode && (
+                  {normalEditorMode && (
                     <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -447,11 +447,11 @@ export default function Navbar() {
                 Normal Editor
               </button>
               <button
-                onClick={() => { setFullBleedMode(false); setViewMenuOpen(false); }}
+                onClick={() => { setNormalEditorMode(false); setViewMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <span className="w-4 h-4 inline-flex items-center justify-center shrink-0">
-                  {!fullBleedMode && (
+                  {!normalEditorMode && (
                     <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -462,13 +462,13 @@ export default function Navbar() {
               <button
                 onClick={() => {
                   const { updateSettings, docState } = useDocStore.getState();
-                  updateSettings({ defaultFullBleedMode: !docState.settings.defaultFullBleedMode });
+                  updateSettings({ defaultNormalEditorMode: !docState.settings.defaultNormalEditorMode });
                   setViewMenuOpen(false);
                 }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
                 <span className="w-4 h-4 inline-flex items-center justify-center shrink-0">
-                  {docState.settings.defaultFullBleedMode && (
+                  {docState.settings.defaultNormalEditorMode && (
                     <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>

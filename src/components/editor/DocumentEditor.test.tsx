@@ -36,7 +36,7 @@ vi.mock('../../store/useDocStore', () => ({
       settings: {
         orphans: 2,
         widows: 2,
-        defaultFullBleedMode: false,
+        defaultNormalEditorMode: false,
       },
     },
     updateContent: vi.fn(),

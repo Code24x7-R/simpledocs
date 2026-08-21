@@ -79,7 +79,7 @@ describe('pdfExport', () => {
         pageGap: 20,
         orphans: 2,
         widows: 2,
-    defaultFullBleedMode: false,
+    defaultNormalEditorMode: false,
       },
       totalPages: 1,
     };
@@ -172,7 +172,7 @@ describe('pdfExport', () => {
           pageGap: 20,
           orphans: 2,
           widows: 2,
-    defaultFullBleedMode: false,
+    defaultNormalEditorMode: false,
         },
         totalPages: 1,
       };

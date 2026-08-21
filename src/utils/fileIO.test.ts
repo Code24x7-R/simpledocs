@@ -20,7 +20,7 @@ describe('fileIO', () => {
       pageGap: 24,
       orphans: 2,
       widows: 2,
-    defaultFullBleedMode: false,
+    defaultNormalEditorMode: false,
     },
     content: {
       type: 'doc',

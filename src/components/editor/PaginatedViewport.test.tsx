@@ -7,7 +7,7 @@ import PaginatedViewport from './PaginatedViewport';
 const mockSetCurrentPage = vi.fn();
 const mockSetTotalPages = vi.fn();
 const mockSetEditor = vi.fn();
-let mockFullBleedMode = false;
+let mockNormalEditorMode = false;
 
 vi.mock('../../store/useDocStore', () => ({
   useDocStore: () => ({
@@ -25,11 +25,11 @@ vi.mock('../../store/useDocStore', () => ({
         pageGap: 24,
         orphans: 2,
         widows: 2,
-        defaultFullBleedMode: false,
+        defaultNormalEditorMode: false,
       },
       content: { type: 'doc', content: [{ type: 'paragraph' }] },
     },
-    fullBleedMode: mockFullBleedMode,
+    normalEditorMode: mockNormalEditorMode,
     setEditor: mockSetEditor,
   }),
 }));
@@ -50,10 +50,10 @@ vi.mock('./DocumentEditor', () => ({
 describe('PaginatedViewport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFullBleedMode = false;
+    mockNormalEditorMode = false;
   });
 
-  it('renders with paginated layout by default (not full-bleed)', () => {
+  it('renders with paginated layout by default (not normal editor)', () => {
     render(<PaginatedViewport />);
     const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
     // In paginated mode, maxWidth should be set (not full width)
@@ -72,26 +72,26 @@ describe('PaginatedViewport', () => {
     expect(viewport).toBeTruthy();
   });
 
-  it('removes maxWidth and applies full-bleed padding when fullBleedMode is true', () => {
-    mockFullBleedMode = true;
+  it('removes maxWidth and applies normal-editor padding when normalEditorMode is true', () => {
+    mockNormalEditorMode = true;
     render(<PaginatedViewport />);
     const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
-    // In full-bleed mode, maxWidth should be empty
+    // In normal-editor mode, maxWidth should be empty
     expect(content.style.maxWidth).toBe('');
-    // Should have full-bleed padding
+    // Should have normal-editor padding
     expect(content.style.paddingLeft).toBe('80px');
     expect(content.style.paddingRight).toBe('80px');
   });
 
-  it('does not apply mx-auto class in full-bleed mode', () => {
-    mockFullBleedMode = true;
+  it('does not apply mx-auto class in normal-editor mode', () => {
+    mockNormalEditorMode = true;
     render(<PaginatedViewport />);
     const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
     expect(content.classList.contains('mx-auto')).toBe(false);
   });
 
-  it('uses top-left transform origin in full-bleed mode (prevents LHS truncation on zoom)', () => {
-    mockFullBleedMode = true;
+  it('uses top-left transform origin in normal-editor mode (prevents LHS truncation on zoom)', () => {
+    mockNormalEditorMode = true;
     render(<PaginatedViewport />);
     // The zoom scale container is the parent of the content div
     const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
@@ -100,22 +100,22 @@ describe('PaginatedViewport', () => {
   });
 
   it('uses top-center transform origin in paginated mode', () => {
-    mockFullBleedMode = false;
+    mockNormalEditorMode = false;
     render(<PaginatedViewport />);
     const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
     const zoomContainer = content.parentElement as HTMLElement;
     expect(zoomContainer.style.transformOrigin).toBe('top center');
   });
 
-  it('clips horizontal overflow in full-bleed mode (prevents scrollbar on zoom)', () => {
-    mockFullBleedMode = true;
+  it('clips horizontal overflow in normal-editor mode (prevents scrollbar on zoom)', () => {
+    mockNormalEditorMode = true;
     render(<PaginatedViewport />);
     const viewport = document.getElementById('paginated-viewport') as HTMLElement;
     expect(viewport.classList.contains('overflow-x-hidden')).toBe(true);
   });
 
   it('does not clip horizontal overflow in paginated mode', () => {
-    mockFullBleedMode = false;
+    mockNormalEditorMode = false;
     render(<PaginatedViewport />);
     const viewport = document.getElementById('paginated-viewport') as HTMLElement;
     expect(viewport.classList.contains('overflow-x-hidden')).toBe(false);

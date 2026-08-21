@@ -121,10 +121,10 @@ export default function DocumentEditor() {
           }
           return true;
         }
-        // Ctrl+Shift+F → toggle full-bleed view
+        // Ctrl+Shift+F → toggle Normal / Paginated Editor
         if (event.key === 'f' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
           event.preventDefault();
-          useDocStore.getState().setFullBleedMode(!useDocStore.getState().fullBleedMode);
+          useDocStore.getState().setNormalEditorMode(!useDocStore.getState().normalEditorMode);
           return true;
         }
         // Ctrl+Shift+T → toggle TTS panel

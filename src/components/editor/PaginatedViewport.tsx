@@ -22,7 +22,7 @@ function PaginatedViewportInner() {
     setCurrentPage,
     setTotalPages,
     docState,
-    fullBleedMode,
+    normalEditorMode,
     programmaticScrollUntil,
   } = useDocStore();
   const {
@@ -163,21 +163,21 @@ function PaginatedViewportInner() {
       <div
         id="paginated-viewport"
         ref={handleRef}
-        className={`flex-1 overflow-y-auto relative min-h-0 ${fullBleedMode ? 'overflow-x-hidden' : ''}`}
+        className={`flex-1 overflow-y-auto relative min-h-0 ${normalEditorMode ? 'overflow-x-hidden' : ''}`}
         onScroll={handleScroll}
       >
         <div
           style={{
             transform: `scale(${zoom})`,
-            transformOrigin: fullBleedMode ? 'top left' : 'top center',
+            transformOrigin: normalEditorMode ? 'top left' : 'top center',
           }}
         >
           {/* Editor content */}
           <div
             ref={contentRef}
-            className={`document-content relative bg-white ${fullBleedMode ? '' : 'mx-auto'}`}
+            className={`document-content relative bg-white ${normalEditorMode ? '' : 'mx-auto'}`}
             style={
-              fullBleedMode
+              normalEditorMode
                 ? {
                     // Full-bleed: fill viewport width, no page margins, no shadow
                     paddingLeft: '80px',

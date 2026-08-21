@@ -56,7 +56,7 @@ beforeEach(() => {
         pageGap: 24,
         orphans: 2,
         widows: 2,
-        defaultFullBleedMode: false,
+        defaultNormalEditorMode: false,
       },
       content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
     }),
@@ -112,13 +112,13 @@ function setupStore() {
         pageGap: 24,
         orphans: 2,
         widows: 2,
-        defaultFullBleedMode: false,
+        defaultNormalEditorMode: false,
       },
       content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
     },
     editor: createMockEditor() as Editor,
     zoom: 1,
-    fullBleedMode: false,
+    normalEditorMode: false,
     helpMenuOpen: false,
     aboutOpen: false,
     shortcutsOpen: false,
@@ -283,7 +283,7 @@ describe('Navbar — menu close behavior', () => {
       openMenu('View');
       fireEvent.click(screen.getByText('Normal Editor'));
       expect(screen.queryByText('Normal Editor')).not.toBeInTheDocument();
-      expect(useDocStore.getState().fullBleedMode).toBe(true);
+      expect(useDocStore.getState().normalEditorMode).toBe(true);
     });
 
     it('switches to Paginated Editor and closes', () => {
@@ -291,7 +291,7 @@ describe('Navbar — menu close behavior', () => {
       openMenu('View');
       fireEvent.click(screen.getByText('Paginated Editor'));
       expect(screen.queryByText('Paginated Editor')).not.toBeInTheDocument();
-      expect(useDocStore.getState().fullBleedMode).toBe(false);
+      expect(useDocStore.getState().normalEditorMode).toBe(false);
     });
 
     it('closes after clicking Launch with Normal Editor by Default', () => {
