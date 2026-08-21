@@ -151,10 +151,11 @@ describe('DocumentEditor', () => {
       preventDefault: vi.fn(),
     } as unknown as MouseEvent;
 
-    // Set up mock chain for cursor placement verification
+    // Set up mock chain: focus → setTextSelection → scrollIntoView
     const mockPosAtDOM = vi.fn().mockReturnValue(42);
-    const mockRun = vi.fn();
-    const mockSetTextSelection = vi.fn().mockReturnValue({ run: mockRun });
+    const mockScrollRun = vi.fn();
+    const mockScrollIntoView = vi.fn().mockReturnValue({ run: mockScrollRun });
+    const mockSetTextSelection = vi.fn().mockReturnValue({ scrollIntoView: mockScrollIntoView });
     const mockFocus = vi.fn().mockReturnValue({ setTextSelection: mockSetTextSelection });
     const mockChain = vi.fn().mockReturnValue({ focus: mockFocus });
 
@@ -178,13 +179,62 @@ describe('DocumentEditor', () => {
     expect(result).toBe(true);
     expect(mockEvent.preventDefault).toHaveBeenCalled();
 
-    // Verify cursor was placed at the heading
+    // Verify cursor was placed and scroll triggered
     expect(mockPosAtDOM).toHaveBeenCalledWith(mockTargetEl, 0);
     expect(mockFocus).toHaveBeenCalled();
     expect(mockSetTextSelection).toHaveBeenCalledWith(42);
-    expect(mockRun).toHaveBeenCalled();
+    expect(mockScrollIntoView).toHaveBeenCalled();
+    expect(mockScrollRun).toHaveBeenCalled();
 
     // Cleanup
+    document.body.removeChild(mockTargetEl);
+  });
+
+  it('handleClick uses Tiptap native scrollIntoView after setting cursor', async () => {
+    capturedOptions = {};
+    render(<DocumentEditor />);
+    await waitFor(() => expect(capturedOptions).toBeTruthy());
+
+    const handleClick = (capturedOptions.editorProps as { handleClick: (_view: unknown, _pos: number, event: MouseEvent) => boolean })?.handleClick;
+    expect(handleClick).toBeDefined();
+
+    const mockTargetEl = document.createElement('h2');
+    mockTargetEl.setAttribute('id', 'scroll-heading');
+    document.body.appendChild(mockTargetEl);
+
+    const mockAnchor = document.createElement('a');
+    mockAnchor.setAttribute('href', '#scroll-heading');
+
+    const mockEvent = {
+      target: mockAnchor,
+      preventDefault: vi.fn(),
+    } as unknown as MouseEvent;
+
+    const mockPosAtDOM = vi.fn().mockReturnValue(10);
+    const mockScrollIntoView = vi.fn().mockReturnValue({ run: vi.fn() });
+    const mockSetTextSelection = vi.fn().mockReturnValue({ scrollIntoView: mockScrollIntoView });
+    const mockFocus = vi.fn().mockReturnValue({ setTextSelection: mockSetTextSelection });
+    const mockChain = vi.fn().mockReturnValue({ focus: mockFocus });
+
+    mockEditorInstance.chain = mockChain;
+    mockEditorInstance.view = { posAtDOM: mockPosAtDOM };
+
+    const container = document.querySelector('.document-editor');
+    if (container) {
+      Object.defineProperty(container, 'querySelector', {
+        value: vi.fn().mockReturnValue(mockTargetEl),
+        writable: true,
+        configurable: true,
+      });
+    }
+
+    handleClick({}, 0, mockEvent);
+
+    // Verify the full chain: focus → setTextSelection → scrollIntoView
+    expect(mockFocus).toHaveBeenCalled();
+    expect(mockSetTextSelection).toHaveBeenCalledWith(10);
+    expect(mockScrollIntoView).toHaveBeenCalled();
+
     document.body.removeChild(mockTargetEl);
   });
 });

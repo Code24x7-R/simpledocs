@@ -17,43 +17,6 @@ interface ContextMenuState {
 }
 
 /**
- * Scroll the paginated viewport so that the given element is visible.
- * Uses getBoundingClientRect for reliable positioning across transforms.
- *
- * Note: CSS transform:scale() on the content wrapper affects visual
- * rendering but not layout. scrollTop is in unscaled layout coordinates
- * while getBoundingClientRect returns scaled visual positions, so we
- * must divide by scale to convert.
- */
-function scrollToElement(el: Element) {
-  const viewport = document.getElementById('paginated-viewport');
-  if (!viewport) return;
-
-  const elRect = el.getBoundingClientRect();
-  const viewportRect = viewport.getBoundingClientRect();
-
-  // Detect zoom scale from the content wrapper's transform
-  const contentWrapper = viewport.querySelector('[style*="transform"]') as HTMLElement | null;
-  const transform = contentWrapper?.style.transform || '';
-  const scaleMatch = transform.match(/scale\(([\d.]+)\)/);
-  const scale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
-
-  // Convert visual (scaled) position to layout (unscaled) scroll position:
-  //   visualOffset = (elRect.top - viewportRect.top)  // scaled
-  //   layoutOffset = visualOffset / scale              // unscaled
-  //   targetScroll = currentScroll + layoutOffset - margin
-  const visualOffset = elRect.top - viewportRect.top;
-  const targetScroll = viewport.scrollTop + visualOffset / scale - 40;
-
-  // Clamp to valid scroll range
-  const maxScroll = viewport.scrollHeight - viewport.clientHeight;
-  viewport.scrollTo({
-    top: Math.max(0, Math.min(targetScroll, maxScroll)),
-    behavior: 'smooth',
-  });
-}
-
-/**
  * DocumentEditor — single Tiptap instance for the entire document.
  *
  * The Google Docs approach: one editor, one content tree. Pages are
@@ -92,11 +55,10 @@ export default function DocumentEditor() {
                 // Find the anchor target within the editor content
                 const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
                 if (targetEl) {
-                  scrollToElement(targetEl);
-                  // Place the editor cursor at the heading so typing continues there
+                  // Set cursor at the heading and use Tiptap's native scroll
                   if (editor) {
                     const pos = editor.view.posAtDOM(targetEl, 0);
-                    editor.chain().focus().setTextSelection(pos).run();
+                    editor.chain().focus().setTextSelection(pos).scrollIntoView().run();
                   }
                   return true;
                 }
@@ -134,9 +96,9 @@ export default function DocumentEditor() {
                 if (editorEl) {
                   const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
                   if (targetEl) {
-                    scrollToElement(targetEl);
+                    // Set cursor at the heading and use Tiptap's native scroll
                     const pos = editor.view.posAtDOM(targetEl, 0);
-                    editor.chain().focus().setTextSelection(pos).run();
+                    editor.chain().focus().setTextSelection(pos).scrollIntoView().run();
                   }
                 }
               } else {
