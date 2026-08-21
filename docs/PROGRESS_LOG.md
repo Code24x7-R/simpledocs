@@ -17,6 +17,23 @@ Fixed clicking a Table of Contents hyperlink to both scroll to the heading AND p
 
 ---
 
+## 2026-08-20 — [REFACTOR] Use Tiptap native scrollIntoView across codebase
+
+### Summary
+
+Refactored all scroll-to-content patterns to use Tiptap's native `scrollIntoView` command instead of custom scroll math that fought with the editor's focus scroll behavior.
+
+### Changes
+- `src/components/editor/DocumentEditor.tsx` — TOC hyperlink handlers use `editor.chain().focus().setTextSelection(pos).scrollIntoView().run()`
+- `src/components/layout/SearchReplaceModal.tsx` — Removed `scrollMatchIntoView` (manual `scrollTo` + `coordsAtPos` math), use native `scrollIntoView` chain
+- Tests updated to verify scrollIntoView usage in both components
+
+### Results
+- 887 tests pass (49 suites)
+- Lint clean, type-check clean, build succeeds
+
+---
+
 ## 2026-08-20 — [FEATURE] Phase 39: Text-to-Speech (TTS) Reader
 
 ### Summary
