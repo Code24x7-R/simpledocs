@@ -62,9 +62,20 @@
 
 .tiptap code {
   background: #f3f4f6;
+  color: #1f2937;
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-size: 0.875em;
+}
+
+/* Reset inline-code styling inside code blocks so the dark <pre> background
+   and light text-color are inherited instead of overridden (white-on-dark). */
+.tiptap pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
 }
 
 .tiptap pre {

@@ -393,37 +393,6 @@
         ]
       },
       {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": "center",
-          "lineHeight": "2",
-          "paragraphSpacing": {
-            "before": 16,
-            "after": 16
-          }
-        },
-        "content": [
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              },
-              {
-                "type": "textStyle",
-                "attrs": {
-                  "fontFamily": null,
-                  "fontSize": null,
-                  "color": "#4a86e8",
-                  "backgroundColor": null
-                }
-              }
-            ],
-            "text": "Centered, double-spaced, colored heading-like paragraph."
-          }
-        ]
-      },
-      {
         "type": "blockquote",
         "content": [
           {
@@ -448,11 +417,54 @@
         ]
       },
       {
-        "type": "codeBlock",
+        "type": "blockquote",
         "content": [
           {
-            "type": "text",
-            "text": "// Code blocks preserve formatting\nconst styled = {\n  lineHeight: '1.5',\n  indent: 40,\n  paragraphSpacing: { before: 16, after: 8 }\n};"
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center",
+              "paragraphSpacing": {
+                "before": 12,
+                "after": 12
+              }
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "bold"
+                  },
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": null,
+                      "fontSize": null,
+                      "color": "#4a86e8",
+                      "backgroundColor": null
+                    }
+                  }
+                ],
+                "text": "Blockquotes support color, alignment, and paragraph spacing. This example is centered, bold, and colored."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "blockquote",
+        "content": [
+          {
+            "type": "codeBlock",
+            "attrs": {
+              "language": "javascript"
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "// Code blocks preserve formatting\nconst styled = {\n  lineHeight: '1.5',\n  indent: 40,\n  paragraphSpacing: { before: 16, after: 8 }\n};"
+              }
+            ]
           }
         ]
       },
