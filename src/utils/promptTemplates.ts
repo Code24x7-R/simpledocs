@@ -29,7 +29,7 @@ You must strictly follow the two-part structure below using the exact headings p
 ---
 
 ## Document Overview
-[Provide a concise, single-paragraph overview of the document(s). Clearly state the primary objective, the target audience or scope, the main thesis or purpose, and the overall tone/conclusion of the text. Keep this section high-level and restricted to 3–5 impactful sentences.]
+[Provide a concise, single-paragraph overview of the document(s). Clearly state the primary objective, the target audience or scope, the main thesis or purpose, and the overall tone/conclusion of the text. Keep this section high-level and restricted to 3-5 impactful sentences.]
 
 ---
 
@@ -69,7 +69,7 @@ You must strictly follow the two-part structure below using the exact headings p
 ---
 
 ## Narrative Overview
-[Provide a concise, two-paragraph overview of the text. Paragraph 1 should summarize the visible plot, setting the scene, identifying the viewpoint character, and stating the immediate physical conflict. Paragraph 2 should analyze the underlying subtext, the emotional landscape, the thematic resonance, and the overall atmospheric tone of the piece. Restrict each paragraph to 3–4 sentences.]
+[Provide a concise, two-paragraph overview of the text. Paragraph 1 should summarize the visible plot, setting the scene, identifying the viewpoint character, and stating the immediate physical conflict. Paragraph 2 should analyze the underlying subtext, the emotional landscape, the thematic resonance, and the overall atmospheric tone of the piece. Restrict each paragraph to 3-4 sentences.]
 
 ---
 
@@ -86,12 +86,12 @@ You must strictly follow the two-part structure below using the exact headings p
 * **Pacing Efficiency:** (Evaluate the balance between active scene/dialogue and interior monologue/exposition; note where the story drags or moves too fast)
 
 ### 3. Sensory World-Building & Setting
-* **Immersive Anchors:** (List the most effective sensory details used—sight, sound, smell, texture—that anchor the reader in the environment)
+* **Immersive Anchors:** (List the most effective sensory details used - sight, sound, smell, texture - that anchor the reader in the environment)
 * **Spatial Geometry:** (Evaluate how well the physical layout of the room, landscape, or arena is communicated to ensure the reader isn't lost in "floating head syndrome")
 * **Atmospheric Coding:** (How does the setting reflect or contrast the internal emotional state of the characters?)
 
 ### 4. Voice, Style & Prose Mechanics
-* **Stylistic Fingerprint:** (Analyze the prose style—e.g., lyrical, minimalist, visceral, clinical—and evaluate its consistency)
+* **Stylistic Fingerprint:** (Analyze the prose style - e.g., lyrical, minimalist, visceral, clinical - and evaluate its consistency)
 * **Rhythmic Variance:** (Examine sentence structure length and cadence; highlight areas of strong rhythm or unintended repetition)
 * **Word Choice & Imagery:** (Identify standout metaphors or similes, as well as cliché or weak verbs that could be elevated)
 
