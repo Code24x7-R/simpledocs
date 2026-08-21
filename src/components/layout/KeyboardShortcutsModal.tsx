@@ -64,7 +64,7 @@ const SHORTCUTS = [
     { keys: ['Ctrl', 'Shift', 'T'], description: 'Toggle TTS panel' },
   ]},
   { category: 'View', items: [
-    { keys: ['Ctrl', 'Shift', 'F'], description: 'Toggle full-bleed view' },
+    { keys: ['Ctrl', 'Shift', 'F'], description: 'Toggle Normal / Paginated Editor' },
   ]},
   { category: 'Document', items: [
     { keys: ['Ctrl', 'S'], description: 'Save (browser default)' },

@@ -259,7 +259,7 @@ describe('Navbar — menu close behavior', () => {
       const matches = screen.getAllByText('100%');
       const presetButton = matches.find((el) => el.tagName === 'BUTTON');
       fireEvent.click(presetButton!);
-      expect(screen.queryByText('Full-Bleed View')).not.toBeInTheDocument();
+      expect(screen.queryByText('Normal Editor')).not.toBeInTheDocument();
     });
 
     it('closes after clicking the zoom out (−) button', () => {
@@ -278,18 +278,27 @@ describe('Navbar — menu close behavior', () => {
       expect(screen.queryByTitle('Zoom in')).not.toBeInTheDocument();
     });
 
-    it('closes after clicking Full-Bleed View toggle', () => {
+    it('switches to Normal Editor and closes', () => {
       render(<Navbar />);
       openMenu('View');
-      fireEvent.click(screen.getByText('Full-Bleed View'));
-      expect(screen.queryByText('Full-Bleed View')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText('Normal Editor'));
+      expect(screen.queryByText('Normal Editor')).not.toBeInTheDocument();
+      expect(useDocStore.getState().fullBleedMode).toBe(true);
     });
 
-    it('closes after clicking Launch in Full-Bleed by Default', () => {
+    it('switches to Paginated Editor and closes', () => {
       render(<Navbar />);
       openMenu('View');
-      fireEvent.click(screen.getByText('Launch in Full-Bleed by Default'));
-      expect(screen.queryByText('Launch in Full-Bleed by Default')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText('Paginated Editor'));
+      expect(screen.queryByText('Paginated Editor')).not.toBeInTheDocument();
+      expect(useDocStore.getState().fullBleedMode).toBe(false);
+    });
+
+    it('closes after clicking Launch with Normal Editor by Default', () => {
+      render(<Navbar />);
+      openMenu('View');
+      fireEvent.click(screen.getByText('Launch with Normal Editor by Default'));
+      expect(screen.queryByText('Launch with Normal Editor by Default')).not.toBeInTheDocument();
     });
   });
 
