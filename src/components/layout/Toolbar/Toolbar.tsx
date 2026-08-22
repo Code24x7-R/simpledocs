@@ -97,6 +97,14 @@ export default function Toolbar() {
   const isActive = (mark: string) => editor.isActive(mark);
   const isHeading = (level: number) => editor.isActive('heading', { level });
 
+  // Resolve the active paragraph/heading label for the Style dropdown button.
+  const getActiveStyle = (): string => {
+    for (let level = 1; level <= 6; level++) {
+      if (isHeading(level)) return `Heading ${level}`;
+    }
+    return 'Normal';
+  };
+
   // Get the font size from the current selection using Tiptap's isActive
   const getActiveFontSize = (): string | null => {
     const foundSize = editor.getAttributes('textStyle').fontSize;
@@ -170,7 +178,7 @@ export default function Toolbar() {
           onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
         >
-          Style <ChevronDown className="w-3 h-3" />
+          {getActiveStyle()} <ChevronDown className="w-3 h-3" />
         </button>
         {styleDropdownOpen && (
           <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded shadow-lg z-50">

@@ -20,7 +20,10 @@ vi.mock('../../../hooks/useEditorClipboard', () => ({
 // ---------------------------------------------------------------------------
 // Build a chainable editor mock whose per-mark active state is configurable.
 // ---------------------------------------------------------------------------
-function createMockEditor(activeMarks: Record<string, boolean> = {}): Partial<Editor> {
+function createMockEditor(
+  activeMarks: Record<string, boolean> = {},
+  activeHeadingLevel: number | null = null,
+): Partial<Editor> {
   const chainObj: Record<string, ReturnType<typeof vi.fn>> = {};
   // Every chainable command returns the chain object itself.
   [
@@ -65,7 +68,13 @@ function createMockEditor(activeMarks: Record<string, boolean> = {}): Partial<Ed
   return {
     getHTML: () => '<p>Hello</p>',
     isActive: vi.fn((mark: string, attrs?: unknown) => {
-      if (attrs !== undefined) return false;
+      if (attrs !== undefined) {
+        // Support heading level checks: isActive('heading', { level: N }).
+        if (mark === 'heading' && typeof (attrs as { level?: number })?.level === 'number') {
+          return (attrs as { level: number }).level === activeHeadingLevel;
+        }
+        return false;
+      }
       return activeMarks[mark] ?? false;
     }),
     getAttributes: vi.fn(() => ({})),
@@ -175,5 +184,20 @@ describe('Toolbar', () => {
     expect(within(dropdown).queryByRole('button', { name: /Underline/ })).not.toBeInTheDocument();
     // Strikethrough is still in the Format menu.
     expect(within(dropdown).getByRole('button', { name: /Strikethrough/ })).toBeInTheDocument();
+  });
+
+  it('shows "Normal" as the active style by default', () => {
+    render(<Toolbar />);
+
+    expect(screen.getByText('Normal')).toBeInTheDocument();
+  });
+
+  it('shows the active heading level in the Style dropdown', () => {
+    const editor = createMockEditor({}, 2) as Editor;
+    useDocStore.setState({ editor });
+    render(<Toolbar />);
+
+    expect(screen.getByText('Heading 2')).toBeInTheDocument();
+    expect(screen.queryByText('Normal')).not.toBeInTheDocument();
   });
 });
