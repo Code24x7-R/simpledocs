@@ -36,6 +36,8 @@ vi.mock('../../store/useDocStore', () => ({
   useDocStore: vi.fn(() => ({
     docState: { content: mockDocWithHeadings },
     setTocOpen: vi.fn(),
+    normalEditorMode: false,
+    setNormalEditorMode: vi.fn(),
   })),
 }));
 
@@ -48,10 +50,12 @@ describe('TableOfContentsModal', () => {
     vi.restoreAllMocks();
   });
 
-  function renderWithDoc(docContent: Record<string, unknown>) {
+  function renderWithDoc(docContent: Record<string, unknown>, normalEditorMode = false) {
     vi.mocked(useDocStore).mockReturnValue({
       docState: { content: docContent },
       setTocOpen: vi.fn(),
+      normalEditorMode,
+      setNormalEditorMode: vi.fn(),
     } as unknown as ReturnType<typeof useDocStore>);
     render(
       <TableOfContentsModal
@@ -71,6 +75,8 @@ describe('TableOfContentsModal', () => {
     vi.mocked(useDocStore).mockReturnValue({
       docState: { content: mockDocWithHeadings },
       setTocOpen: vi.fn(),
+      normalEditorMode: false,
+      setNormalEditorMode: vi.fn(),
     } as unknown as ReturnType<typeof useDocStore>);
     render(
       <TableOfContentsModal
@@ -158,5 +164,45 @@ describe('TableOfContentsModal', () => {
     fireEvent.change(combos[1], { target: { value: '1' } });
     // Should only show h1 headings
     expect(screen.getByText('2 headings found')).toBeInTheDocument();
+  });
+
+  it('shows a notice and disables Insert in Normal Editor mode', () => {
+    renderWithDoc(mockDocWithHeadings, /* normalEditorMode */ true);
+    expect(screen.getByText('Table of Contents works in the Paginated Editor')).toBeInTheDocument();
+    const insertBtn = screen.getByText('Insert TOC') as HTMLButtonElement;
+    expect(insertBtn).toBeDisabled();
+  });
+
+  it('shows a notice and disables Replace in Normal Editor mode', () => {
+    renderWithDoc(mockDocWithToc, /* normalEditorMode */ true);
+    expect(screen.getByText('Table of Contents works in the Paginated Editor')).toBeInTheDocument();
+    const replaceBtn = screen.getByText('Replace TOC') as HTMLButtonElement;
+    expect(replaceBtn).toBeDisabled();
+  });
+
+  it('does not show the notice in Paginated Editor mode', () => {
+    renderWithDoc(mockDocWithHeadings, /* normalEditorMode */ false);
+    expect(
+      screen.queryByText('Table of Contents works in the Paginated Editor')
+    ).not.toBeInTheDocument();
+  });
+
+  it('Switch to Paginated Editor button calls setNormalEditorMode(false)', () => {
+    const setNormalEditorMode = vi.fn();
+    vi.mocked(useDocStore).mockReturnValue({
+      docState: { content: mockDocWithHeadings },
+      setTocOpen: vi.fn(),
+      normalEditorMode: true,
+      setNormalEditorMode,
+    } as unknown as ReturnType<typeof useDocStore>);
+    render(
+      <TableOfContentsModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onInsert={mockOnInsert}
+      />
+    );
+    fireEvent.click(screen.getByText('Switch to Paginated Editor'));
+    expect(setNormalEditorMode).toHaveBeenCalledWith(false);
   });
 });

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { useState, useMemo } from 'react';
-import { X, List, RefreshCw, AlertTriangle } from 'lucide-react';
+import { X, List, RefreshCw, AlertTriangle, Info } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import {
   extractHeadings,
@@ -28,7 +28,7 @@ interface TableOfContentsModalProps {
  * replace it.
  */
 export default function TableOfContentsModal({ isOpen, onClose, onInsert }: TableOfContentsModalProps) {
-  const { docState } = useDocStore();
+  const { docState, normalEditorMode, setNormalEditorMode } = useDocStore();
   const [minLevel, setMinLevel] = useState(1);
   const [maxLevel, setMaxLevel] = useState(6);
 
@@ -93,6 +93,27 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
               <p className="text-amber-600 mt-0.5">
                 Generating a new one will replace the existing TOC. The old content will be removed.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Paginated-editor-only notice */}
+        {normalEditorMode && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <div className="text-xs text-blue-800">
+              <p className="font-medium">Table of Contents works in the Paginated Editor</p>
+              <p className="text-blue-600 mt-0.5">
+                ToC hyperlinks scroll to and select their heading, which requires the paged view.
+                Switch to the Paginated Editor to insert or refresh a TOC.
+              </p>
+              <button
+                type="button"
+                onClick={() => setNormalEditorMode(false)}
+                className="mt-2 px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Switch to Paginated Editor
+              </button>
             </div>
           </div>
         )}
@@ -177,7 +198,8 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
             <button
               type="button"
               onClick={handleReplace}
-              disabled={entries.length === 0}
+              disabled={entries.length === 0 || normalEditorMode}
+              title={normalEditorMode ? 'Switch to the Paginated Editor to replace the TOC' : undefined}
               className="px-4 py-1.5 text-sm bg-amber-500 text-white rounded hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -187,7 +209,8 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
             <button
               type="button"
               onClick={() => handleInsert()}
-              disabled={entries.length === 0}
+              disabled={entries.length === 0 || normalEditorMode}
+              title={normalEditorMode ? 'Switch to the Paginated Editor to insert a TOC' : undefined}
               className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Insert TOC
