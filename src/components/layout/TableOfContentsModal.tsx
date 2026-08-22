@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { X, List, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import {
@@ -31,7 +31,6 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
   const { docState } = useDocStore();
   const [minLevel, setMinLevel] = useState(1);
   const [maxLevel, setMaxLevel] = useState(6);
-  const [replaceConfirmed, setReplaceConfirmed] = useState(false);
 
   // Check if document already has a TOC
   const existingToc = useMemo(() => hasExistingToc(docState.content), [docState.content]);
@@ -42,25 +41,22 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
     [docState.content, minLevel, maxLevel]
   );
 
-  // Reset confirmation when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setReplaceConfirmed(false);
-    }
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
-  const handleInsert = () => {
+  // `replace` is passed explicitly (not read from state) because React
+  // hasn't flushed a setState yet when handleReplace calls this — reading
+  // replaceConfirmed here would see the stale value and skip removal.
+  const handleInsert = (replace = false) => {
     // buildTocContent returns tocEntry nodes; wrap in container for insertion
     const tocNode = wrapTocInContainer(buildTocContent(entries));
 
     // Assign anchor IDs to headings in the document
     const docWithAnchors = assignHeadingAnchors(docState.content, entries);
 
-    // If existing TOC, remove it first then insert new one at that position
+    // If replacing an existing TOC, strip it out first so the new one lands
+    // in the same position instead of being appended.
     let finalDoc = docWithAnchors;
-    if (existingToc && replaceConfirmed) {
+    if (existingToc && replace) {
       finalDoc = removeExistingToc(docWithAnchors);
     }
 
@@ -68,8 +64,10 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
   };
 
   const handleReplace = () => {
-    setReplaceConfirmed(true);
-    handleInsert();
+    // Pass replace=true explicitly (the existing-TOC flag and removal are
+    // derived from `existingToc` inside handleInsert), so the old TOC is
+    // stripped before the new one is inserted in its place.
+    handleInsert(true);
   };
 
   return (
@@ -188,7 +186,7 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
           ) : (
             <button
               type="button"
-              onClick={handleInsert}
+              onClick={() => handleInsert()}
               disabled={entries.length === 0}
               className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
             >

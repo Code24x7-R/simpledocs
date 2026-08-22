@@ -29,18 +29,24 @@ vi.mock('../../extensions', () => ({
   createExtensions: () => [],
 }));
 
-vi.mock('../../store/useDocStore', () => ({
-  useDocStore: () => ({
-    docState: {
-      content: { type: 'doc', content: [{ type: 'paragraph' }] },
-      settings: {
-        orphans: 2,
-        widows: 2,
-        defaultNormalEditorMode: false,
-      },
+const mockStoreState = {
+  docState: {
+    content: { type: 'doc', content: [{ type: 'paragraph' }] },
+    settings: {
+      orphans: 2,
+      widows: 2,
+      defaultNormalEditorMode: false,
     },
-    updateContent: vi.fn(),
-    setEditor: mockSetEditor,
+  },
+  updateContent: vi.fn(),
+  setEditor: mockSetEditor,
+  zoom: 1,
+  beginProgrammaticScroll: vi.fn(),
+};
+
+vi.mock('../../store/useDocStore', () => ({
+  useDocStore: Object.assign(() => mockStoreState, {
+    getState: () => mockStoreState,
   }),
 }));
 
@@ -131,6 +137,7 @@ describe('DocumentEditor', () => {
   it('handleClick places cursor at the heading when clicking a TOC link', async () => {
     // Reset captured options from previous tests
     capturedOptions = {};
+    mockStoreState.beginProgrammaticScroll.mockClear();
     render(<DocumentEditor />);
     await waitFor(() => expect(capturedOptions).toBeTruthy());
 
@@ -151,11 +158,11 @@ describe('DocumentEditor', () => {
       preventDefault: vi.fn(),
     } as unknown as MouseEvent;
 
-    // Set up mock chain: focus → setTextSelection → scrollIntoView
+    // Set up mock chain: focus → setTextSelection → run (no scrollIntoView —
+    // scrolling is now handled by the zoom-aware scrollHeadingIntoView)
     const mockPosAtDOM = vi.fn().mockReturnValue(42);
-    const mockScrollRun = vi.fn();
-    const mockScrollIntoView = vi.fn().mockReturnValue({ run: mockScrollRun });
-    const mockSetTextSelection = vi.fn().mockReturnValue({ scrollIntoView: mockScrollIntoView });
+    const mockRun = vi.fn();
+    const mockSetTextSelection = vi.fn().mockReturnValue({ run: mockRun });
     const mockFocus = vi.fn().mockReturnValue({ setTextSelection: mockSetTextSelection });
     const mockChain = vi.fn().mockReturnValue({ focus: mockFocus });
 
@@ -179,19 +186,22 @@ describe('DocumentEditor', () => {
     expect(result).toBe(true);
     expect(mockEvent.preventDefault).toHaveBeenCalled();
 
-    // Verify cursor was placed and scroll triggered
+    // Verify cursor was placed via the chain
     expect(mockPosAtDOM).toHaveBeenCalledWith(mockTargetEl, 0);
     expect(mockFocus).toHaveBeenCalled();
     expect(mockSetTextSelection).toHaveBeenCalledWith(42);
-    expect(mockScrollIntoView).toHaveBeenCalled();
-    expect(mockScrollRun).toHaveBeenCalled();
+    expect(mockRun).toHaveBeenCalled();
+
+    // Verify the zoom-aware viewport scroll was triggered (not scrollIntoView)
+    expect(mockStoreState.beginProgrammaticScroll).toHaveBeenCalled();
 
     // Cleanup
     document.body.removeChild(mockTargetEl);
   });
 
-  it('handleClick uses Tiptap native scrollIntoView after setting cursor', async () => {
+  it('handleClick scrolls the viewport zoom-aware instead of scrollIntoView', async () => {
     capturedOptions = {};
+    mockStoreState.beginProgrammaticScroll.mockClear();
     render(<DocumentEditor />);
     await waitFor(() => expect(capturedOptions).toBeTruthy());
 
@@ -211,8 +221,8 @@ describe('DocumentEditor', () => {
     } as unknown as MouseEvent;
 
     const mockPosAtDOM = vi.fn().mockReturnValue(10);
-    const mockScrollIntoView = vi.fn().mockReturnValue({ run: vi.fn() });
-    const mockSetTextSelection = vi.fn().mockReturnValue({ scrollIntoView: mockScrollIntoView });
+    const mockRun = vi.fn();
+    const mockSetTextSelection = vi.fn().mockReturnValue({ run: mockRun });
     const mockFocus = vi.fn().mockReturnValue({ setTextSelection: mockSetTextSelection });
     const mockChain = vi.fn().mockReturnValue({ focus: mockFocus });
 
@@ -230,10 +240,13 @@ describe('DocumentEditor', () => {
 
     handleClick({}, 0, mockEvent);
 
-    // Verify the full chain: focus → setTextSelection → scrollIntoView
+    // Cursor is placed via focus → setTextSelection → run
     expect(mockFocus).toHaveBeenCalled();
     expect(mockSetTextSelection).toHaveBeenCalledWith(10);
-    expect(mockScrollIntoView).toHaveBeenCalled();
+    expect(mockRun).toHaveBeenCalled();
+
+    // Scroll is handled by the zoom-aware viewport scroll, not scrollIntoView
+    expect(mockStoreState.beginProgrammaticScroll).toHaveBeenCalledWith(1500);
 
     document.body.removeChild(mockTargetEl);
   });

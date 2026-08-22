@@ -3,6 +3,25 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import type { EditorView } from '@tiptap/pm/view';
 import { useEffect, useRef, useState, useCallback } from 'react';
+
+/**
+ * Scroll the paginated viewport so the target heading is visible, zoom-aware.
+ * Sets the programmatic-scroll lock so the viewport's page tracking doesn't
+ * hijack this navigation scroll (which otherwise re-snaps to the page top,
+ * getting progressively worse for headings further down the document).
+ */
+function scrollHeadingIntoView(targetEl: Element): void {
+  useDocStore.getState().beginProgrammaticScroll(1500);
+  const container = targetEl.closest('#paginated-viewport');
+  if (!container) return;
+  const zoom = useDocStore.getState().zoom;
+  const containerRect = container.getBoundingClientRect();
+  const targetRect = targetEl.getBoundingClientRect();
+  const targetScrollTop =
+    container.scrollTop + (targetRect.top - containerRect.top) / zoom;
+  container.scrollTo({ top: targetScrollTop, behavior: 'auto' });
+}
+
 import { createPortal } from 'react-dom';
 import { createExtensions } from '../../extensions';
 import { useDocStore } from '../../store/useDocStore';
@@ -54,12 +73,13 @@ export default function DocumentEditor() {
               if (editorEl) {
                 // Find the anchor target within the editor content
                 const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
-                if (targetEl) {
-                  // Set cursor at the heading and use Tiptap's native scroll
-                  if (editor) {
-                    const pos = editor.view.posAtDOM(targetEl, 0);
-                    editor.chain().focus().setTextSelection(pos).scrollIntoView().run();
-                  }
+                if (targetEl && editor) {
+                  // Place the cursor at the heading, then scroll the viewport
+                  // zoom-aware (Tiptap's scrollIntoView ignores the scaled
+                  // wrapper, so it drifts for headings further down the doc).
+                  const pos = editor.view.posAtDOM(targetEl, 0);
+                  editor.chain().focus().setTextSelection(pos).run();
+                  scrollHeadingIntoView(targetEl);
                   return true;
                 }
               }
@@ -96,9 +116,9 @@ export default function DocumentEditor() {
                 if (editorEl) {
                   const targetEl = editorEl.querySelector(`[id="${targetId}"], [data-anchor="${targetId}"], a[name="${targetId}"]`);
                   if (targetEl) {
-                    // Set cursor at the heading and use Tiptap's native scroll
                     const pos = editor.view.posAtDOM(targetEl, 0);
-                    editor.chain().focus().setTextSelection(pos).scrollIntoView().run();
+                    editor.chain().focus().setTextSelection(pos).run();
+                    scrollHeadingIntoView(targetEl);
                   }
                 }
               } else {

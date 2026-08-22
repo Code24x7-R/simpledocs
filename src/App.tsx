@@ -60,11 +60,26 @@ export default function App() {
   const handleTocInsert = useCallback((tocContent: Record<string, unknown>, docWithAnchors: Record<string, unknown>) => {
     if (!editor) return;
 
-    // Step 1: Apply heading anchors to the editor content
+    // Capture insertion target BEFORE setContent resets the selection:
+    // - If a TOC already exists, replace it in place (preserve position).
+    // - Otherwise insert at the current cursor position.
+    let insertPos = editor.state.selection.from;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'tableOfContents') {
+        insertPos = pos;
+        return false;
+      }
+      return true;
+    });
+
+    // Step 1: Apply heading anchors to the editor content.
+    // setContent resets the selection, so we restore it afterwards.
     editor.commands.setContent(docWithAnchors, { emitUpdate: false });
 
-    // Step 2: Insert the TOC at the current cursor position
-    editor.chain().focus().insertContent(tocContent).run();
+    // Step 2: Insert the TOC at the captured position.
+    // Using insertContentAt (rather than relying on the selection left by
+    // setContent) guarantees the TOC lands at the right place.
+    editor.chain().focus().insertContentAt(insertPos, tocContent).run();
 
     // Step 3: Update the store with the COMPLETE document (anchors + TOC)
     // This prevents the content-sync useEffect from overwriting our changes
