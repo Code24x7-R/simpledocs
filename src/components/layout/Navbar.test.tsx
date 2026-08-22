@@ -73,7 +73,20 @@ afterEach(() => {
 function createMockEditor(): Partial<Editor> {
   // Build a chainable mock that supports editor.chain().focus().setPageBreak().run()
   const chainObj: Record<string, ReturnType<typeof vi.fn>> = {};
-  const methods = ['focus', 'setPageBreak', 'deleteSelection', 'insertContent', 'setTextSelection'];
+  const methods = [
+    'focus',
+    'setPageBreak',
+    'deleteSelection',
+    'insertContent',
+    'setTextSelection',
+    'setTextAlign',
+    'setLineHeight',
+    'unsetLineHeight',
+    'setParagraphSpacing',
+    'unsetParagraphSpacing',
+    'increaseIndent',
+    'decreaseIndent',
+  ];
   methods.forEach((m) => {
     chainObj[m] = vi.fn().mockReturnValue(chainObj);
   });
@@ -82,6 +95,9 @@ function createMockEditor(): Partial<Editor> {
 
   return {
     getHTML: () => '<p>Hello</p>',
+    isActive: vi.fn(() => false),
+    getAttributes: vi.fn(() => ({})),
+    can: vi.fn(() => ({ undo: () => true, redo: () => true })),
     chain: vi.fn().mockReturnValue(chainObj),
     state: {
       selection: { from: 0, to: 0, empty: true },
@@ -267,6 +283,50 @@ describe('Navbar — menu close behavior', () => {
       openMenu('Insert');
       fireEvent.click(screen.getByText('Read Aloud'));
       expect(screen.queryByText('Read Aloud')).not.toBeInTheDocument();
+    });
+  });
+
+  // =======================================================================
+  // Layout menu — uses local state (layoutMenuOpen)
+  // =======================================================================
+  describe('Layout menu', () => {
+    it('shows Alignment, Line Height, Paragraph Spacing and Indent sections', () => {
+      render(<Navbar />);
+      openMenu('Layout');
+      expect(screen.getByText('Alignment')).toBeInTheDocument();
+      expect(screen.getByText('Line Height')).toBeInTheDocument();
+      expect(screen.getByText('Paragraph Spacing')).toBeInTheDocument();
+      expect(screen.getByText('Indent')).toBeInTheDocument();
+      expect(screen.getByText('Outdent')).toBeInTheDocument();
+    });
+
+    it('lists the line height options', () => {
+      render(<Navbar />);
+      openMenu('Layout');
+      expect(screen.getByText('1.15')).toBeInTheDocument();
+      expect(screen.getByText('1.5')).toBeInTheDocument();
+      expect(screen.getByText('2.0')).toBeInTheDocument();
+    });
+
+    it('closes after clicking an alignment button', () => {
+      render(<Navbar />);
+      openMenu('Layout');
+      fireEvent.click(screen.getByTitle('Align Left'));
+      expect(screen.queryByText('Line Height')).not.toBeInTheDocument();
+    });
+
+    it('closes after clicking a line height option', () => {
+      render(<Navbar />);
+      openMenu('Layout');
+      fireEvent.click(screen.getByText('1.5'));
+      expect(screen.queryByText('Line Height')).not.toBeInTheDocument();
+    });
+
+    it('closes after clicking Indent', () => {
+      render(<Navbar />);
+      openMenu('Layout');
+      fireEvent.click(screen.getByText('Indent'));
+      expect(screen.queryByText('Line Height')).not.toBeInTheDocument();
     });
   });
 

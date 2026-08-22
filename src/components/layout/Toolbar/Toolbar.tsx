@@ -6,10 +6,6 @@ import {
   Italic,
   Underline,
   Strikethrough,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
   List,
   ListOrdered,
   CheckSquare,
@@ -27,10 +23,6 @@ import {
   Redo,
   RemoveFormatting,
   Paintbrush,
-  IndentIncrease,
-  IndentDecrease,
-  WrapText,
-  Rows,
   Volume2,
 } from 'lucide-react';
 import { useDocStore } from '../../../store/useDocStore';
@@ -58,25 +50,7 @@ const HEADING_STYLES = [
   { label: 'Heading 6', value: 'h6' },
 ];
 
-const LINE_HEIGHTS = [
-  { label: 'Default', value: '' },
-  { label: '1.0', value: '1' },
-  { label: '1.15', value: '1.15' },
-  { label: '1.5', value: '1.5' },
-  { label: '2.0', value: '2' },
-  { label: '2.5', value: '2.5' },
-  { label: '3.0', value: '3' },
-];
 
-const PARAGRAPH_SPACING = [
-  { label: 'Default', before: 0, after: 0 },
-  { label: '0pt / 0pt', before: 0, after: 0 },
-  { label: '6pt / 6pt', before: 8, after: 8 },
-  { label: '12pt / 12pt', before: 16, after: 16 },
-  { label: '18pt / 18pt', before: 24, after: 24 },
-  { label: '12pt / 6pt', before: 16, after: 8 },
-  { label: '6pt / 12pt', before: 8, after: 16 },
-];
 
 
 
@@ -87,8 +61,6 @@ export default function Toolbar() {
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
-  const [lineHeightDropdownOpen, setLineHeightDropdownOpen] = useState(false);
-  const [paragraphSpacingDropdownOpen, setParagraphSpacingDropdownOpen] = useState(false);
 
 
 
@@ -118,28 +90,6 @@ export default function Toolbar() {
   const getActiveFontFamily = (): string | null => {
     const foundFont = editor.getAttributes('textStyle').fontFamily;
     return foundFont || null;
-  };
-
-  // Get the active line height from the current paragraph/heading
-  const getActiveLineHeight = (): string => {
-    const lh = editor.getAttributes('paragraph').lineHeight
-      ?? editor.getAttributes('heading').lineHeight
-      ?? null;
-    return lh || '';
-  };
-
-  // Get the active indent from the current paragraph/heading
-  const getActiveIndent = (): number => {
-    return editor.getAttributes('paragraph').indent
-      ?? editor.getAttributes('heading').indent
-      ?? 0;
-  };
-
-  // Get the active paragraph spacing from the current paragraph/heading
-  const getActiveParagraphSpacing = (): { before: number; after: number } | null => {
-    return editor.getAttributes('paragraph').paragraphSpacing
-      ?? editor.getAttributes('heading').paragraphSpacing
-      ?? null;
   };
 
   const Button = ({
@@ -400,95 +350,6 @@ export default function Toolbar() {
 
       <div className="w-px h-6 bg-gray-200 mx-1" />
 
-      {/* Line Height */}
-      <div className="relative">
-        <button
-          onClick={() => setLineHeightDropdownOpen(!lineHeightDropdownOpen)}
-          className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
-          title="Line Spacing"
-        >
-          <Rows className="w-4 h-4" />
-          <span className="text-xs">{LINE_HEIGHTS.find((lh) => lh.value === getActiveLineHeight())?.label ?? 'Spacing'}</span>
-          <ChevronDown className="w-3 h-3" />
-        </button>
-        {lineHeightDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50">
-            {LINE_HEIGHTS.map((lh) => (
-              <button
-                key={lh.value}
-                onClick={() => {
-                  if (lh.value === '') {
-                    editor.chain().focus().unsetLineHeight().run();
-                  } else {
-                    editor.chain().focus().setLineHeight(lh.value).run();
-                  }
-                  setLineHeightDropdownOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                  getActiveLineHeight() === lh.value ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                }`}
-              >
-                {lh.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Indent / Outdent */}
-      <Button
-        onClick={() => editor.chain().focus().increaseIndent().run()}
-        title="Increase Indent"
-      >
-        <IndentIncrease className="w-4 h-4" />
-      </Button>
-      <Button
-        onClick={() => editor.chain().focus().decreaseIndent().run()}
-        disabled={getActiveIndent() === 0}
-        title="Decrease Indent"
-      >
-        <IndentDecrease className="w-4 h-4" />
-      </Button>
-
-      {/* Paragraph Spacing */}
-      <div className="relative">
-        <button
-          onClick={() => setParagraphSpacingDropdownOpen(!paragraphSpacingDropdownOpen)}
-          className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
-          title="Paragraph Spacing"
-        >
-          <WrapText className="w-4 h-4" />
-          <ChevronDown className="w-3 h-3" />
-        </button>
-        {paragraphSpacingDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 w-36 bg-white border border-gray-200 rounded shadow-lg z-50">
-            {PARAGRAPH_SPACING.map((ps) => {
-              const isActive = getActiveParagraphSpacing()?.before === ps.before && getActiveParagraphSpacing()?.after === ps.after;
-              return (
-                <button
-                  key={ps.label}
-                  onClick={() => {
-                    if (ps.before === 0 && ps.after === 0) {
-                      editor.chain().focus().unsetParagraphSpacing().run();
-                    } else {
-                      editor.chain().focus().setParagraphSpacing({ before: ps.before, after: ps.after }).run();
-                    }
-                    setParagraphSpacingDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                    isActive ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                  }`}
-                >
-                  {ps.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="w-px h-6 bg-gray-200 mx-1" />
-
       {/* Clipboard */}
       <Button onClick={handleCopy} title="Copy">
         <Copy className="w-4 h-4" />
@@ -506,22 +367,6 @@ export default function Toolbar() {
       </Button>
       <Button onClick={() => editor.chain().focus().redo().run()} disabled={!editor?.can()?.redo()} title="Redo (Ctrl+Y)">
         <Redo className="w-4 h-4" />
-      </Button>
-
-      <div className="w-px h-6 bg-gray-200 mx-1" />
-
-      {/* Alignment */}
-      <Button onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left">
-        <AlignLeft className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Center">
-        <AlignCenter className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right">
-        <AlignRight className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().setTextAlign('justify').run()} active={editor.isActive({ textAlign: 'justify' })} title="Justify">
-        <AlignJustify className="w-4 h-4" />
       </Button>
 
       <div className="w-px h-6 bg-gray-200 mx-1" />

@@ -12,6 +12,34 @@ export const TEXT_COLORS = [
   '#e6b8af', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc',
 ];
 
+/**
+ * Line height options for the Layout menu.
+ * Used by the Navbar's Layout dropdown.
+ */
+export const LINE_HEIGHTS = [
+  { label: 'Default', value: '' },
+  { label: '1.0', value: '1' },
+  { label: '1.15', value: '1.15' },
+  { label: '1.5', value: '1.5' },
+  { label: '2.0', value: '2' },
+  { label: '2.5', value: '2.5' },
+  { label: '3.0', value: '3' },
+];
+
+/**
+ * Paragraph spacing options for the Layout menu.
+ * before/after are in pt-ish units consumed by the paragraphSpacing extension.
+ */
+export const PARAGRAPH_SPACING = [
+  { label: 'Default', before: 0, after: 0 },
+  { label: '0pt / 0pt', before: 0, after: 0 },
+  { label: '6pt / 6pt', before: 8, after: 8 },
+  { label: '12pt / 12pt', before: 16, after: 16 },
+  { label: '18pt / 18pt', before: 24, after: 24 },
+  { label: '12pt / 6pt', before: 16, after: 8 },
+  { label: '6pt / 12pt', before: 8, after: 16 },
+];
+
 export const HIGHLIGHT_COLORS = [
   '#fef08a', '#fde047', '#facc15', '#eab308', '#ca8a04', // Yellows
   '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', // Greens

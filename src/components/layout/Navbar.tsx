@@ -22,12 +22,19 @@ import {
   Minus,
   List,
   Volume2,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  IndentIncrease,
+  IndentDecrease,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { useEditorClipboard } from '../../hooks/useEditorClipboard';
 import { exportToMarkdown } from '../../utils/fileIO';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
+import { LINE_HEIGHTS, PARAGRAPH_SPACING } from '../../constants';
 
 const ZOOM_LEVELS = [
   { label: '50%', value: 0.5 },
@@ -72,6 +79,35 @@ export default function Navbar() {
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
+  const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+
+  // --- Layout menu helpers (read active paragraph/heading attributes) ---
+  const getActiveLineHeight = (): string => {
+    if (!editor) return '';
+    return (
+      editor.getAttributes('paragraph').lineHeight ??
+      editor.getAttributes('heading').lineHeight ??
+      ''
+    );
+  };
+  const getActiveIndent = (): number => {
+    if (!editor) return 0;
+    return (
+      editor.getAttributes('paragraph').indent ??
+      editor.getAttributes('heading').indent ??
+      0
+    );
+  };
+  const getActiveParagraphSpacing = (): { before: number; after: number } | null => {
+    if (!editor) return null;
+    return (
+      editor.getAttributes('paragraph').paragraphSpacing ??
+      editor.getAttributes('heading').paragraphSpacing ??
+      null
+    );
+  };
+  const isActiveAlignment = (align: string): boolean =>
+    !!editor && editor.isActive({ textAlign: align });
 
   const { handleCopy, handleCut, handlePaste } = useEditorClipboard(editor);
 
@@ -365,6 +401,115 @@ export default function Navbar() {
               >
                 <Volume2 className="w-4 h-4" /> Read Aloud
               </button>
+            </div>
+          )}
+        </div>
+
+        {/* Layout Menu */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setLayoutMenuOpen(!layoutMenuOpen)}
+            className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
+          >
+            Layout
+          </button>
+          {layoutMenuOpen && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded shadow-lg z-50">
+              {/* Alignment */}
+              <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Alignment
+              </div>
+              <div className="flex items-center gap-1 px-3 pb-2">
+                {([
+                  { align: 'left', icon: AlignLeft, label: 'Align Left' },
+                  { align: 'center', icon: AlignCenter, label: 'Align Center' },
+                  { align: 'right', icon: AlignRight, label: 'Align Right' },
+                  { align: 'justify', icon: AlignJustify, label: 'Justify' },
+                ] as const).map(({ align, icon: Icon, label }) => (
+                  <button
+                    key={align}
+                    onClick={() => { editor?.chain().focus().setTextAlign(align).run(); setLayoutMenuOpen(false); }}
+                    title={label}
+                    aria-pressed={isActiveAlignment(align)}
+                    className={`p-1.5 rounded transition-colors ${
+                      isActiveAlignment(align)
+                        ? 'bg-blue-600 text-white shadow-inner ring-1 ring-blue-700'
+                        : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
+              <div className="border-t border-gray-100 my-1" />
+              {/* Line Height */}
+              <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Line Height
+              </div>
+              {LINE_HEIGHTS.map((lh) => (
+                <button
+                  key={lh.value}
+                  onClick={() => {
+                    if (lh.value === '') {
+                      editor?.chain().focus().unsetLineHeight().run();
+                    } else {
+                      editor?.chain().focus().setLineHeight(lh.value).run();
+                    }
+                    setLayoutMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                    getActiveLineHeight() === lh.value ? 'bg-blue-50 text-blue-700 font-medium' : ''
+                  }`}
+                >
+                  {lh.label}
+                </button>
+              ))}
+              <div className="border-t border-gray-100 my-1" />
+              {/* Paragraph Spacing */}
+              <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Paragraph Spacing
+              </div>
+              {PARAGRAPH_SPACING.map((ps) => {
+                const activePs = getActiveParagraphSpacing();
+                const isActive = activePs?.before === ps.before && activePs?.after === ps.after;
+                return (
+                  <button
+                    key={ps.label}
+                    onClick={() => {
+                      if (ps.before === 0 && ps.after === 0) {
+                        editor?.chain().focus().unsetParagraphSpacing().run();
+                      } else {
+                        editor?.chain().focus().setParagraphSpacing({ before: ps.before, after: ps.after }).run();
+                      }
+                      setLayoutMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                      isActive ? 'bg-blue-50 text-blue-700 font-medium' : ''
+                    }`}
+                  >
+                    {ps.label}
+                  </button>
+                );
+              })}
+              <div className="border-t border-gray-100 my-1" />
+              {/* Indent / Outdent */}
+              <div className="flex items-center gap-2 px-3 pb-2 pt-1">
+                <button
+                  onClick={() => { editor?.chain().focus().increaseIndent().run(); setLayoutMenuOpen(false); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100"
+                  title="Increase Indent"
+                >
+                  <IndentIncrease className="w-4 h-4" /> Indent
+                </button>
+                <button
+                  onClick={() => { editor?.chain().focus().decreaseIndent().run(); setLayoutMenuOpen(false); }}
+                  disabled={getActiveIndent() === 0}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Decrease Indent"
+                >
+                  <IndentDecrease className="w-4 h-4" /> Outdent
+                </button>
+              </div>
             </div>
           )}
         </div>
