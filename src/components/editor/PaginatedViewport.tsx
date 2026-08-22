@@ -40,6 +40,14 @@ function PaginatedViewportInner() {
   const contentRef = useRef<HTMLDivElement>(null);
   /** True during programmatic scrolls (page nav, search) — suppresses page tracking */
   const programmaticScrollRef = useRef(false);
+  /**
+   * Origin flag for the pending currentPage change. handleScroll sets this
+   * true before calling setCurrentPage so the currentPage effect below knows
+   * the change came from the user's own scrolling (not a Prev/Next/Jump
+   * control). Page-boundary positions are shared between two pages, so the
+   * effect can't tell the origin apart by geometry — it needs this signal.
+   */
+  const pageChangeFromScrollRef = useRef(false);
   const [pageCount, setPageCount] = useState(1);
 
   /**
@@ -131,6 +139,11 @@ function PaginatedViewportInner() {
     const clampedPage = Math.max(1, Math.min(pageIndex, pageCount));
 
     if (clampedPage !== currentPage) {
+      // Mark this change as scroll-driven so the currentPage effect below
+      // does not snap the scroll back to the page boundary (which would
+      // bounce the user backward). Prev/Next/Jump controls go through
+      // goToPage and leave this flag false, so they still snap.
+      pageChangeFromScrollRef.current = true;
       setCurrentPage(clampedPage);
     }
   }, [currentPage, pageHeightPx, pageGapPx, pageCount, setCurrentPage, programmaticScrollUntil]);
@@ -138,8 +151,21 @@ function PaginatedViewportInner() {
   // Scroll to current page when it changes via navigation controls.
   // Also moves the editor caret to the top of the target page so typing
   // doesn't snap the view back to the old cursor position.
+  //
   useEffect(() => {
     if (!containerRef.current) return;
+
+    // The currentPage change came from the user's own scrolling (handleScroll
+    // set the origin flag) — don't snap. Page-boundary positions are shared
+    // between two pages, so the effect can't tell a scroll-driven change from
+    // a navigation-driven one by geometry; the flag is the authoritative
+    // signal. Clearing it here means only genuine Prev/Next/Jump clicks snap,
+    // which breaks the bounce/ratchet loop (snapping back to a boundary
+    // raises the programmatic-scroll lock and freezes page tracking).
+    if (pageChangeFromScrollRef.current) {
+      pageChangeFromScrollRef.current = false;
+      return;
+    }
 
     const stride = pageHeightPx + pageGapPx;
     const maxScroll = containerRef.current.scrollHeight - containerRef.current.clientHeight;
