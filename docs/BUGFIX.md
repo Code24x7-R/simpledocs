@@ -38,6 +38,7 @@
 
 | ID | Title | Description | Fix |
 |----|-------|-------------|-----|
+| B-026 | Open from File does not load the picked document | Selecting a file via the Open picker closed the modal but the editor kept showing the previous content. `handleOpenFromDrive` called `useDocStore.setState(parsed)` directly, bypassing `loadDocument`. Legacy `pages[]` files kept `docState.content` undefined, so the editor sync effect never fired and the document never displayed. | Route through `loadDocument(parsed)` so legacy `pages[]` migrates to `content` (which the editor sync requires), plus sanitization + persistence run. Updated the `useEffect` dep array to `[loadDocument]`. Added regression test in `CloudStorageModal.test.tsx` covering the file-read boundary. |
 | B-025 | View menu stays open after item click | The View menu (zoom +/− buttons and Full-Bleed View toggle) remained visible after clicking a menu item — the standard menu pattern is to close after the action fires. Other menus (File, Edit, Insert, Help) correctly closed. | Added `setViewMenuOpen(false)` to the three onClick handlers in `Navbar.tsx` that were missing it: zoom out (−), zoom in (+), and Full-Bleed View toggle. Added 19 tests in `Navbar.test.tsx` covering all 5 menus. |
 
 ### 2026-08-20
