@@ -198,6 +198,13 @@ function PaginatedViewportInner() {
           style={{
             transform: `scale(${zoom})`,
             transformOrigin: normalEditorMode ? 'top left' : 'top center',
+            // In normal mode the content fills the viewport and the scale
+            // origin is top-left, so zoom > 1 grows the content past the RHS
+            // and overflow-x-hidden clips it (while the LHS margin stays put).
+            // Shrink the wrapper by 1/zoom so the scaled result fits the
+            // viewport exactly — margins scale with zoom (correct behavior)
+            // and nothing is clipped. At zoom 1 this is a no-op (100%).
+            ...(normalEditorMode ? { width: `${100 / zoom}%` } : {}),
           }}
         >
           {/* Editor content */}

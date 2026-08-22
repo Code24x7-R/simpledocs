@@ -14,6 +14,10 @@
 .tiptap {
   outline: none;
   min-height: 100%;
+  /* Project-owned word wrap: break long words/URLs so they never overflow
+     the RHS and get clipped by the viewport's overflow-x-hidden. */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 /* Text selection - light blue background */
@@ -32,6 +36,11 @@
   orphans: var(--orphans, 2);
   widows: var(--widows, 2);
   break-inside: avoid;
+  /* Word-like hyphenation for long words at line ends (requires lang="en"
+     on <html>). overflow-wrap breaks words that still overflow. */
+  hyphens: auto;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .tiptap h1,

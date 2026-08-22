@@ -11,10 +11,12 @@ let mockNormalEditorMode = false;
 // Mutable page so navigation-driven changes can be simulated. The mock
 // setCurrentPage writes here; the selector reads it back via the getter.
 let mockCurrentPage = 1;
+// Mutable zoom so the scale-container width (100%/zoom) can be asserted.
+let mockZoom = 1;
 
 vi.mock('../../store/useDocStore', () => ({
   useDocStore: () => ({
-    zoom: 1,
+    zoom: mockZoom,
     get currentPage() {
       return mockCurrentPage;
     },
@@ -71,6 +73,7 @@ describe('PaginatedViewport', () => {
     vi.clearAllMocks();
     mockNormalEditorMode = false;
     mockCurrentPage = 1;
+    mockZoom = 1;
   });
 
   // jsdom has no layout engine, so scroll metrics are all 0. These helpers
@@ -139,6 +142,28 @@ describe('PaginatedViewport', () => {
     const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
     const zoomContainer = content.parentElement as HTMLElement;
     expect(zoomContainer.style.transformOrigin).toBe('top center');
+  });
+
+  it('scales the wrapper width by 1/zoom in normal-editor mode (prevents RHS clipping on zoom)', () => {
+    mockNormalEditorMode = true;
+    mockZoom = 2;
+    render(<PaginatedViewport />);
+    const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
+    const zoomContainer = content.parentElement as HTMLElement;
+    // At zoom 2 the wrapper is 50% wide, so after scaling it fits the viewport
+    // exactly and the RHS margin is not clipped by overflow-x-hidden.
+    expect(zoomContainer.style.width).toBe('50%');
+  });
+
+  it('does not constrain wrapper width in paginated mode (zoom scales a centered page)', () => {
+    mockNormalEditorMode = false;
+    mockZoom = 2;
+    render(<PaginatedViewport />);
+    const content = screen.getByTestId('document-editor').parentElement as HTMLElement;
+    const zoomContainer = content.parentElement as HTMLElement;
+    // In paginated mode the page has a fixed maxWidth and is centered, so the
+    // wrapper width is left to fill the container (no 1/zoom constraint).
+    expect(zoomContainer.style.width).toBe('');
   });
 
   it('clips horizontal overflow in normal-editor mode (prevents scrollbar on zoom)', () => {
