@@ -187,46 +187,52 @@ describe('extractHeadings', () => {
 });
 
 describe('buildTocContent', () => {
-  it('builds a bullet list with links for each entry', () => {
+  it('returns an array with a tocEntry per heading', () => {
     const entries: TocEntry[] = [
       { level: 1, text: 'Intro', anchorId: 'intro', page: 1 },
       { level: 2, text: 'Background', anchorId: 'background', page: 1 },
     ];
     const content = buildTocContent(entries);
-    expect(content.type).toBe('bulletList');
-    expect(content.content).toHaveLength(2);
+    expect(Array.isArray(content)).toBe(true);
+    expect(content).toHaveLength(2);
+    const first = content[0];
+    expect(first.type).toBe('tocEntry');
+    expect(first.attrs).toEqual({
+      level: 1,
+      anchorId: 'intro',
+      text: 'Intro',
+      page: 1,
+    });
   });
 
-  it('creates link marks with anchor hrefs', () => {
+  it('stores anchor id and text as tocEntry attributes', () => {
     const entries: TocEntry[] = [{ level: 1, text: 'Intro', anchorId: 'intro', page: 1 }];
     const content = buildTocContent(entries);
-    const firstItem = (content.content as Record<string, unknown>[])[0];
-    const paragraph = (firstItem.content as Record<string, unknown>[])[0];
-    const textNode = (paragraph.content as Record<string, unknown>[])[0];
-    expect(textNode.text).toBe('Intro');
-    const marks = textNode.marks as Record<string, unknown>[];
-    expect(marks[0].type).toBe('link');
-    expect((marks[0].attrs as Record<string, unknown>).href).toBe('#intro');
+    expect(content).toHaveLength(1);
+    const attrs = content[0].attrs as Record<string, unknown>;
+    expect(attrs.anchorId).toBe('intro');
+    expect(attrs.text).toBe('Intro');
+    expect(attrs.page).toBe(1);
+    expect(attrs.level).toBe(1);
   });
 
-  it('indents entries based on heading level', () => {
+  it('preserves heading level per entry', () => {
     const entries: TocEntry[] = [
       { level: 1, text: 'Top', anchorId: 'top', page: 1 },
       { level: 3, text: 'Deep', anchorId: 'deep', page: 2 },
     ];
     const content = buildTocContent(entries);
-    const items = content.content as Record<string, unknown>[];
-    expect((items[0].attrs as Record<string, unknown> | undefined)).toBeUndefined();
-    expect((items[1].attrs as Record<string, unknown>).indent).toBe(2);
+    expect((content[0].attrs as Record<string, unknown>).level).toBe(1);
+    expect((content[1].attrs as Record<string, unknown>).level).toBe(3);
   });
 
-  it('returns placeholder when no entries', () => {
+  it('returns placeholder tocEntry when no entries', () => {
     const content = buildTocContent([]);
-    expect(content.type).toBe('bulletList');
-    const firstItem = (content.content as Record<string, unknown>[])[0];
-    const paragraph = (firstItem.content as Record<string, unknown>[])[0];
-    const textNode = (paragraph.content as Record<string, unknown>[])[0];
-    expect(textNode.text).toBe('No headings found in document.');
+    expect(content).toHaveLength(1);
+    expect(content[0].type).toBe('tocEntry');
+    expect((content[0].attrs as Record<string, unknown>).text).toBe(
+      'No headings found in document.'
+    );
   });
 });
 
@@ -276,11 +282,19 @@ describe('assignHeadingAnchors', () => {
 });
 
 describe('wrapTocInContainer', () => {
-  it('wraps TOC content in a tableOfContents node', () => {
-    const tocContent = { type: 'bulletList', content: [] };
-    const wrapped = wrapTocInContainer(tocContent);
+  it('wraps an array of tocEntry nodes in a tableOfContents container', () => {
+    const tocEntries = [
+      { type: 'tocEntry', attrs: { level: 1, anchorId: 'a', text: 'A', page: 1 } },
+    ];
+    const wrapped = wrapTocInContainer(tocEntries);
     expect(wrapped.type).toBe('tableOfContents');
-    expect((wrapped.content as unknown[])[0]).toEqual(tocContent);
+    expect(wrapped.content).toEqual(tocEntries);
+  });
+
+  it('wraps an empty entries array', () => {
+    const wrapped = wrapTocInContainer([]);
+    expect(wrapped.type).toBe('tableOfContents');
+    expect(wrapped.content).toEqual([]);
   });
 });
 

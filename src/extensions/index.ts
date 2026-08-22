@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import StarterKit from '@tiptap/starter-kit';
+import Heading from '@tiptap/extension-heading';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
@@ -20,14 +21,26 @@ import CharacterCount from '@tiptap/extension-character-count';
 import { TemplateField } from './TemplateField';
 import { PageBreak } from './PageBreak';
 import { ParagraphStyle } from './ParagraphStyle';
-import { TableOfContents } from './TableOfContents';
+import { TableOfContents, TocEntry } from './TableOfContents';
 
 export function createExtensions() {
   return [
     StarterKit.configure({
-      heading: { levels: [1, 2, 3, 4, 5, 6] },
+      heading: false,
       link: false,
     }),
+    Heading.extend({
+      addAttributes() {
+        return {
+          ...this.parent?.(),
+          id: {
+            default: null,
+            parseHTML: (element) => element.getAttribute('id'),
+            renderHTML: (attributes) => (attributes.id ? { id: attributes.id } : {}),
+          },
+        };
+      },
+    }).configure({ levels: [1, 2, 3, 4, 5, 6] }),
     TextStyle,
     FontFamily,
     FontSize,
@@ -50,6 +63,7 @@ export function createExtensions() {
     PageBreak,
     ParagraphStyle,
     TableOfContents,
+    TocEntry,
     Image.configure({
       inline: false,
       allowBase64: true,

@@ -190,72 +190,37 @@ export function extractHeadings(
 }
 
 /**
- * Build a Tiptap JSON fragment for the table of contents.
+ * Build the inner content nodes for the table of contents.
  *
- * The TOC is a nested bullet list where each item is a link to a heading
- * anchor. Indentation reflects heading level.
+ * Returns an array of `tocEntry` nodes — one per heading. Each entry stores
+ * its level, anchor id, title text, and page number as attributes, and renders
+ * as a flex row (linked title · dot leader · page). Pass the result to
+ * `wrapTocInContainer` to get the final `tableOfContents` node.
  */
-export function buildTocContent(entries: TocEntry[]): Record<string, unknown> {
+export function buildTocContent(entries: TocEntry[]): Record<string, unknown>[] {
   if (entries.length === 0) {
-    return {
-      type: 'bulletList',
-      content: [
-        {
-          type: 'listItem',
-          content: [
-            {
-              type: 'paragraph',
-              content: [
-                { type: 'text', text: 'No headings found in document.' },
-              ],
-            },
-          ],
+    return [
+      {
+        type: 'tocEntry',
+        attrs: {
+          level: 1,
+          anchorId: '',
+          text: 'No headings found in document.',
+          page: 1,
         },
-      ],
-    };
+      },
+    ];
   }
 
-  const minLevel = Math.min(...entries.map((e) => e.level));
-
-  const listItems = entries.map((entry) => {
-    const indent = entry.level - minLevel;
-    // Build the text with a tab/space + page number after the heading text
-    const pageNum = entry.page;
-    return {
-      type: 'listItem',
-      attrs: indent > 0 ? { indent } : undefined,
-      content: [
-        {
-          type: 'paragraph',
-          content: [
-            {
-              type: 'text',
-              marks: [
-                {
-                  type: 'link',
-                  attrs: {
-                    href: `#${entry.anchorId}`,
-                    class: undefined,
-                    target: null,
-                  },
-                },
-              ],
-              text: entry.text,
-            },
-            {
-              type: 'text',
-              text: `\t${pageNum}`,
-            },
-          ],
-        },
-      ],
-    };
-  });
-
-  return {
-    type: 'bulletList',
-    content: listItems,
-  };
+  return entries.map((entry) => ({
+    type: 'tocEntry' as const,
+    attrs: {
+      level: entry.level,
+      anchorId: entry.anchorId,
+      text: entry.text,
+      page: entry.page,
+    },
+  }));
 }
 
 /**
@@ -304,14 +269,15 @@ export function assignHeadingAnchors(
 }
 
 /**
- * Wrap TOC content in a styled container for visual distinction.
+ * Wrap TOC entry nodes in a `tableOfContents` container for visual
+ * distinction. Accepts the array returned by `buildTocContent`.
  */
 export function wrapTocInContainer(
-  tocContent: Record<string, unknown>
+  tocEntries: Record<string, unknown>[]
 ): Record<string, unknown> {
   return {
     type: 'tableOfContents',
-    content: [tocContent],
+    content: tocEntries,
   };
 }
 

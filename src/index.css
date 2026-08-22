@@ -157,22 +157,41 @@
   background: #f9fafb;
 }
 
-.tiptap .toc-container ul {
-  margin: 0;
-  padding-left: 1.25em;
-}
-
-.tiptap .toc-container li {
+/* Each TOC entry: [ linked title ][ dot leader ][ right-aligned page ] */
+.tiptap .toc-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
   margin: 0.25em 0;
 }
 
-.tiptap .toc-container a {
+.tiptap .toc-entry-link {
   color: #2563eb;
   text-decoration: none;
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tiptap .toc-container a:hover {
+.tiptap .toc-entry-link:hover {
   text-decoration: underline;
+}
+
+/* The dot leader stretches to fill the gap between title and page number. */
+.tiptap .toc-leader {
+  flex: 1 1 auto;
+  min-width: 1.5em;
+  margin: 0 0.25em;
+  border-bottom: 1px dotted #9ca3af;
+  align-self: baseline;
+}
+
+.tiptap .toc-page {
+  flex: 0 0 auto;
+  min-width: 2em;
+  text-align: right;
+  color: #374151;
 }
 
 /* Print styles — ensure widow/orphan control applies */

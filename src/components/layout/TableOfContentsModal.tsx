@@ -52,8 +52,8 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
   if (!isOpen) return null;
 
   const handleInsert = () => {
-    const tocContent = buildTocContent(entries);
-    const wrapped = wrapTocInContainer(tocContent);
+    // buildTocContent returns tocEntry nodes; wrap in container for insertion
+    const tocNode = wrapTocInContainer(buildTocContent(entries));
 
     // Assign anchor IDs to headings in the document
     const docWithAnchors = assignHeadingAnchors(docState.content, entries);
@@ -64,7 +64,7 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
       finalDoc = removeExistingToc(docWithAnchors);
     }
 
-    onInsert(wrapped, finalDoc);
+    onInsert(tocNode, finalDoc);
   };
 
   const handleReplace = () => {
@@ -129,7 +129,7 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
           </label>
         </div>
 
-        {/* Preview */}
+        {/* Preview — mirrors the flex layout of a real tocEntry */}
         <div className="mb-4">
           <div className="text-xs font-medium text-gray-500 mb-2">Preview</div>
           <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 max-h-48 overflow-y-auto">
@@ -138,21 +138,21 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
                 No headings found for the selected levels. Add headings to your document first.
               </p>
             ) : (
-              <ul className="space-y-1">
+              <div className="space-y-1">
                 {entries.map((entry, i) => (
-                  <li
+                  <div
                     key={i}
-                    className="text-xs text-gray-700 flex items-center gap-1"
+                    className="toc-entry text-xs"
                     style={{ paddingLeft: `${(entry.level - minLevel) * 16}px` }}
                   >
-                    <span className="text-blue-500">›</span>
-                    <span className="text-blue-600 hover:underline cursor-pointer flex-1 truncate">
+                    <span className="toc-entry-link text-blue-600 hover:underline cursor-pointer">
                       {entry.text || '(empty heading)'}
                     </span>
-                    <span className="text-gray-400 text-[10px] w-8 text-right">p.{entry.page}</span>
-                  </li>
+                    <span className="toc-leader" />
+                    <span className="toc-page text-gray-700">{entry.page}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
           <div className="text-[10px] text-gray-400 mt-1">
@@ -162,8 +162,8 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
 
         {/* Info */}
         <div className="mb-4 text-[11px] text-gray-500 bg-blue-50 border border-blue-100 rounded p-2">
-          The TOC is generated from heading styles in your document. You can manually edit it after insertion.
-          Links navigate to headings within the document.
+          The TOC is generated from heading styles in your document. Each entry links to its
+          heading and shows the page number. Replace the TOC at any time to refresh it.
         </div>
 
         {/* Actions */}

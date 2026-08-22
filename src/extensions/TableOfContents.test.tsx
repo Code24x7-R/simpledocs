@@ -4,9 +4,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, waitFor, act } from '@testing-library/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Heading from '@tiptap/extension-heading';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { ParagraphStyle } from './ParagraphStyle';
-import { TableOfContents } from './TableOfContents';
+import { TableOfContents, TocEntry } from './TableOfContents';
 import {
   extractHeadings,
   buildTocContent,
@@ -20,10 +21,24 @@ let testEditor: Editor | null = null;
 function TestEditor({ content = '<p>Hello</p>' }: { content?: string | object }) {
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
+      StarterKit.configure({ heading: false }),
+      Heading.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            id: {
+              default: null,
+              parseHTML: (element: HTMLElement) => element.getAttribute('id'),
+              renderHTML: (attributes: Record<string, unknown>) =>
+                attributes.id ? { id: attributes.id as string } : {},
+            },
+          };
+        },
+      }).configure({ levels: [1, 2, 3, 4, 5, 6] }),
       TextStyle,
       ParagraphStyle,
       TableOfContents,
+      TocEntry,
     ] as AnyExtension[],
     content,
     onUpdate: () => {
@@ -137,19 +152,22 @@ describe('TOC hyperlink integration', () => {
     expect(entries.length).toBe(1);
     expect(entries[0].anchorId).toBe('introduction');
 
-    // Build TOC content and assign anchors
-    const tocContent = buildTocContent(entries);
-    const wrapped = wrapTocInContainer(tocContent);
+    const wrapped = wrapTocInContainer(buildTocContent(entries));
     const docWithAnchors = assignHeadingAnchors(doc, entries);
 
-    // Create the full document: TOC + original content with anchors
-    const fullDoc = {
+    // Create the full document: TOC + original content with anchors.
+    // setContent accepts Record<string, unknown>, matching App.tsx usage.
+    const fullDoc: Record<string, unknown> = {
       type: 'doc',
-      content: [wrapped, ...(docWithAnchors.content as unknown[])],
+      content: [wrapped, ...(docWithAnchors.content as Record<string, unknown>[])],
     };
 
-    render(<TestEditor content={fullDoc} />);
+    render(<TestEditor content="<p>placeholder</p>" />);
     await waitFor(() => expect(testEditor).not.toBeNull());
+
+    act(() => {
+      testEditor!.commands.setContent(fullDoc, { emitUpdate: false });
+    });
 
     await waitFor(() => {
       const html = testEditor!.getHTML();
@@ -171,17 +189,20 @@ describe('TOC hyperlink integration', () => {
     };
 
     const entries = extractHeadings(doc);
-    const tocContent = buildTocContent(entries);
-    const wrapped = wrapTocInContainer(tocContent);
+    const wrapped = wrapTocInContainer(buildTocContent(entries));
     const docWithAnchors = assignHeadingAnchors(doc, entries);
 
-    const fullDoc = {
+    const fullDoc: Record<string, unknown> = {
       type: 'doc',
-      content: [wrapped, ...(docWithAnchors.content as unknown[])],
+      content: [wrapped, ...(docWithAnchors.content as Record<string, unknown>[])],
     };
 
-    render(<TestEditor content={fullDoc} />);
+    render(<TestEditor content="<p>placeholder</p>" />);
     await waitFor(() => expect(testEditor).not.toBeNull());
+
+    act(() => {
+      testEditor!.commands.setContent(fullDoc, { emitUpdate: false });
+    });
 
     await waitFor(() => {
       const html = testEditor!.getHTML();
@@ -200,17 +221,20 @@ describe('TOC hyperlink integration', () => {
     };
 
     const entries = extractHeadings(doc);
-    const tocContent = buildTocContent(entries);
-    const wrapped = wrapTocInContainer(tocContent);
+    const wrapped = wrapTocInContainer(buildTocContent(entries));
     const docWithAnchors = assignHeadingAnchors(doc, entries);
 
-    const fullDoc = {
+    const fullDoc: Record<string, unknown> = {
       type: 'doc',
-      content: [wrapped, ...(docWithAnchors.content as unknown[])],
+      content: [wrapped, ...(docWithAnchors.content as Record<string, unknown>[])],
     };
 
-    render(<TestEditor content={fullDoc} />);
+    render(<TestEditor content="<p>placeholder</p>" />);
     await waitFor(() => expect(testEditor).not.toBeNull());
+
+    act(() => {
+      testEditor!.commands.setContent(fullDoc, { emitUpdate: false });
+    });
 
     await waitFor(() => {
       const html = testEditor!.getHTML();
@@ -219,4 +243,5 @@ describe('TOC hyperlink integration', () => {
       expect(html).toContain('<a');
     });
   });
+
 });
