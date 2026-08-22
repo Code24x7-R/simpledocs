@@ -1022,6 +1022,47 @@ describe('CloudStorageModal', () => {
       clickSpy.mockRestore();
     });
 
+    it('reads a picked file and passes its text to onOpenDocument', async () => {
+      // jsdom does not implement Blob.text() (available in real browsers),
+      // so polyfill it for this test to exercise the async file-read path.
+      if (typeof Blob.prototype.text !== 'function') {
+        Blob.prototype.text = function () {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsText(this);
+          });
+        };
+      }
+
+      const onOpenDocument = vi.fn();
+      render(
+        <CloudStorageModal
+          {...defaultProps}
+          mode="open"
+          onOpenDocument={onOpenDocument}
+        />,
+      );
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(fileInput).toBeTruthy();
+
+      const fileContent = JSON.stringify({
+        id: 'local-1',
+        title: 'Local Doc',
+        settings: {},
+        content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'From disk' }] }] },
+      });
+      const file = new File([fileContent], 'local.sdjson', { type: 'application/json' });
+
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      await waitFor(() => {
+        expect(onOpenDocument).toHaveBeenCalledWith(fileContent, 'local.sdjson');
+      });
+    });
+
     it('disables Copy Link and warns when the document is too large', () => {
       // Force the size guard to treat the doc as too large for this test.
       vi.mocked(canShareViaUrl).mockReturnValue(false);

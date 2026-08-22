@@ -95,8 +95,10 @@ export default function App() {
     try {
       const parsed = JSON.parse(content);
       if (parsed.id && parsed.settings && (parsed.content || parsed.pages)) {
-        // Valid DocState format
-        useDocStore.setState(parsed);
+        // Valid DocState format — route through loadDocument so legacy
+        // `pages[]` files migrate to `content` (which the editor sync
+        // requires) and the document is sanitized + persisted.
+        loadDocument(parsed);
         console.log('[App] Opened document from Drive:', fileName);
       } else {
         alert('Invalid document format in Drive file');
@@ -104,7 +106,7 @@ export default function App() {
     } catch {
       alert('Failed to parse document from Drive');
     }
-  }, []);
+  }, [loadDocument]);
 
   // Image modal handler
   const handleImageSubmit = useCallback((src: string, alt: string, width: number, height: number) => {
