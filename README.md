@@ -22,7 +22,8 @@ The editor uses a continuous-scroll architecture where a single Tiptap instance 
 - Table of Contents generation with heading anchor links
 - Search & replace (regex, case-sensitive, whole-word)
 - File I/O (JSON save/load, PDF export, Markdown export, Word import)
-- Cloud storage (Google Drive, OneDrive, S3-compatible)
+- Sharing — copy link (self-contained URL), native share sheet, save/open as file (no accounts needed)
+- Cloud storage (Google Drive, OneDrive, S3-compatible) — advanced, optional
 - AI chat panel (multi-provider: LM Studio, Google Gemini)
 - Named ranges (Excel-like named cell references)
 - Text-to-Speech reader (planned)
@@ -42,8 +43,9 @@ For detailed usage instructions, see **[MANUAL.md](./MANUAL.md)**.
 | State | Zustand |
 | Styling | Tailwind CSS 3 |
 | Virtualization | @tanstack/react-virtual |
-| PDF | html2pdf.js |
+| PDF | pdfmake (text-based, searchable) |
 | Word import | mammoth.js |
+| URL sharing | lz-string (compresses a whole document into a `#doc=` URL fragment) |
 | Testing | Vitest + React Testing Library + Playwright |
 
 ---
@@ -86,6 +88,21 @@ PaginatedViewport
        └─ TableContextMenu (right-click in tables)
 ```
 
+### Document Sharing
+
+The `CloudStorageModal` opens to a **userland home view** that needs no accounts and no developer-provisioned infrastructure. Cloud providers (Google Drive, OneDrive, S3) remain available under an "Advanced" collapsible.
+
+| Action | Mode | Mechanism |
+|--------|------|-----------|
+| Copy Link | save | `shareUrl.ts` — compresses the document into a self-contained `#doc=` URL fragment via `lz-string` |
+| Share File | save | `webShare.ts` — native OS share sheet (`navigator.share` with a `.sdjson` file), falls back to download |
+| Save to File | save | downloads the document as a `.sdjson` file |
+| Open from File | open | reads a `.sdjson` file from disk and loads it into the editor |
+
+A 30 KB size guard (`estimateShareSize` / `canShareViaUrl`) disables Copy Link for oversized documents — they fall back to a file download instead of producing a broken link.
+
+On startup, `App.tsx` hydrates a shared document from a `#doc=` URL fragment and then clears the fragment so a refresh does not re-load it.
+
 ### Component Hierarchy
 
 ```
@@ -103,7 +120,7 @@ App
 ├─ FieldMergeModal (merge all fields with values)
 ├─ ImageModal (upload or URL with preview)
 ├─ LinkModal (URL + display text + validation)
-├─ CloudStorageModal (Google Drive, OneDrive, S3)
+├─ CloudStorageModal (userland sharing + Google Drive, OneDrive, S3)
 ├─ ChatPanel (LM Studio + Gemini, multi-provider)
 ├─ ProviderSetupModal (3-step provider wizard)
 ├─ KeyboardShortcutsModal (shortcut reference)

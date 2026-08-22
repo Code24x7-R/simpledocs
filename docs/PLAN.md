@@ -43,13 +43,14 @@
 | 37 | Full-Bleed / Distraction-Free View | COMPLETE ✅ |
 | 38 | Additional Common Styles (Headings H1-H6, Line Spacing, Indent/Outdent, Paragraph Spacing) | COMPLETE ✅ |
 | 39 | Text-to-Speech (TTS) Reader | COMPLETE ✅ |
+| 40 | Zero-Friction Sharing (URL link, native share, file) | COMPLETE ✅ |
 
-### Final Results (2026-08-20)
-- **884 tests pass** (49 suites)
+### Final Results (2026-08-22)
+- **952 tests pass** (53 suites)
 - **Lint**: 0 errors, 0 warnings
 - **Type-check**: Clean
 - **Build**: Succeeds
-- **Phases**: 39 complete
+- **Phases**: 40 complete
 
 - [x] Update PLAN.md with results and coverage stats
 - [x] Log completion in PROGRESS_LOG.md
@@ -682,7 +683,7 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 - [ ] Fit-to-width zoom option
 - [ ] Spell check
 - [ ] Collaborative editing (@tiptap/extension-collaboration)
-- [ ] Cloud storage integration
+- [x] Cloud storage integration (Phase 36) + zero-friction sharing (Phase 40)
 - [ ] Subscript/Superscript support
 - [ ] Syntax highlighting in code blocks (@tiptap/extension-code-block-lowlight)
 - [ ] Floating menu (insert menu on new line)
@@ -1127,3 +1128,41 @@ src/
 - Export audio (record synthesis output to WAV)
 - Voice pitch control
 - Per-paragraph navigation (skip forward/back by paragraph)
+
+---
+
+## Phase 40: Zero-Friction Sharing — COMPLETE ✅
+
+**2026-08-22** — Replaced the cloud-provider-first save/open flow with a userland home view that needs no accounts and no developer-provisioned infrastructure. Cloud providers (Google Drive, OneDrive, S3) remain available under an "Advanced" collapsible.
+
+### Design
+A "userland-first" sharing model (see `docs/CLOUD_SYNC_DESIGN.md`):
+1. **Copy Link** — compresses the document into a self-contained `#doc=` URL fragment via `lz-string`.
+2. **Share File** — native OS share sheet (`navigator.share` with a `.sdjson` file), falls back to download.
+3. **Save to File / Open from File** — plain file download/upload.
+4. **Open from link on startup** — `App.tsx` hydrates a shared document from the `#doc=` fragment, then clears it.
+
+A 30 KB size guard (`estimateShareSize` / `canShareViaUrl`) disables Copy Link for oversized documents — they fall back to a file download instead of producing a broken link.
+
+### Files
+| File | Action |
+|------|--------|
+| `src/utils/shareUrl.ts` | **NEW** — `encodeDocToUrl`, `loadDocFromUrl`, `estimateShareSize`, `canShareViaUrl`, `MAX_SHARE_SIZE` |
+| `src/utils/shareUrl.test.ts` | **NEW** — 14 tests (encode/decode round-trip, size guard, URL parsing) |
+| `src/utils/webShare.ts` | **NEW** — `shareDocument` (native share + fallback), `canShareFiles` (feature detect) |
+| `src/utils/webShare.test.ts` | **NEW** — 11 tests (share, fallback, user-cancel vs real error) |
+| `src/components/layout/CloudStorageModal.tsx` | **REFACTOR** — userland home view (Copy Link / Share File / Save to File / Open from File); providers moved under "Advanced" collapsible; size guard disables Copy Link |
+| `src/components/layout/CloudStorageModal.test.tsx` | **EDIT** — 9 new userland tests (39 existing still pass) |
+| `src/App.tsx` | **EDIT** — hydrate shared doc from `#doc=` fragment on startup, then clear fragment |
+| `docs/CLOUD_SYNC_DESIGN.md` | **NEW** — full design (7 options SWOT, recommendation, implementation status) |
+| `package.json` | **EDIT** — added `lz-string@^1.5.0` |
+
+### Results
+- **952 tests pass** (53 suites) — up from 918
+- Lint clean, type-check clean, build succeeds
+- 34 new tests (14 shareUrl + 11 webShare + 9 modal)
+
+### Future Enhancements (v2+)
+- QR code generation for share links
+- File System Access API (save/link to a local folder without re-downloading)
+- Encrypted share links (password-protected docs)

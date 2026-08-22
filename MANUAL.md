@@ -17,7 +17,7 @@
 - [Search & Replace](#search--replace)
 - [Text-to-Speech (TTS)](#text-to-speech-tts)
 - [File Operations](#file-operations)
-  - [Cloud Storage](#cloud-storage)
+  - [Sharing & Cloud Storage](#sharing--cloud-storage)
     - [Google Drive Setup](#google-drive-setup)
     - [OneDrive Setup](#onedrive-setup)
 - [AI Chat Panel](#ai-chat-panel)
@@ -77,7 +77,7 @@ SimpleDocs is a browser-based WYSIWYG document editor — no installation requir
 
 | Menu | Purpose |
 |------|---------|
-| **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Cloud Storage (Save/Open), Recent Files |
+| **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Save/Open Cloud (sharing + cloud storage), Recent Files |
 | **Edit** | Copy, Cut, Paste |
 | **Insert** | Image, Link, Table, Field, Merge Fields, Page Break |
 | **View** | Zoom levels (50%–200% with +/− step buttons), Full-Bleed view toggle, Launch in Full-Bleed by Default |
@@ -498,22 +498,32 @@ The status bar shows:
 | **Open JSON** | File → Open JSON | Open a previously saved `.json` document |
 | **Import Word** | File → Import Word | Import a `.docx` file (converts to editor content) |
 
-### Cloud Storage
+### Sharing & Cloud Storage
 
-SimpleDocs supports saving and opening documents from **Google Drive** and **Microsoft OneDrive**.
+The **Save to Cloud** / **Open from Cloud** dialog opens to a userland home view that needs no accounts and no setup — you can share a document the moment you open the dialog.
 
-| Operation | Menu Path | Description |
-|-----------|-----------|-------------|
-| **Save to Cloud** | File → Save to Cloud | Save document as `.sdjson` to Google Drive or OneDrive |
-| **Open from Cloud** | File → Open from Cloud | Browse and open documents from Google Drive or OneDrive |
+#### Quick share (no accounts)
 
-> **Note:** First-time use requires connecting to a cloud provider via OAuth. See [Google Drive Setup](#google-drive-setup) or [OneDrive Setup](#onedrive-setup) for setup instructions.
+| Action | Mode | What it does |
+|--------|------|--------------|
+| **Copy Link** | Save | Generates a self-contained share link. The whole document is compressed into the URL fragment, so anyone who opens the link gets your document — no upload, no server. |
+| **Share File** | Save | Opens the device's native share sheet with the document attached as a `.sdjson` file (works with messaging, email, AirDrop, etc.). Falls back to a download if the OS has no share sheet. |
+| **Save to File** | Save | Downloads the document as a `.sdjson` file you can store anywhere. |
+| **Open from File** | Open | Choose a `.sdjson` file from your device to load it into the editor. |
+
+> **Size limit:** share links are capped at ~30 KB of compressed content. If your document is too large for a link, **Copy Link** is disabled and you'll see a notice — use **Save to File** or **Share File** instead.
+
+> **Opening a shared link:** open the link in a browser and the document loads automatically. Refreshing the page won't reload it (the link fragment is cleared once opened).
+
+#### Cloud accounts (optional)
+
+Google Drive, Microsoft OneDrive, and S3-compatible storage are still available under an **Advanced** section at the bottom of the dialog. First-time use requires connecting a cloud provider via OAuth. See [Google Drive Setup](#google-drive-setup) or [OneDrive Setup](#onedrive-setup) for setup instructions.
 
 ### Exporting
 
 | Format | Menu Path | Description |
 |--------|-----------|-------------|
-| **PDF** | File → Export PDF | Generate PDF via html2pdf.js with exact margins |
+| **PDF** | File → Export PDF | Generate a searchable, selectable PDF via pdfmake with exact margins |
 | **Markdown** | File → Export Markdown | Download document as `.md` file |
 | **Print** | File → Print | Native browser print dialog |
 

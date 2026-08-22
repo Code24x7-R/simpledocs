@@ -1,5 +1,26 @@
 # simpledocs — Progress Log
 
+## 2026-08-22 — [FEATURE] Zero-friction document sharing and link-based open
+
+### Summary
+
+Replaced the cloud-provider-first save/open flow with a userland home view that needs no accounts and no developer-provisioned infrastructure. Cloud providers (Google Drive, OneDrive, S3) remain available under an "Advanced" collapsible.
+
+### Changes
+- `src/utils/shareUrl.ts` — encode a `DocState` into a self-contained `#doc=` URL fragment via `lz-string`, decode it back, and enforce a 30 KB size guard so oversized docs fall back to a file download.
+- `src/utils/webShare.ts` — share a document through the native OS share sheet (`navigator.share` with a `.sdjson` file) with a download fallback; handles user-cancel vs real errors.
+- `src/components/layout/CloudStorageModal.tsx` — refactored from a provider-picker into a home view with Copy Link, Share File, Save to File / Open from File up front; providers moved under an "Advanced" `<details>` collapsible.
+- `src/App.tsx` — hydrate a shared document from the `#doc=` fragment on startup, then clear the fragment so a refresh does not re-load it.
+- `docs/CLOUD_SYNC_DESIGN.md` — full design (7 options SWOT, recommendation, implementation status).
+- Added `lz-string@^1.5.0` dependency.
+
+### Results
+- 952 tests pass (53 suites) — up from 918
+- Lint clean, type-check clean, build succeeds
+- 34 new tests (14 shareUrl + 11 webShare + 9 modal)
+
+---
+
 ## 2026-08-22 — [BUGFIX] B-025: View menu stays open after item click
 
 ### Summary
