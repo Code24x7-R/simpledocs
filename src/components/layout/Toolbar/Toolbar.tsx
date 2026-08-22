@@ -151,8 +151,11 @@ export default function Toolbar() {
       onClick={onClick}
       disabled={disabled}
       title={title}
+      aria-pressed={active}
       className={`p-1.5 rounded transition-colors ${
-        active ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        active
+          ? 'bg-blue-600 text-white shadow-inner ring-1 ring-blue-700'
+          : 'hover:bg-gray-100 text-gray-700'
       } disabled:opacity-30 disabled:cursor-not-allowed`}
     >
       {children}
@@ -287,6 +290,17 @@ export default function Toolbar() {
         )}
       </div>
 
+      {/* Text Style toggles */}
+      <Button onClick={() => editor.chain().focus().toggleBold().run()} active={isActive('bold')} title="Bold (Ctrl+B)">
+        <Bold className="w-4 h-4" />
+      </Button>
+      <Button onClick={() => editor.chain().focus().toggleItalic().run()} active={isActive('italic')} title="Italic (Ctrl+I)">
+        <Italic className="w-4 h-4" />
+      </Button>
+      <Button onClick={() => editor.chain().focus().toggleUnderline().run()} active={isActive('underline')} title="Underline (Ctrl+U)">
+        <Underline className="w-4 h-4" />
+      </Button>
+
       {/* Format Menu */}
       <div className="relative">
         <button
@@ -298,34 +312,6 @@ export default function Toolbar() {
         </button>
         {formatMenuOpen && (
           <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
-            {/* Text Style */}
-            <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Text Style
-            </div>
-            <button
-              onClick={() => { editor.chain().focus().toggleBold().run(); setFormatMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
-                isActive('bold') ? 'bg-blue-50 text-blue-700 font-medium' : ''
-              }`}
-            >
-              <Bold className="w-4 h-4" /> Bold
-            </button>
-            <button
-              onClick={() => { editor.chain().focus().toggleItalic().run(); setFormatMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
-                isActive('italic') ? 'bg-blue-50 text-blue-700 font-medium' : ''
-              }`}
-            >
-              <Italic className="w-4 h-4" /> Italic
-            </button>
-            <button
-              onClick={() => { editor.chain().focus().toggleUnderline().run(); setFormatMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
-                isActive('underline') ? 'bg-blue-50 text-blue-700 font-medium' : ''
-              }`}
-            >
-              <Underline className="w-4 h-4" /> Underline
-            </button>
             <button
               onClick={() => { editor.chain().focus().toggleStrike().run(); setFormatMenuOpen(false); }}
               className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
