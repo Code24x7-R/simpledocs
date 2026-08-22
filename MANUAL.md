@@ -77,7 +77,9 @@ SimpleDocs is a browser-based WYSIWYG document editor — no installation requir
 
 | Menu | Purpose |
 |------|---------|
-| **File** | New, Open, Save, Import Word, Export (PDF/Markdown), Print, Page Setup, Save/Open Cloud (sharing + cloud storage), Recent Files |
+| **File** | New, Open, Save, Import Word, Export ▸ (PDF / Markdown), Print, Page Setup, Recent Files |
+
+> **Open** and **Save** open a single dialog that covers local files, sharing (copy link / native share sheet), and cloud storage (Google Drive / OneDrive / S3 under an "Advanced" section). |
 | **Edit** | Copy, Cut, Paste |
 | **Insert** | Image, Link, Table, Field, Merge Fields, Page Break |
 | **View** | Zoom levels (50%–200% with +/− step buttons), Full-Bleed view toggle, Launch in Full-Bleed by Default |
@@ -494,13 +496,13 @@ The status bar shows:
 | Operation | Menu Path | Description |
 |-----------|-----------|-------------|
 | **New** | File → New | Start a fresh document |
-| **Save JSON** | File → Save JSON | Download document as `.json` file |
-| **Open JSON** | File → Open JSON | Open a previously saved `.json` document |
+| **Save** | File → Save | Open the save dialog — save as a local file, share a link, or send via the share sheet (see below) |
+| **Open** | File → Open | Open the open dialog — open a local file, a shared link, or a cloud document (see below) |
 | **Import Word** | File → Import Word | Import a `.docx` file (converts to editor content) |
 
 ### Sharing & Cloud Storage
 
-The **Save to Cloud** / **Open from Cloud** dialog opens to a userland home view that needs no accounts and no setup — you can share a document the moment you open the dialog.
+The **Save** / **Open** dialog opens to a userland home view that needs no accounts and no setup — you can share a document the moment you open the dialog.
 
 #### Quick share (no accounts)
 
@@ -559,24 +561,22 @@ Before using Google Drive, you need to configure OAuth credentials:
 #### Saving to Google Drive
 
 1. Make sure you're connected (see below)
-2. **File → Save to Cloud**
-3. Select **Google Drive** as the provider
-4. Enter a filename (`.sdjson` extension is added automatically)
-5. Click **Save to Drive**
-6. Your document is saved to the root of your Google Drive
+2. **File → Save**, then expand **Advanced: cloud accounts** and select **Google Drive**
+3. Enter a filename (`.sdjson` extension is added automatically)
+4. Click **Save to Drive**
+5. Your document is saved to the root of your Google Drive
 
 #### Opening from Google Drive
 
 1. Make sure you're connected (see below)
-2. **File → Open from Cloud**
-3. Select **Google Drive** as the provider
-4. Browse your Drive files using the built-in picker
-5. Or view a list of recently saved SimpleDocs files
-6. Click **Open** to load the document into the editor
+2. **File → Open**, then expand **Advanced: cloud accounts** and select **Google Drive**
+3. Browse your Drive files using the built-in picker
+4. Or view a list of recently saved SimpleDocs files
+5. Click **Open** to load the document into the editor
 
 #### Connecting to Google Drive
 
-1. Click **File → Save to Cloud** or **File → Open from Cloud**
+1. Click **File → Save** or **File → Open**
 2. Select **Google Drive** as the provider
 3. A Google consent popup will appear
 4. Grant permission for the app to access your Drive files
@@ -625,23 +625,21 @@ Before using OneDrive, you need to configure OAuth credentials:
 #### Saving to OneDrive
 
 1. Make sure you're connected (see below)
-2. **File → Save to Cloud**
-3. Select **OneDrive** as the provider
-4. Enter a filename (`.sdjson` extension is added automatically)
-5. Click **Save to OneDrive**
-6. Your document is saved to the OneDrive app folder
+2. **File → Save**, then expand **Advanced: cloud accounts** and select **OneDrive**
+3. Enter a filename (`.sdjson` extension is added automatically)
+4. Click **Save to OneDrive**
+5. Your document is saved to the OneDrive app folder
 
 #### Opening from OneDrive
 
 1. Make sure you're connected (see below)
-2. **File → Open from Cloud**
-3. Select **OneDrive** as the provider
-4. View a list of recently saved SimpleDocs files
-5. Click **Open** to load the document into the editor
+2. **File → Open**, then expand **Advanced: cloud accounts** and select **OneDrive**
+3. View a list of recently saved SimpleDocs files
+4. Click **Open** to load the document into the editor
 
 #### Connecting to OneDrive
 
-1. Click **File → Save to Cloud** or **File → Open from Cloud**
+1. Click **File → Save** or **File → Open**
 2. Select **OneDrive** as the provider
 3. A Microsoft sign-in popup will appear
 4. Sign in with your Microsoft account and grant permission

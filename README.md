@@ -21,7 +21,7 @@ The editor uses a continuous-scroll architecture where a single Tiptap instance 
 - Hyperlinks (insert/edit/remove, auto-link on paste, internal TOC anchors)
 - Table of Contents generation with heading anchor links
 - Search & replace (regex, case-sensitive, whole-word)
-- File I/O (JSON save/load, PDF export, Markdown export, Word import)
+- File I/O (PDF export, Markdown export, Word import) via a unified Open/Save dialog that also handles sharing and cloud storage
 - Sharing — copy link (self-contained URL), native share sheet, save/open as file (no accounts needed)
 - Cloud storage (Google Drive, OneDrive, S3-compatible) — advanced, optional
 - AI chat panel (multi-provider: LM Studio, Google Gemini)

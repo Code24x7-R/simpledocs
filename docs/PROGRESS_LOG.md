@@ -1,5 +1,25 @@
 # simpledocs — Progress Log
 
+## 2026-08-22 — [REFACTOR] Collapse File menu Open/Save and add Export submenu
+
+### Summary
+
+Deduplicated the redundant File menu open/save paths. `Open JSON` and `Save JSON` both did the same thing as the unified dialog's `Open from File` / `Save to File`, so they were removed. `Open from Cloud` / `Save to Cloud` were renamed to just **Open** / **Save**, and the modal now handles local files, sharing, and cloud storage in one place. Export PDF and Markdown were moved under a new **Export ▸** flyout submenu, shortening the File menu further.
+
+### Changes
+- `src/components/layout/Navbar.tsx` — removed `handleOpenJson` / `handleSaveJson` / `handleFileChange` and the `.json` file input; renamed `Save to Cloud` → **Save**, `Open from Cloud` → **Open**; added an **Export** hover/click flyout containing Export PDF and Export Markdown; dropped unused `Cloud` icon and `saveDocument`/`openDocument` imports.
+- `src/utils/fileIO.ts` — deleted the now-dead `saveDocument` and `openDocument` helpers (their only callers were the removed menu items).
+- `src/utils/fileIO.test.ts` — deleted (covered only the two removed helpers).
+- `src/components/layout/Navbar.test.tsx` — removed the stale `fileIO` mock fields and the Save JSON test; added Open / Export Markdown close tests and an Export-submenu reveal test.
+- Docs (README, MANUAL, PLAN) — updated the menu tables and save/open instructions to match.
+
+### Results
+- 950 tests pass (52 suites) — down from 952 (removed the 5 `fileIO` tests, added a net of 3 Navbar tests)
+- Lint clean, type-check clean, build succeeds
+- File menu reduced from 10 items to 7 (New, Save, Open, Import Word, Export ▸, Print, Page Setup)
+
+---
+
 ## 2026-08-22 — [FEATURE] Zero-friction document sharing and link-based open
 
 ### Summary

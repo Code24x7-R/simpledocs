@@ -21,8 +21,6 @@ vi.mock('../../hooks/useEditorClipboard', () => ({
 // Mock utility modules triggered by menu item actions
 // ---------------------------------------------------------------------------
 vi.mock('../../utils/fileIO', () => ({
-  saveDocument: vi.fn(),
-  openDocument: vi.fn().mockResolvedValue(null),
   exportToMarkdown: vi.fn(),
 }));
 
@@ -166,18 +164,43 @@ describe('Navbar — menu close behavior', () => {
       });
     });
 
-    it('closes after clicking Save JSON', () => {
+    it('closes after clicking Save', () => {
       render(<Navbar />);
       openMenu('File');
-      fireEvent.click(screen.getByText('Save JSON'));
-      expect(screen.queryByText('Save JSON')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText('Save'));
+      expect(screen.queryByText('Save')).not.toBeInTheDocument();
+    });
+
+    it('closes after clicking Open', () => {
+      render(<Navbar />);
+      openMenu('File');
+      fireEvent.click(screen.getByText('Open'));
+      expect(screen.queryByText('Open')).not.toBeInTheDocument();
     });
 
     it('closes after clicking Export PDF', () => {
       render(<Navbar />);
       openMenu('File');
+      fireEvent.mouseEnter(screen.getByText('Export'));
       fireEvent.click(screen.getByText('Export PDF'));
       expect(screen.queryByText('Export PDF')).not.toBeInTheDocument();
+    });
+
+    it('closes after clicking Export Markdown', () => {
+      render(<Navbar />);
+      openMenu('File');
+      fireEvent.mouseEnter(screen.getByText('Export'));
+      fireEvent.click(screen.getByText('Export Markdown'));
+      expect(screen.queryByText('Export Markdown')).not.toBeInTheDocument();
+    });
+
+    it('shows the Export submenu with PDF and Markdown options', () => {
+      render(<Navbar />);
+      openMenu('File');
+      expect(screen.queryByText('Export PDF')).not.toBeInTheDocument();
+      fireEvent.mouseEnter(screen.getByText('Export'));
+      expect(screen.getByText('Export PDF')).toBeInTheDocument();
+      expect(screen.getByText('Export Markdown')).toBeInTheDocument();
     });
 
     it('closes after clicking Print', () => {

@@ -20,13 +20,12 @@ import {
   Table,
   Sparkles,
   Minus,
-  Cloud,
   List,
   Volume2,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { useEditorClipboard } from '../../hooks/useEditorClipboard';
-import { saveDocument, openDocument, exportToMarkdown } from '../../utils/fileIO';
+import { exportToMarkdown } from '../../utils/fileIO';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
 
@@ -68,35 +67,13 @@ export default function Navbar() {
     addRecentFile,
   } = useDocStore();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
 
   const { handleCopy, handleCut, handlePaste } = useEditorClipboard(editor);
-
-  const handleSaveJson = () => {
-    saveDocument(docState);
-  };
-
-  const handleOpenJson = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const doc = await openDocument(file);
-      if (doc) {
-        loadDocument(doc);
-      }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to open document');
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
 
   const handleExportPdf = () => {
     // Triggered via custom event - App listens for this
@@ -162,7 +139,7 @@ export default function Navbar() {
   const handleOpenMRUFile = async (entry: { name: string; timestamp: number; size: number }) => {
     // For MRU, we just show info since we don't store the actual file content
     // In a full implementation, we'd store file references via File System Access API
-    alert(`MRU: ${entry.name} (${formatMRUTimestamp(entry.timestamp)}). Use Open JSON to reopen saved documents.`);
+    alert(`MRU: ${entry.name} (${formatMRUTimestamp(entry.timestamp)}). Use File → Open to reopen saved documents.`);
   };
 
   const handleLoadDemo = async () => {
@@ -211,35 +188,53 @@ export default function Navbar() {
               <Sparkles className="w-4 h-4" /> Load Demo
             </button>
             <button
-              onClick={() => { handleOpenJson(); setFileMenuOpen(false); }}
+              onClick={() => { setDriveOpen(true, 'save'); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
-              <FolderOpen className="w-4 h-4" /> Open JSON
+              <Save className="w-4 h-4" /> Save
             </button>
+            <button
+              onClick={() => { setDriveOpen(true, 'open'); setFileMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <FolderOpen className="w-4 h-4" /> Open
+            </button>
+            <div className="border-t border-gray-100 my-1" />
             <button
               onClick={() => { handleImportWord(); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <FileUp className="w-4 h-4" /> Import Word
             </button>
-            <button
-              onClick={() => { handleSaveJson(); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+            <div
+              className="relative"
+              onMouseEnter={() => setExportMenuOpen(true)}
+              onMouseLeave={() => setExportMenuOpen(false)}
             >
-              <Save className="w-4 h-4" /> Save JSON
-            </button>
-            <button
-              onClick={() => { handleExportPdf(); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" /> Export PDF
-            </button>
-            <button
-              onClick={() => { handleExportMarkdown(); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <FileDown className="w-4 h-4" /> Export Markdown
-            </button>
+              <button
+                onClick={() => setExportMenuOpen((v) => !v)}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" /> Export
+                <span className="ml-auto text-gray-400">▸</span>
+              </button>
+              {exportMenuOpen && (
+                <div className="absolute top-0 left-full ml-0.5 w-48 bg-white border border-gray-200 rounded shadow-lg z-50">
+                  <button
+                    onClick={() => { handleExportPdf(); setFileMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" /> Export PDF
+                  </button>
+                  <button
+                    onClick={() => { handleExportMarkdown(); setFileMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <FileDown className="w-4 h-4" /> Export Markdown
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => { handlePrint(); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -247,18 +242,6 @@ export default function Navbar() {
               <Printer className="w-4 h-4" /> Print
             </button>
             <div className="border-t border-gray-100 my-1" />
-            <button
-              onClick={() => { setDriveOpen(true, 'save'); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Cloud className="w-4 h-4" /> Save to Cloud
-            </button>
-            <button
-              onClick={() => { setDriveOpen(true, 'open'); setFileMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Cloud className="w-4 h-4" /> Open from Cloud
-            </button>
             <button
               onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -526,13 +509,6 @@ export default function Navbar() {
         placeholder="Document Title"
       />
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        onChange={handleFileChange}
-        className="hidden"
-      />
       <input
         ref={wordFileInputRef}
         type="file"
