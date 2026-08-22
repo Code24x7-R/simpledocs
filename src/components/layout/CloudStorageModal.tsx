@@ -13,8 +13,8 @@
  * - "open": Browse cloud and open a document
  */
 
-import { useState, useEffect } from 'react';
-import { X, FolderOpen, Save, Loader2, AlertCircle, FileText, Trash2, Cloud, Server, Settings } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, FolderOpen, Save, Loader2, AlertCircle, FileText, Trash2, Cloud, Server, Settings, Link, Check, Download, Share2 } from 'lucide-react';
 import { listFiles as listGoogleFiles, createFile as createGoogleFile, downloadFile as downloadGoogleFile, deleteFile as deleteGoogleFile, DriveFile } from '../../utils/driveApi';
 import { openPicker } from '../../utils/pickerApi';
 import { listFiles as listOneDriveFiles, createFile as createOneDriveFile, downloadFile as downloadOneDriveFile, deleteFile as deleteOneDriveFile, OneDriveItem } from '../../utils/onedriveApi';
@@ -22,6 +22,9 @@ import { requestAccessToken as getGoogleToken } from '../../utils/driveAuth';
 import { signIn as signInOneDrive, signOut as signOutOneDrive } from '../../utils/onedriveAuth';
 import { listFiles as listS3Files, createFile as createS3File, downloadFile as downloadS3File, deleteFile as deleteS3File, S3Object } from '../../utils/s3Api';
 import { loadS3Config, isS3Configured } from '../../utils/s3Config';
+import { encodeDocToUrl, canShareViaUrl, estimateShareSize } from '../../utils/shareUrl';
+import { shareDocument } from '../../utils/webShare';
+import type { DocState } from '../../store/useDocStore';
 import S3ConfigModal from './S3ConfigModal';
 
 type CloudProvider = 'google' | 'onedrive' | 's3';
@@ -59,8 +62,12 @@ export default function CloudStorageModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
+const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
   const [s3Ready, setS3Ready] = useState(false);
+  /** Whether the URL link was just copied (shows a brief confirmation). */
+  const [linkCopied, setLinkCopied] = useState(false);
+  /** Hidden file input for the userland "Open from file" action. */
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -70,10 +77,103 @@ export default function CloudStorageModal({
       setProvider(null);
       setFiles([]);
       setS3Ready(isS3Configured(loadS3Config()));
+      setLinkCopied(false);
     }
   }, [isOpen, documentTitle]);
 
   const clearError = () => setError(null);
+
+  // Size guard: can this document fit in a share link? Computed each render
+  // from the current content string.
+  let linkTooLarge = false;
+  let linkSizeLabel = '';
+  try {
+    const doc = JSON.parse(documentContent) as DocState;
+    const size = estimateShareSize(doc);
+    linkTooLarge = !canShareViaUrl(doc);
+    linkSizeLabel = `${Math.round(size / 1024)} KB`;
+  } catch {
+    linkTooLarge = true;
+  }
+
+  // --- Userland sharing (no accounts, no setup) ---
+
+  /** Copy a self-contained share link to the clipboard. */
+  const handleCopyLink = async () => {
+    setError(null);
+    try {
+      const doc = JSON.parse(documentContent) as DocState;
+      const url = encodeDocToUrl(doc, `${window.location.origin}${window.location.pathname}`);
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      // Auto-close shortly after confirming the copy.
+      setTimeout(() => onClose(), 1200);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to copy link to clipboard');
+    }
+  };
+
+  /** Share the document as a file via the native OS share sheet (or download). */
+  const handleShareFile = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const doc = JSON.parse(documentContent) as DocState;
+      const result = await shareDocument(doc, documentTitle || 'Untitled');
+      if (result === 'shared' || result === 'fallback') {
+        onClose();
+      }
+      // 'cancelled' — stay open, no error.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to share file');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Download the document as a .sdjson file to the local machine. */
+  const handleDownloadFile = () => {
+    setError(null);
+    try {
+      const doc = JSON.parse(documentContent) as DocState;
+      const json = JSON.stringify(doc, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(documentTitle || 'Untitled').replace(/[^a-zA-Z0-9_-]/g, '_')}.sdjson`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download file');
+    }
+  };
+
+  /** Open the native file picker and load the chosen .sdjson file. */
+  const handleOpenFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset the input so the same file can be re-selected.
+    e.target.value = '';
+    if (!file) return;
+    setError(null);
+    setLoadingFiles(true);
+    try {
+      const text = await file.text();
+      onOpenDocument(text, file.name);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to read file');
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
 
   // --- Google Drive ---
   const connectGoogle = async () => {
@@ -397,78 +497,172 @@ export default function CloudStorageModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {!provider ? (
-            /* Provider selection */
+            /* Userland home view — no accounts, no setup. */
             <div className="py-4">
-              <div className="text-center mb-5">
+              <div className="text-center mb-4">
                 <Cloud className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                 <p className="text-gray-700 font-medium">
-                  {mode === 'save' ? 'Save your document to the cloud' : 'Open a document from the cloud'}
+                  {mode === 'save' ? 'Save or share your document' : 'Open a document'}
                 </p>
                 <p className="text-gray-500 text-sm mt-1">
-                  Your document is saved as a <code className="text-xs bg-gray-100 px-1 rounded">.sdjson</code> file. Choose a storage provider below.
+                  No account or setup required. Your document is a <code className="text-xs bg-gray-100 px-1 rounded">.sdjson</code> file.
                 </p>
               </div>
 
-              {/* Google Drive */}
-              <button
-                onClick={connectGoogle}
-                disabled={busy}
-                className="w-full mb-3 px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
-              >
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-800">Google Drive</div>
-                  <div className="text-xs text-gray-500">Save to your Google account. Requires Google Cloud project setup.</div>
-                </div>
-              </button>
+              {/* --- Primary userland actions --- */}
+              {mode === 'save' ? (
+                <div className="space-y-2">
+                  {/* Copy Link */}
+                  <button
+                    onClick={handleCopyLink}
+                    disabled={busy || linkTooLarge}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
+                  >
+                    {linkCopied
+                      ? <Check className="w-5 h-5 text-green-600 shrink-0" />
+                      : <Link className="w-5 h-5 text-blue-600 shrink-0" />}
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">
+                        {linkCopied ? 'Link copied!' : 'Copy Link'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {linkTooLarge
+                          ? `Too large for a link (${linkSizeLabel}). Use Share File instead.`
+                          : 'Share a link that contains the whole document.'}
+                      </div>
+                    </div>
+                  </button>
 
-              {/* OneDrive */}
-              <button
-                onClick={connectOneDrive}
-                disabled={busy}
-                className="w-full mb-3 px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
-              >
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#0364B8" d="M12.5 1.5c-2.9 0-5.5 1.6-6.9 4C3.6 6.4 2 8.4 2 11c0 3.3 2.7 6 6 6h10.5c2.8 0 5-2.2 5-5 0-2.5-1.8-4.5-4.2-4.9C18.6 3.8 15.8 1.5 12.5 1.5z"/>
-                  <path fill="#0078D4" d="M6.5 18c-2.2 0-4-1.8-4-4s1.8-4 4-4c.4 0 .8.1 1.2.2C8.3 8.2 10.2 7 12.5 7c2.8 0 5.2 2 5.8 4.7.3-.1.6-.1.9-.1 1.9 0 3.5 1.6 3.5 3.5S21.1 18.5 19.2 18.5H6.5z"/>
-                </svg>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-800">OneDrive</div>
-                  <div className="text-xs text-gray-500">Save to your Microsoft account. Requires Azure AD app registration.</div>
-                </div>
-              </button>
+                  {/* Share File (native share sheet / download) */}
+                  <button
+                    onClick={handleShareFile}
+                    disabled={busy}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
+                  >
+                    <Share2 className="w-5 h-5 text-blue-600 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">Share File</div>
+                      <div className="text-xs text-gray-500">
+                        Send as a .sdjson file via your device's share sheet.
+                      </div>
+                    </div>
+                  </button>
 
-              {/* S3-compatible */}
-              <button
-                onClick={connectS3}
-                disabled={busy}
-                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
-              >
-                <Server className="w-5 h-5 text-gray-500 shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium text-gray-800">S3-Compatible Storage</div>
-                  <div className="text-xs text-gray-500">
-                    AWS S3, MinIO, Wasabi, DigitalOcean Spaces, Backblaze B2, Cloudflare R2.
-                    {!s3Ready && ' Click to configure.'}
-                  </div>
+                  {/* Download to file */}
+                  <button
+                    onClick={handleDownloadFile}
+                    disabled={busy}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
+                  >
+                    <Download className="w-5 h-5 text-blue-600 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">Save to File</div>
+                      <div className="text-xs text-gray-500">
+                        Download a .sdjson file to this device.
+                      </div>
+                    </div>
+                  </button>
                 </div>
-                {!s3Ready && (
-                  <Settings className="w-4 h-4 text-gray-400 shrink-0" />
-                )}
-              </button>
+              ) : (
+                <div className="space-y-2">
+                  {/* Open from file */}
+                  <button
+                    onClick={handleOpenFile}
+                    disabled={busy}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
+                  >
+                    <FolderOpen className="w-5 h-5 text-blue-600 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">Open from File</div>
+                      <div className="text-xs text-gray-500">
+                        Load a .sdjson file from this device.
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* --- Advanced: cloud accounts (collapsible) --- */}
+              <details className="mt-4 pt-3 border-t border-gray-100 group">
+                <summary className="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700 select-none list-none flex items-center gap-1">
+                  <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
+                  Advanced: cloud accounts
+                </summary>
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-gray-400">
+                    Connect a cloud account to browse and store files online. Requires developer-side setup.
+                  </p>
+
+                  {/* Google Drive */}
+                  <button
+                    onClick={connectGoogle}
+                    disabled={busy}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
+                  >
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">Google Drive</div>
+                      <div className="text-xs text-gray-500">Requires a Google Cloud project + OAuth Client ID.</div>
+                    </div>
+                  </button>
+
+                  {/* OneDrive */}
+                  <button
+                    onClick={connectOneDrive}
+                    disabled={busy}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
+                  >
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#0364B8" d="M12.5 1.5c-2.9 0-5.5 1.6-6.9 4C3.6 6.4 2 8.4 2 11c0 3.3 2.7 6 6 6h10.5c2.8 0 5-2.2 5-5 0-2.5-1.8-4.5-4.2-4.9C18.6 3.8 15.8 1.5 12.5 1.5z"/>
+                      <path fill="#0078D4" d="M6.5 18c-2.2 0-4-1.8-4-4s1.8-4 4-4c.4 0 .8.1 1.2.2C8.3 8.2 10.2 7 12.5 7c2.8 0 5.2 2 5.8 4.7.3-.1.6-.1.9-.1 1.9 0 3.5 1.6 3.5 3.5S21.1 18.5 19.2 18.5H6.5z"/>
+                    </svg>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">OneDrive</div>
+                      <div className="text-xs text-gray-500">Requires an Azure AD app registration.</div>
+                    </div>
+                  </button>
+
+                  {/* S3-compatible */}
+                  <button
+                    onClick={connectS3}
+                    disabled={busy}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-3 text-left"
+                  >
+                    <Server className="w-5 h-5 text-gray-500 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">S3-Compatible Storage</div>
+                      <div className="text-xs text-gray-500">
+                        AWS S3, MinIO, Wasabi, DigitalOcean Spaces, Backblaze B2, Cloudflare R2.
+                        {!s3Ready && ' Click to configure.'}
+                      </div>
+                    </div>
+                    {!s3Ready && (
+                      <Settings className="w-4 h-4 text-gray-400 shrink-0" />
+                    )}
+                  </button>
+                </div>
+              </details>
 
               {/* Footer info */}
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <p className="text-xs text-gray-400 text-center">
                   Files are stored as <code className="bg-gray-100 px-1 rounded">.sdjson</code> (JSON format).
-                  {mode === 'save' && ' Your document stays private to the connected account.'}
                 </p>
               </div>
+
+              {/* Hidden file input for Open from File */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".sdjson,application/json"
+                className="hidden"
+                onChange={handleFilePicked}
+              />
             </div>
           ) : mode === 'save' ? (
             /* Save mode */

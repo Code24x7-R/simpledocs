@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDocStore } from './store/useDocStore';
 import { exportToPdf } from './utils/pdfExport';
+import { loadDocFromUrl } from './utils/shareUrl';
 import Navbar from './components/layout/Navbar';
 import Toolbar from './components/layout/Toolbar/Toolbar';
 import PageSetupModal from './components/layout/PageSetupModal';
@@ -23,7 +24,7 @@ import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
+  const { docState, loadDocument, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
   // Link modal handler
@@ -128,6 +129,17 @@ export default function App() {
     window.addEventListener('simpledocs:export-pdf', handler);
     return () => window.removeEventListener('simpledocs:export-pdf', handler);
   }, [docState]);
+
+  // Hydrate from a share link (#doc= fragment) on first load.
+  useEffect(() => {
+    const shared = loadDocFromUrl();
+    if (shared && shared.id && shared.settings && (shared.content || (shared as unknown as Record<string, unknown>).pages)) {
+      loadDocument(shared);
+      // Clear the fragment so a refresh does not re-load the shared doc.
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      console.log('[App] Opened shared document from link:', shared.title);
+    }
+  }, [loadDocument]);
 
   // Listen for Ctrl+K link shortcut from editor
   useEffect(() => {

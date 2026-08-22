@@ -84,6 +84,46 @@ import { signIn as signInOneDrive, signOut as signOutOneDrive } from '../../util
 import { listFiles as listS3Files, createFile as createS3File, downloadFile as downloadS3File, deleteFile as deleteS3File } from '../../utils/s3Api';
 import { isS3Configured } from '../../utils/s3Config';
 
+// A full DocState JSON string (has title + id + settings) for tests that
+// inspect what gets passed to shareUrl / webShare.
+const fullDocContent = JSON.stringify({
+  id: 'test-123',
+  title: 'Test Document',
+  createdAt: '2026-08-02T00:00:00Z',
+  updatedAt: '2026-08-02T00:00:00Z',
+  totalPages: 1,
+  settings: {
+    pageFormat: 'A4',
+    orientation: 'portrait',
+    margins: { top: '20mm', bottom: '20mm', left: '25mm', right: '25mm' },
+    header: { enabled: false, content: '' },
+    footer: { enabled: false, showPageNumbers: false },
+    pageGap: 24,
+    orphans: 2,
+    widows: 2,
+    defaultNormalEditorMode: false,
+  },
+  content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }] },
+});
+
+// Mock shareUrl + webShare so modal tests focus on UI wiring, not the
+// compression / clipboard internals (those have their own unit tests).
+vi.mock('../../utils/shareUrl', () => ({
+  encodeDocToUrl: vi.fn((doc: Record<string, unknown>) =>
+    `https://simpledocs.app/#doc=ENCODED_${(doc as { title?: string }).title ?? 'untitled'}`,
+  ),
+  canShareViaUrl: vi.fn(() => true),
+  estimateShareSize: vi.fn(() => 2048),
+  MAX_SHARE_SIZE: 30 * 1024,
+}));
+
+vi.mock('../../utils/webShare', () => ({
+  shareDocument: vi.fn(() => Promise.resolve('shared' as const)),
+}));
+
+import { encodeDocToUrl, canShareViaUrl } from '../../utils/shareUrl';
+import { shareDocument } from '../../utils/webShare';
+
 describe('CloudStorageModal', () => {
   const defaultProps = {
     isOpen: true,
@@ -100,6 +140,26 @@ describe('CloudStorageModal', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     // Default: S3 not configured
     vi.mocked(isS3Configured).mockReturnValue(false);
+    // Stub clipboard (jsdom has no navigator.clipboard).
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+    });
+    // jsdom lacks URL.createObjectURL / revokeObjectURL.
+    if (!URL.createObjectURL) {
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        writable: true,
+        value: vi.fn(() => 'blob:mock'),
+      });
+    }
+    if (!URL.revokeObjectURL) {
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        writable: true,
+        value: vi.fn(),
+      });
+    }
   });
 
   afterEach(() => {
@@ -867,6 +927,110 @@ describe('CloudStorageModal', () => {
       });
 
       expect(listGoogleFiles).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ── Userland sharing (no accounts) ──────────────────────
+
+  describe('userland sharing', () => {
+    it('shows Copy Link / Share File / Save to File in save mode', () => {
+      render(<CloudStorageModal {...defaultProps} mode="save" />);
+      expect(screen.getByText('Copy Link')).toBeInTheDocument();
+      expect(screen.getByText('Share File')).toBeInTheDocument();
+      expect(screen.getByText('Save to File')).toBeInTheDocument();
+    });
+
+    it('shows Open from File in open mode', () => {
+      render(<CloudStorageModal {...defaultProps} mode="open" />);
+      expect(screen.getByText('Open from File')).toBeInTheDocument();
+    });
+
+    it('hides cloud providers behind an Advanced collapsible by default', () => {
+      render(<CloudStorageModal {...defaultProps} mode="save" />);
+      // Providers exist in the DOM (inside <details>) but the section is not
+      // the primary focus — the userland actions are rendered first.
+      expect(screen.getByText('Copy Link')).toBeInTheDocument();
+      expect(screen.getByText('Advanced: cloud accounts')).toBeInTheDocument();
+    });
+
+    it('Copy Link encodes the document and copies the URL to clipboard', async () => {
+      render(<CloudStorageModal {...defaultProps} mode="save" documentContent={fullDocContent} />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Copy Link'));
+      });
+
+      expect(encodeDocToUrl).toHaveBeenCalledTimes(1);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('#doc=ENCODED_Test Document'),
+      );
+    });
+
+    it('Copy Link shows a brief "Link copied!" confirmation', async () => {
+      vi.useFakeTimers();
+      render(<CloudStorageModal {...defaultProps} mode="save" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Copy Link'));
+      });
+
+      expect(screen.getByText('Link copied!')).toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
+
+    it('Share File calls shareDocument with the doc and title', async () => {
+      render(<CloudStorageModal {...defaultProps} mode="save" documentContent={fullDocContent} />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Share File'));
+      });
+
+      expect(shareDocument).toHaveBeenCalledTimes(1);
+      // shareDocument receives the parsed doc object and the title string.
+      expect(shareDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Test Document' }),
+        'Test Document',
+      );
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('Save to File triggers a download and closes', async () => {
+      const clickSpy = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => {});
+
+      render(<CloudStorageModal {...defaultProps} mode="save" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Save to File'));
+      });
+
+      expect(clickSpy).toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+
+    it('Open from File clicks the hidden file input', () => {
+      const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+
+      render(<CloudStorageModal {...defaultProps} mode="open" />);
+
+      fireEvent.click(screen.getByText('Open from File'));
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+
+    it('disables Copy Link and warns when the document is too large', () => {
+      // Force the size guard to treat the doc as too large for this test.
+      vi.mocked(canShareViaUrl).mockReturnValue(false);
+
+      render(<CloudStorageModal {...defaultProps} mode="save" />);
+
+      const copyLinkBtn = screen.getByText('Copy Link').closest('button') as HTMLButtonElement;
+      expect(copyLinkBtn.disabled).toBe(true);
+      expect(screen.getByText(/Too large for a link/)).toBeInTheDocument();
     });
   });
 });
