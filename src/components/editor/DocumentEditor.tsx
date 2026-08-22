@@ -6,12 +6,11 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
  * Scroll the paginated viewport so the target heading is visible, zoom-aware.
- * Sets the programmatic-scroll lock so the viewport's page tracking doesn't
- * hijack this navigation scroll (which otherwise re-snaps to the page top,
- * getting progressively worse for headings further down the document).
+ * The viewport's own scroll handler tracks the new page number from the
+ * resulting scroll position (the origin flag prevents it from snapping back
+ * to a page boundary, so the view stays put on the heading).
  */
 function scrollHeadingIntoView(targetEl: Element): void {
-  useDocStore.getState().beginProgrammaticScroll(1500);
   const container = targetEl.closest('#paginated-viewport');
   if (!container) return;
   const zoom = useDocStore.getState().zoom;

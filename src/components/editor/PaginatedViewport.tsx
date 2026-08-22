@@ -23,7 +23,6 @@ function PaginatedViewportInner() {
     setTotalPages,
     docState,
     normalEditorMode,
-    programmaticScrollUntil,
   } = useDocStore();
   const {
     pageHeightPx,
@@ -120,9 +119,12 @@ function PaginatedViewportInner() {
   // Handle scroll to track current page
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
-    // Suppress page tracking during programmatic scrolls (page nav, search)
+    // Suppress page tracking only during the snap-to-boundary scroll that
+    // the effect below performs for Prev/Next/Jump. Other programmatic
+    // scrolls (ToC hyperlink, search) must NOT be suppressed — they never
+    // call setCurrentPage themselves, so this handler is the only thing
+    // that can update the page number to match the new scroll position.
     if (programmaticScrollRef.current) return;
-    if (Date.now() < programmaticScrollUntil) return;
 
     const scrollTop = containerRef.current.scrollTop;
     const maxScroll = containerRef.current.scrollHeight - containerRef.current.clientHeight;
@@ -146,7 +148,7 @@ function PaginatedViewportInner() {
       pageChangeFromScrollRef.current = true;
       setCurrentPage(clampedPage);
     }
-  }, [currentPage, pageHeightPx, pageGapPx, pageCount, setCurrentPage, programmaticScrollUntil]);
+  }, [currentPage, pageHeightPx, pageGapPx, pageCount, setCurrentPage]);
 
   // Scroll to current page when it changes via navigation controls.
   // Also moves the editor caret to the top of the target page so typing

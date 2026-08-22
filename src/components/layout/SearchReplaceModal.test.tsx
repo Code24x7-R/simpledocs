@@ -24,8 +24,6 @@ const mockEditor = {
   },
 };
 
-const mockBeginProgrammaticScroll = vi.fn();
-
 vi.mock('../../store/useDocStore', () => ({
   useDocStore: () => ({
     editor: mockEditor,
@@ -44,7 +42,6 @@ vi.mock('../../store/useDocStore', () => ({
     },
     updateContent: mockUpdateContent,
     setSearchReplaceOpen: mockSetSearchReplaceOpen,
-    beginProgrammaticScroll: mockBeginProgrammaticScroll,
   }),
 }));
 

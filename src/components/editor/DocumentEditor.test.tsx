@@ -41,7 +41,6 @@ const mockStoreState = {
   updateContent: vi.fn(),
   setEditor: mockSetEditor,
   zoom: 1,
-  beginProgrammaticScroll: vi.fn(),
 };
 
 vi.mock('../../store/useDocStore', () => ({
@@ -137,17 +136,34 @@ describe('DocumentEditor', () => {
   it('handleClick places cursor at the heading when clicking a TOC link', async () => {
     // Reset captured options from previous tests
     capturedOptions = {};
-    mockStoreState.beginProgrammaticScroll.mockClear();
     render(<DocumentEditor />);
     await waitFor(() => expect(capturedOptions).toBeTruthy());
 
     const handleClick = (capturedOptions.editorProps as { handleClick: (_view: unknown, _pos: number, event: MouseEvent) => boolean })?.handleClick;
     expect(handleClick).toBeDefined();
 
+    // Build a #paginated-viewport scroll container with a scrollTo spy so
+    // scrollHeadingIntoView has a real container to zoom-scroll. The target
+    // heading must be a descendant so closest('#paginated-viewport') finds it.
+    const scrollToSpy = vi.fn();
+    const viewport = document.createElement('div');
+    viewport.setAttribute('id', 'paginated-viewport');
+    Object.defineProperty(viewport, 'scrollTop', { value: 200, configurable: true });
+    Object.defineProperty(viewport, 'getBoundingClientRect', {
+      value: () => ({ top: 100, bottom: 800, left: 0, right: 600 }),
+      configurable: true,
+    });
+    Object.defineProperty(viewport, 'scrollTo', { value: scrollToSpy, configurable: true });
+
     // Create a mock target element representing the heading
     const mockTargetEl = document.createElement('h2');
     mockTargetEl.setAttribute('id', 'my-heading');
-    document.body.appendChild(mockTargetEl);
+    Object.defineProperty(mockTargetEl, 'getBoundingClientRect', {
+      value: () => ({ top: 500, bottom: 540, left: 0, right: 600 }),
+      configurable: true,
+    });
+    viewport.appendChild(mockTargetEl);
+    document.body.appendChild(viewport);
 
     // Create a mock anchor wrapping the heading link
     const mockAnchor = document.createElement('a');
@@ -192,25 +208,43 @@ describe('DocumentEditor', () => {
     expect(mockSetTextSelection).toHaveBeenCalledWith(42);
     expect(mockRun).toHaveBeenCalled();
 
-    // Verify the zoom-aware viewport scroll was triggered (not scrollIntoView)
-    expect(mockStoreState.beginProgrammaticScroll).toHaveBeenCalled();
+    // Verify the zoom-aware viewport scroll was triggered (not scrollIntoView):
+    // targetScrollTop = scrollTop + (targetRect.top - containerRect.top) / zoom
+    //               = 200 + (500 - 100) / 1 = 600
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 600, behavior: 'auto' });
 
     // Cleanup
-    document.body.removeChild(mockTargetEl);
+    document.body.removeChild(viewport);
   });
 
   it('handleClick scrolls the viewport zoom-aware instead of scrollIntoView', async () => {
     capturedOptions = {};
-    mockStoreState.beginProgrammaticScroll.mockClear();
     render(<DocumentEditor />);
     await waitFor(() => expect(capturedOptions).toBeTruthy());
 
     const handleClick = (capturedOptions.editorProps as { handleClick: (_view: unknown, _pos: number, event: MouseEvent) => boolean })?.handleClick;
     expect(handleClick).toBeDefined();
 
+    // Build a #paginated-viewport scroll container with a scrollTo spy so
+    // scrollHeadingIntoView has a real container to zoom-scroll.
+    const scrollToSpy = vi.fn();
+    const viewport = document.createElement('div');
+    viewport.setAttribute('id', 'paginated-viewport');
+    Object.defineProperty(viewport, 'scrollTop', { value: 0, configurable: true });
+    Object.defineProperty(viewport, 'getBoundingClientRect', {
+      value: () => ({ top: 50, bottom: 750, left: 0, right: 600 }),
+      configurable: true,
+    });
+    Object.defineProperty(viewport, 'scrollTo', { value: scrollToSpy, configurable: true });
+
     const mockTargetEl = document.createElement('h2');
     mockTargetEl.setAttribute('id', 'scroll-heading');
-    document.body.appendChild(mockTargetEl);
+    Object.defineProperty(mockTargetEl, 'getBoundingClientRect', {
+      value: () => ({ top: 350, bottom: 390, left: 0, right: 600 }),
+      configurable: true,
+    });
+    viewport.appendChild(mockTargetEl);
+    document.body.appendChild(viewport);
 
     const mockAnchor = document.createElement('a');
     mockAnchor.setAttribute('href', '#scroll-heading');
@@ -245,9 +279,11 @@ describe('DocumentEditor', () => {
     expect(mockSetTextSelection).toHaveBeenCalledWith(10);
     expect(mockRun).toHaveBeenCalled();
 
-    // Scroll is handled by the zoom-aware viewport scroll, not scrollIntoView
-    expect(mockStoreState.beginProgrammaticScroll).toHaveBeenCalledWith(1500);
+    // Scroll is handled by the zoom-aware viewport scroll, not scrollIntoView:
+    // targetScrollTop = scrollTop + (targetRect.top - containerRect.top) / zoom
+    //               = 0 + (350 - 50) / 1 = 300
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 300, behavior: 'auto' });
 
-    document.body.removeChild(mockTargetEl);
+    document.body.removeChild(viewport);
   });
 });

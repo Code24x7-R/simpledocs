@@ -71,8 +71,6 @@ interface DocStore {
   savedLinkSelection: { from: number; to: number } | null;
   currentPage: number;
   totalPages: number;
-  /** Timestamp until which programmatic scrolls suppress page tracking */
-  programmaticScrollUntil: number;
 
   setEditor: (editor: Editor) => void;
   updateContent: (content: Record<string, unknown>) => void;
@@ -107,8 +105,6 @@ interface DocStore {
   goToPrevPage: () => void;
   goToPage: (page: number) => void;
   setNormalEditorMode: (enabled: boolean) => void;
-  /** Signal that a programmatic scroll is in progress — page tracking should pause */
-  beginProgrammaticScroll: (durationMs?: number) => void;
 }
 
 const STORAGE_KEY = 'SIMPLEDOCS_STATE';
@@ -257,8 +253,6 @@ export const useDocStore = create<DocStore>((set, get) => {
     savedLinkSelection: null,
     currentPage: 1,
     totalPages: 1,
-    /** Timestamp until which programmatic scrolls suppress page tracking */
-    programmaticScrollUntil: 0,
 
     setEditor: (editor) => set({ editor }),
 
@@ -366,7 +360,5 @@ export const useDocStore = create<DocStore>((set, get) => {
       set({ currentPage: Math.max(1, Math.min(Math.floor(page), totalPages)) });
     },
     setNormalEditorMode: (enabled) => set({ normalEditorMode: enabled }),
-    beginProgrammaticScroll: (durationMs = 800) =>
-      set({ programmaticScrollUntil: Date.now() + durationMs }),
   };
 });

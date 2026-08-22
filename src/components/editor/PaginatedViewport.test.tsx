@@ -23,7 +23,6 @@ vi.mock('../../store/useDocStore', () => ({
       mockCurrentPage = page;
     },
     setTotalPages: mockSetTotalPages,
-    programmaticScrollUntil: 0,
     docState: {
       settings: {
         pageFormat: 'A4',

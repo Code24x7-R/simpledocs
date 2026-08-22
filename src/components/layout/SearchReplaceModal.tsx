@@ -27,7 +27,7 @@ interface SearchReplaceModalProps {
  * - Opens with Ctrl+H or Ctrl+F (when no text selected)
  */
 export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceModalProps) {
-  const { editor, docState, updateContent, setSearchReplaceOpen, beginProgrammaticScroll } = useDocStore();
+  const { editor, docState, updateContent, setSearchReplaceOpen } = useDocStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [replaceTerm, setReplaceTerm] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -85,9 +85,9 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
     if (!editor || allMatches.length === 0) return;
 
     const match = allMatches[index];
-    // Suppress page tracking during the scroll so currentPage doesn't jump
-    beginProgrammaticScroll(600);
-    // Set selection, focus, and scroll into view in a single chain
+    // Set selection, focus, and scroll into view in a single chain.
+    // The viewport's own scroll handler tracks the page number from the
+    // resulting scroll position (the origin flag prevents a snap-back).
     editor.chain()
       .focus()
       .setTextSelection({ from: match.from, to: match.to })
