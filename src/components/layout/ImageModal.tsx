@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import { useState, useRef, useEffect } from 'react';
 import { X, Image, Upload, Link } from 'lucide-react';
+import Modal from './Modal';
 
 interface ImageModalProps {
   isOpen: boolean;
@@ -112,8 +113,7 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
   const canSubmit = tab === 'upload' ? !!previewSrc : !!url.trim();
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[85vh] flex flex-col">
+    <Modal isOpen={isOpen} onClose={onClose} className="w-[480px] max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -244,7 +244,6 @@ export default function ImageModal({ isOpen, onClose, onSubmit }: ImageModalProp
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

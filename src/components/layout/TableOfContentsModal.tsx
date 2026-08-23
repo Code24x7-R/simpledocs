@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { X, List, RefreshCw, AlertTriangle, Info } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import Modal from './Modal';
 import {
   extractHeadings,
   buildTocContent,
@@ -71,8 +72,7 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[480px] p-5">
+    <Modal isOpen={isOpen} onClose={onClose} className="w-[480px] p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -217,7 +217,6 @@ export default function TableOfContentsModal({ isOpen, onClose, onInsert }: Tabl
             </button>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

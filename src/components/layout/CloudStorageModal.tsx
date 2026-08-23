@@ -26,6 +26,7 @@ import { encodeDocToUrl, canShareViaUrl, estimateShareSize } from '../../utils/s
 import { shareDocument } from '../../utils/webShare';
 import type { DocState } from '../../store/useDocStore';
 import S3ConfigModal from './S3ConfigModal';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 type CloudProvider = 'google' | 'onedrive' | 's3';
 
@@ -68,6 +69,8 @@ const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   /** Hidden file input for the userland "Open from file" action. */
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const onCardKeyDown = useFocusTrap(cardRef, isOpen, onClose);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -466,8 +469,13 @@ const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
+        ref={cardRef}
         className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={onCardKeyDown}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">

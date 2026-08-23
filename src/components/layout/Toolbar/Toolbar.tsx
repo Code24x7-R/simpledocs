@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Bold,
   Italic,
@@ -50,10 +50,6 @@ const HEADING_STYLES = [
   { label: 'Heading 6', value: 'h6' },
 ];
 
-
-
-
-
 export default function Toolbar() {
   const { editor, setSearchReplaceOpen, setChatOpen, chatOpen, setTtsOpen } = useDocStore();
   const { handleCopy, handleCut, handlePaste } = useEditorClipboard(editor);
@@ -62,7 +58,68 @@ export default function Toolbar() {
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
 
+  // Any dropdown open suspends the toolbar's arrow-key navigation so the
+  // dropdown owns the keys instead.
+  const anyDropdownOpen = styleDropdownOpen || fontDropdownOpen || sizeDropdownOpen || formatMenuOpen;
 
+  // ---- Roving tabindex (ARIA toolbar pattern) ----------------------------
+  // The toolbar is a SINGLE tab stop; arrow keys move focus between buttons.
+  // `focusIndex` tracks which button currently has tabIndex={0}; all others
+  // have tabIndex={-1}. Tab / Shift+Tab leave the toolbar entirely.
+  const [focusIndex, setFocusIndex] = useState(0);
+
+  const handleToolbarKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (anyDropdownOpen) return; // dropdown owns the keys
+      // Query the buttons live from the DOM via the event target so the list
+      // is always current regardless of React's render timing.
+      const toolbar = e.currentTarget as HTMLElement;
+      const buttons = Array.from(
+        toolbar.querySelectorAll<HTMLButtonElement>('button:not([disabled])'),
+      );
+      const active = buttons.indexOf(
+        document.activeElement as HTMLButtonElement,
+      );
+      if (active === -1) return;
+      const len = buttons.length;
+      let next = active;
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          e.preventDefault();
+          next = (active + 1) % len;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
+          next = (active - 1 + len) % len;
+          break;
+        case 'Home':
+          e.preventDefault();
+          next = 0;
+          break;
+        case 'End':
+          e.preventDefault();
+          next = len - 1;
+          break;
+        default:
+          return;
+      }
+      setFocusIndex(next);
+      buttons[next]?.focus();
+    },
+    [anyDropdownOpen],
+  );
+
+  // Give a button the roving tabindex: only the focused button is in the
+  // tab order (tabIndex 0); the rest are programmatically focusable (-1).
+  const registerButton = useCallback(
+    (index: number) => ({
+      tabIndex: index === focusIndex ? 0 : -1,
+      onFocus: () => setFocusIndex(index),
+    }),
+    [focusIndex],
+  );
 
   if (!editor) return null;
 
@@ -92,6 +149,8 @@ export default function Toolbar() {
     return foundFont || null;
   };
 
+  let idx = 0; // running index assigned to each toolbar button in DOM order
+
   const Button = ({
     onClick,
     active,
@@ -104,27 +163,37 @@ export default function Toolbar() {
     disabled?: boolean;
     title: string;
     children: React.ReactNode;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-pressed={active}
-      className={`p-1.5 rounded transition-colors ${
-        active
-          ? 'bg-blue-600 text-white shadow-inner ring-1 ring-blue-700'
-          : 'hover:bg-gray-100 text-gray-700'
-      } disabled:opacity-30 disabled:cursor-not-allowed`}
-    >
-      {children}
-    </button>
-  );
+  }) => {
+    const i = idx++;
+    return (
+      <button
+        {...registerButton(i)}
+        onClick={onClick}
+        disabled={disabled}
+        title={title}
+        aria-pressed={active}
+        className={`p-1.5 rounded transition-colors ${
+          active
+            ? 'bg-blue-600 text-white shadow-inner ring-1 ring-blue-700'
+            : 'hover:bg-gray-100 text-gray-700'
+        } disabled:opacity-30 disabled:cursor-not-allowed`}
+      >
+        {children}
+      </button>
+    );
+  };
 
   return (
-    <div className="h-auto min-h-10 bg-white border-b border-gray-200 flex items-center px-3 gap-0.5 flex-wrap shrink-0 py-1">
+    <div
+      role="toolbar"
+      aria-label="Formatting"
+      className="h-auto min-h-10 bg-white border-b border-gray-200 flex items-center px-3 gap-0.5 flex-wrap shrink-0 py-1"
+      onKeyDown={handleToolbarKeyDown}
+    >
       {/* Style Dropdown */}
       <div className="relative">
         <button
+          {...registerButton(idx++)}
           onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
         >
@@ -157,11 +226,12 @@ export default function Toolbar() {
         )}
       </div>
 
-      <div className="w-px h-6 bg-gray-200 mx-1" />
+      <div className="w-px h-6 bg-gray-200 mx-1" aria-hidden="true" />
 
       {/* Font Family */}
       <div className="relative">
         <button
+          {...registerButton(idx++)}
           onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 min-w-[120px]"
         >
@@ -208,6 +278,7 @@ export default function Toolbar() {
       {/* Font Size */}
       <div className="relative">
         <button
+          {...registerButton(idx++)}
           onClick={() => setSizeDropdownOpen(!sizeDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 min-w-[60px]"
         >
@@ -262,6 +333,7 @@ export default function Toolbar() {
       {/* Format Menu */}
       <div className="relative">
         <button
+          {...registerButton(idx++)}
           onClick={() => setFormatMenuOpen(!formatMenuOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
         >
@@ -348,7 +420,7 @@ export default function Toolbar() {
         )}
       </div>
 
-      <div className="w-px h-6 bg-gray-200 mx-1" />
+      <div className="w-px h-6 bg-gray-200 mx-1" aria-hidden="true" />
 
       {/* Clipboard */}
       <Button onClick={handleCopy} title="Copy">
@@ -369,7 +441,7 @@ export default function Toolbar() {
         <Redo className="w-4 h-4" />
       </Button>
 
-      <div className="w-px h-6 bg-gray-200 mx-1" />
+      <div className="w-px h-6 bg-gray-200 mx-1" aria-hidden="true" />
 
       {/* Lists */}
       <Button onClick={() => editor.chain().focus().toggleBulletList().run()} active={isActive('bulletList')} title="Bullet List">
@@ -382,7 +454,7 @@ export default function Toolbar() {
         <CheckSquare className="w-4 h-4" />
       </Button>
 
-      <div className="w-px h-6 bg-gray-200 mx-1" />
+      <div className="w-px h-6 bg-gray-200 mx-1" aria-hidden="true" />
 
       {/* Blocks */}
       <Button onClick={() => editor.chain().focus().toggleBlockquote().run()} active={isActive('blockquote')} title="Blockquote">
@@ -395,7 +467,7 @@ export default function Toolbar() {
         <Minus className="w-4 h-4" />
       </Button>
 
-      <div className="w-px h-6 bg-gray-200 mx-1" />
+      <div className="w-px h-6 bg-gray-200 mx-1" aria-hidden="true" />
 
       {/* Tools */}
       <Button onClick={() => setSearchReplaceOpen(true)} title="Search & Replace">

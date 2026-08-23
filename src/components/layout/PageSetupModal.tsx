@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import Modal from './Modal';
 
 export default function PageSetupModal() {
   const { docState, updateSettings, pageSetupOpen, setPageSetupOpen } = useDocStore();
@@ -50,8 +51,7 @@ export default function PageSetupModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[90vh] overflow-y-auto">
+    <Modal isOpen={pageSetupOpen} onClose={() => setPageSetupOpen(false)} className="w-[480px] max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold">Page Setup</h2>
           <button onClick={() => setPageSetupOpen(false)} className="p-1 hover:bg-gray-100 rounded">
@@ -234,7 +234,6 @@ export default function PageSetupModal() {
             Apply
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

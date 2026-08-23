@@ -200,4 +200,72 @@ describe('Toolbar', () => {
     expect(screen.getByText('Heading 2')).toBeInTheDocument();
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
   });
+
+  // -------------------------------------------------------------------------
+  // Roving tabindex (ARIA toolbar pattern)
+  // -------------------------------------------------------------------------
+  describe('toolbar keyboard navigation', () => {
+    it('the toolbar has role="toolbar" and an accessible name', () => {
+      render(<Toolbar />);
+      const toolbar = screen.getByRole('toolbar');
+      expect(toolbar).toHaveAttribute('aria-label', 'Formatting');
+    });
+
+    it('only one button is in the tab order at a time (tabIndex 0)', () => {
+      render(<Toolbar />);
+      const buttons = screen.getByRole('toolbar').querySelectorAll('button');
+      const tabZero = Array.from(buttons).filter((b) => b.getAttribute('tabindex') === '0');
+      expect(tabZero.length).toBe(1);
+    });
+
+    // NOTE: focus() and native KeyboardEvent dispatch are intentionally NOT
+    // wrapped in act() — wrapping focus() forces a synchronous flush of the
+    // roving-tabindex state update, which changes tabIndex on the focused
+    // element and causes jsdom to blur it.
+    it('ArrowRight moves focus to the next button', () => {
+      render(<Toolbar />);
+      const toolbar = screen.getByRole('toolbar');
+      const bold = screen.getByTitle('Bold (Ctrl+B)');
+      const italic = screen.getByTitle('Italic (Ctrl+I)');
+      bold.focus();
+      toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(document.activeElement).toBe(italic);
+    });
+
+    it('ArrowLeft wraps to the end from the first button', () => {
+      render(<Toolbar />);
+      const toolbar = screen.getByRole('toolbar');
+      const buttons = toolbar.querySelectorAll('button');
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      first.focus();
+      toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      expect(document.activeElement).toBe(last);
+    });
+
+    it('Home / End jump to first / last button', () => {
+      render(<Toolbar />);
+      const toolbar = screen.getByRole('toolbar');
+      const buttons = toolbar.querySelectorAll('button');
+      const mid = buttons[Math.floor(buttons.length / 2)];
+      mid.focus();
+      toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+      expect(document.activeElement).toBe(buttons[0]);
+      toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+      expect(document.activeElement).toBe(buttons[buttons.length - 1]);
+    });
+
+    it('suspends arrow navigation while a dropdown is open', () => {
+      render(<Toolbar />);
+      const toolbar = screen.getByRole('toolbar');
+      // Open the Style dropdown. The click triggers a re-render, so the
+      // toolbar button DOM nodes are recreated — re-query afterwards.
+      fireEvent.click(screen.getByText('Normal'));
+      const bold = screen.getByTitle('Bold (Ctrl+B)');
+      bold.focus();
+      toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      // Focus must NOT leave the Bold button — dropdown owns the keys.
+      expect(document.activeElement).toBe(bold);
+    });
+  });
 });

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import Modal from './Modal';
 
 const STANDARD_FIELDS = [
   { label: 'Current Date', value: 'current_date' },
@@ -32,8 +33,7 @@ export default function InsertFieldModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[320px] p-4">
+    <Modal isOpen={insertFieldOpen} onClose={() => setInsertFieldOpen(false)} className="w-[320px] p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold">Insert Template Field</h2>
           <button onClick={() => setInsertFieldOpen(false)} className="p-1 hover:bg-gray-100 rounded">
@@ -80,7 +80,6 @@ export default function InsertFieldModal() {
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

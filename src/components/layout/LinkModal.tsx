@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import { useState, useEffect, useRef } from 'react';
 import { X, Link, ExternalLink } from 'lucide-react';
+import Modal from './Modal';
 
 interface LinkModalProps {
   isOpen: boolean;
@@ -59,8 +60,7 @@ export default function LinkModal({
   const canSubmit = url.trim() && isValidUrl(url.trim());
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[420px] p-4">
+    <Modal isOpen={isOpen} onClose={onClose} className="w-[420px] p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -150,7 +150,6 @@ export default function LinkModal({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

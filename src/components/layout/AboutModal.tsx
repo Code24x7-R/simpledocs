@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { HelpCircle, X, Copy, Check } from 'lucide-react';
 import { copyToClipboard } from '../../utils/clipboard';
+import Modal from './Modal';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -45,14 +46,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-lg shadow-xl w-[400px] p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal isOpen={isOpen} onClose={onClose} className="w-[400px] p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">About simpledocs</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
@@ -158,7 +152,6 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
             </a>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { X, Search, Replace, ChevronDown, ChevronUp, Regex } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import {
   findAllOccurrences,
   replaceAllPreservingStyles,
@@ -39,6 +40,8 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
   const [isExpanded, setIsExpanded] = useState(true);
   const [allMatches, setAllMatches] = useState<{ from: number; to: number; text: string }[]>([]);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const onCardKeyDown = useFocusTrap(cardRef, isOpen, onClose);
 
   const getSearchOptions = useCallback((): SearchOptions => {
     return { caseSensitive, wholeWord, regex: useRegex };
@@ -248,7 +251,14 @@ export default function SearchReplaceModal({ isOpen, onClose }: SearchReplaceMod
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[460px]">
-      <div className="bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden">
+      <div
+        ref={cardRef}
+        className="bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        onKeyDown={onCardKeyDown}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
           <button

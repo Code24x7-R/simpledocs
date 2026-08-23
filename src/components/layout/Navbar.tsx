@@ -35,6 +35,7 @@ import { exportToMarkdown } from '../../utils/fileIO';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
 import { LINE_HEIGHTS, PARAGRAPH_SPACING } from '../../constants';
+import { useDropdownKeyboard } from '../../hooks/useDropdownKeyboard';
 
 const ZOOM_LEVELS = [
   { label: '50%', value: 0.5 },
@@ -80,6 +81,15 @@ export default function Navbar() {
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
   const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+
+  // Keyboard navigation for each open dropdown (focus into menu on open,
+  // arrow keys move between items, Escape closes).
+  const fileMenuKb = useDropdownKeyboard(fileMenuOpen, () => setFileMenuOpen(false));
+  const editMenuKb = useDropdownKeyboard(editMenuOpen, () => setEditMenuOpen(false));
+  const insertMenuKb = useDropdownKeyboard(insertMenuOpen, () => setInsertMenuOpen(false));
+  const layoutMenuKb = useDropdownKeyboard(layoutMenuOpen, () => setLayoutMenuOpen(false));
+  const viewMenuKb = useDropdownKeyboard(viewMenuOpen, () => setViewMenuOpen(false));
+  const helpMenuKb = useDropdownKeyboard(helpMenuOpen, () => setHelpMenuOpen(false));
 
   // --- Layout menu helpers (read active paragraph/heading attributes) ---
   const getActiveLineHeight = (): string => {
@@ -204,13 +214,14 @@ export default function Navbar() {
         {/* File Menu */}
         <div className="relative shrink-0">
         <button
+          ref={fileMenuKb.registerTrigger}
           onClick={() => setFileMenuOpen(!fileMenuOpen)}
           className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
         >
           File
         </button>
         {fileMenuOpen && (
-          <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
+          <div ref={fileMenuKb.ref} onKeyDown={fileMenuKb.onKeyDown} className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
             <button
               onClick={() => { newDocument(); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -309,13 +320,14 @@ export default function Navbar() {
         {/* Edit Menu */}
         <div className="relative shrink-0">
           <button
+            ref={editMenuKb.registerTrigger}
             onClick={() => setEditMenuOpen(!editMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             Edit
           </button>
           {editMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-36 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <div ref={editMenuKb.ref} onKeyDown={editMenuKb.onKeyDown} className="absolute top-full left-0 mt-1 w-36 bg-white border border-gray-200 rounded shadow-lg z-50">
               <button
                 onClick={() => { handleCopy(); setEditMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -341,13 +353,14 @@ export default function Navbar() {
         {/* Insert Menu */}
         <div className="relative shrink-0">
           <button
+            ref={insertMenuKb.registerTrigger}
             onClick={() => setInsertMenuOpen(!insertMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             Insert
           </button>
           {insertMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <div ref={insertMenuKb.ref} onKeyDown={insertMenuKb.onKeyDown} className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded shadow-lg z-50">
               <button
                 onClick={() => { setImageOpen(true); setInsertMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -408,13 +421,14 @@ export default function Navbar() {
         {/* Layout Menu */}
         <div className="relative shrink-0">
           <button
+            ref={layoutMenuKb.registerTrigger}
             onClick={() => setLayoutMenuOpen(!layoutMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             Layout
           </button>
           {layoutMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <div ref={layoutMenuKb.ref} onKeyDown={layoutMenuKb.onKeyDown} className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded shadow-lg z-50">
               {/* Alignment */}
               <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Alignment
@@ -517,13 +531,14 @@ export default function Navbar() {
         {/* View Menu */}
         <div className="relative shrink-0">
           <button
+            ref={viewMenuKb.registerTrigger}
             onClick={() => setViewMenuOpen(!viewMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             View
           </button>
           {viewMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <div ref={viewMenuKb.ref} onKeyDown={viewMenuKb.onKeyDown} className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
               <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Zoom
               </div>
@@ -611,13 +626,14 @@ export default function Navbar() {
         {/* Help Menu */}
         <div className="relative shrink-0">
           <button
+            ref={helpMenuKb.registerTrigger}
             onClick={() => setHelpMenuOpen(!helpMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
             Help
           </button>
           {helpMenuOpen && (
-            <div className="absolute top-full right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <div ref={helpMenuKb.ref} onKeyDown={helpMenuKb.onKeyDown} className="absolute top-full right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
               <button
                 onClick={() => { setShortcutsOpen(true); setHelpMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import Modal from './Modal';
 
 const MAX_GRID = 10;
 
@@ -19,8 +20,7 @@ export default function TableGridModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[340px] p-4">
+    <Modal isOpen={tableGridOpen} onClose={() => setTableGridOpen(false)} className="w-[340px] p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold">Insert Table</h2>
           <button onClick={() => setTableGridOpen(false)} className="p-1 hover:bg-gray-100 rounded">
@@ -54,8 +54,7 @@ export default function TableGridModal() {
               />
             );
           })}
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

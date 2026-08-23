@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, AlertCircle, CheckCircle, Server, Key, Globe, Database, FolderOpen } from 'lucide-react';
 import { loadS3Config, saveS3Config, clearS3Config, isS3Configured, S3Config } from '../../utils/s3Config';
 import { testConnection } from '../../utils/s3Api';
+import Modal from './Modal';
 
 interface S3ConfigModalProps {
   isOpen: boolean;
@@ -108,11 +109,7 @@ export default function S3ConfigModal({ isOpen, onClose, onSaved }: S3ConfigModa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal isOpen={isOpen} onClose={onClose} className="w-full max-w-md max-h-[85vh] flex flex-col" backdropClassName="bg-black/50">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -302,7 +299,6 @@ export default function S3ConfigModal({ isOpen, onClose, onSaved }: S3ConfigModa
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Monitor, Sparkles, ExternalLink, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { getAllProviders } from '../../utils/providers/providerRegistry';
+import Modal from './Modal';
 import { useChatStore } from '../../store/useChatStore';
 import type { LlmProvider } from '../../types/provider';
 
@@ -130,8 +131,7 @@ export default function ProviderSetupModal({ isOpen, onClose }: ProviderSetupMod
   const canSave = testResult === 'success';
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[520px] max-h-[85vh] flex flex-col">
+    <Modal isOpen={isOpen} onClose={onClose} className="w-[520px] max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <h2 className="text-sm font-semibold">
@@ -377,7 +377,6 @@ export default function ProviderSetupModal({ isOpen, onClose }: ProviderSetupMod
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

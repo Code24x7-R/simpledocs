@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { X, FileText, AlertCircle } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
+import Modal from './Modal';
 import { extractFieldNames, mergeFields, resolveField } from '../../utils/templateFields';
 
 interface FieldMergeModalProps {
@@ -59,8 +60,7 @@ export default function FieldMergeModal({ isOpen, onClose }: FieldMergeModalProp
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[80vh] flex flex-col">
+    <Modal isOpen={isOpen} onClose={onClose} className="w-[480px] max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -166,7 +166,6 @@ export default function FieldMergeModal({ isOpen, onClose }: FieldMergeModalProp
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
