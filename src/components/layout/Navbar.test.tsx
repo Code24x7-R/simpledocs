@@ -187,11 +187,27 @@ describe('Navbar — menu close behavior', () => {
       expect(screen.queryByText('Save')).not.toBeInTheDocument();
     });
 
+    it('opens the cloud modal in save mode when Save is clicked', () => {
+      render(<Navbar />);
+      openMenu('File');
+      fireEvent.click(screen.getByText('Save'));
+      expect(useDocStore.getState().driveOpen).toBe(true);
+      expect(useDocStore.getState().driveMode).toBe('save');
+    });
+
     it('closes after clicking Open', () => {
       render(<Navbar />);
       openMenu('File');
       fireEvent.click(screen.getByText('Open'));
       expect(screen.queryByText('Open')).not.toBeInTheDocument();
+    });
+
+    it('opens the cloud modal in open mode when Open is clicked', () => {
+      render(<Navbar />);
+      openMenu('File');
+      fireEvent.click(screen.getByText('Open'));
+      expect(useDocStore.getState().driveOpen).toBe(true);
+      expect(useDocStore.getState().driveMode).toBe('open');
     });
 
     it('closes after clicking Export PDF', () => {
