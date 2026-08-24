@@ -206,9 +206,9 @@ export default function Toolbar() {
                 key={style.value}
                 onClick={() => {
                   if (style.value === 'paragraph') {
-                    editor.chain().focus().setParagraph().run();
+                    editor.chain().focus().unsetBlockHeading().run();
                   } else {
-                    editor.chain().focus().toggleHeading({ level: parseInt(style.value[1]) as 1 | 2 | 3 }).run();
+                    editor.chain().focus().setBlockHeading(parseInt(style.value[1]) as 1 | 2 | 3 | 4 | 5 | 6).run();
                   }
                   setStyleDropdownOpen(false);
                 }}
