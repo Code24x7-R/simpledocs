@@ -9,22 +9,30 @@ import { ParagraphStyle } from '../../extensions/ParagraphStyle';
 import { HeadingStyle } from '../../extensions/HeadingStyle';
 import type { Editor, AnyExtension } from '@tiptap/core';
 
-// Mock scrollIntoView and getClientRects which are not implemented in jsdom
+// Mock scrollIntoView and getClientRects which are not implemented in jsdom.
+// getClientRects returns a DOMRectList (which has an item() method), so the
+// mock must implement that shape to satisfy the DOM typings.
+const mockRect: DOMRect = {
+  top: 0,
+  left: 0,
+  bottom: 10,
+  right: 100,
+  width: 100,
+  height: 10,
+  x: 0,
+  y: 0,
+  toJSON() { return this; },
+} as DOMRect;
+
+const mockRectList: DOMRectList = {
+  length: 1,
+  item: () => mockRect,
+  [0]: mockRect,
+} as unknown as DOMRectList;
+
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.getClientRects = vi.fn(() => [
-    {
-      top: 0,
-      left: 0,
-      bottom: 10,
-      right: 100,
-      width: 100,
-      height: 10,
-      x: 0,
-      y: 0,
-      toJSON() { return this; },
-    } as DOMRect,
-  ]);
+  Element.prototype.getClientRects = vi.fn(() => mockRectList);
 });
 
 // Helper: editor component that stores editor in a ref-accessible way
