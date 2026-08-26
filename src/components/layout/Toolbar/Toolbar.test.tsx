@@ -141,6 +141,36 @@ describe('Toolbar', () => {
     expect(editor.chain().focus().toggleUnderline().run).toHaveBeenCalledTimes(1);
   });
 
+  it('calls preventDefault on mousedown so the editor keeps focus', () => {
+    const editor = createMockEditor() as Editor;
+    useDocStore.setState({ editor });
+    render(<Toolbar />);
+
+    const boldButton = screen.getByTitle('Bold (Ctrl+B)');
+    const mousedown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    const preventDefaultSpy = vi.spyOn(mousedown, 'preventDefault');
+
+    boldButton.dispatchEvent(mousedown);
+
+    expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls preventDefault on mousedown for dropdown item buttons', () => {
+    const editor = createMockEditor() as Editor;
+    useDocStore.setState({ editor });
+    render(<Toolbar />);
+
+    // Open the Style dropdown and verify its items prevent default.
+    fireEvent.click(screen.getByText('Normal'));
+    const heading1Item = screen.getByRole('button', { name: 'Heading 1' });
+    const mousedown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    const preventDefaultSpy = vi.spyOn(mousedown, 'preventDefault');
+
+    heading1Item.dispatchEvent(mousedown);
+
+    expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('shows Bold as active when the editor marks bold as active', () => {
     const editor = createMockEditor({ bold: true }) as Editor;
     useDocStore.setState({ editor });

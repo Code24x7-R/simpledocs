@@ -168,6 +168,7 @@ export default function Toolbar() {
     return (
       <button
         {...registerButton(i)}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={onClick}
         disabled={disabled}
         title={title}
@@ -194,6 +195,7 @@ export default function Toolbar() {
       <div className="relative">
         <button
           {...registerButton(idx++)}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
         >
@@ -204,6 +206,7 @@ export default function Toolbar() {
             {HEADING_STYLES.map((style) => (
               <button
                 key={style.value}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   if (style.value === 'paragraph') {
                     editor.chain().focus().unsetBlockHeading().run();
@@ -232,6 +235,7 @@ export default function Toolbar() {
       <div className="relative">
         <button
           {...registerButton(idx++)}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 min-w-[120px]"
         >
@@ -243,6 +247,7 @@ export default function Toolbar() {
           <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto">
             {/* Default option */}
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 editor.chain().focus().unsetFontFamily().run();
                 setFontDropdownOpen(false);
@@ -258,6 +263,7 @@ export default function Toolbar() {
               return (
                 <button
                   key={font}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     editor.chain().focus().setFontFamily(font).run();
                     setFontDropdownOpen(false);
@@ -279,6 +285,7 @@ export default function Toolbar() {
       <div className="relative">
         <button
           {...registerButton(idx++)}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setSizeDropdownOpen(!sizeDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 min-w-[60px]"
         >
@@ -288,6 +295,7 @@ export default function Toolbar() {
           <div className="absolute top-full left-0 mt-1 w-20 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto">
             {/* Default option to unset font size */}
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 editor.chain().focus().unsetFontSize().run();
                 setSizeDropdownOpen(false);
@@ -303,6 +311,7 @@ export default function Toolbar() {
               return (
                 <button
                   key={size}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     editor.chain().focus().setFontSize(`${size}px`).run();
                     setSizeDropdownOpen(false);
@@ -334,6 +343,7 @@ export default function Toolbar() {
       <div className="relative">
         <button
           {...registerButton(idx++)}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setFormatMenuOpen(!formatMenuOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"
         >
@@ -343,6 +353,7 @@ export default function Toolbar() {
         {formatMenuOpen && (
           <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => { editor.chain().focus().toggleStrike().run(); setFormatMenuOpen(false); }}
               className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
                 isActive('strike') ? 'bg-blue-50 text-blue-700 font-medium' : ''
@@ -351,6 +362,7 @@ export default function Toolbar() {
               <Strikethrough className="w-4 h-4" /> Strikethrough
             </button>
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => { editor.chain().focus().unsetAllMarks().run(); setFormatMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
@@ -367,6 +379,7 @@ export default function Toolbar() {
                 return (
                   <button
                     key={color}
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       editor.chain().focus().setColor(color).run();
                       setFormatMenuOpen(false);
@@ -381,6 +394,7 @@ export default function Toolbar() {
               })}
             </div>
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => { editor.chain().focus().unsetColor().run(); setFormatMenuOpen(false); }}
               className="w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 text-gray-600"
             >
@@ -397,6 +411,7 @@ export default function Toolbar() {
                 return (
                   <button
                     key={color}
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       editor.chain().focus().setBackgroundColor(color).run();
                       setFormatMenuOpen(false);
@@ -411,6 +426,7 @@ export default function Toolbar() {
               })}
             </div>
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => { editor.chain().focus().unsetBackgroundColor().run(); setFormatMenuOpen(false); }}
               className="w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 text-gray-600"
             >
