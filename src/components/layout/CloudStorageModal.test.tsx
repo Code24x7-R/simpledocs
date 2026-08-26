@@ -1012,6 +1012,13 @@ describe('CloudStorageModal', () => {
       clickSpy.mockRestore();
     });
 
+    it('Save to File shows auto-rename guidance', () => {
+      render(<CloudStorageModal {...defaultProps} mode="save" />);
+      expect(screen.getByText(/auto-rename it/)).toBeInTheDocument();
+      expect(screen.getByText(/doc \(1\).sdjson/)).toBeInTheDocument();
+      expect(screen.getByText(/Delete or rename the existing file first/)).toBeInTheDocument();
+    });
+
     it('Open from File clicks the hidden file input', () => {
       const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
 

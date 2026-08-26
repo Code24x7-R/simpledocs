@@ -566,7 +566,7 @@ const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
                     <div className="flex-1">
                       <div className="font-medium text-gray-800">Save to File</div>
                       <div className="text-xs text-gray-500">
-                        Download a .sdjson file to this device.
+                        Download a .sdjson file to this device. If a file with the same name exists, the browser will auto-rename it (e.g. <code className="text-[10px] bg-gray-100 px-0.5 rounded">doc (1).sdjson</code>). Delete or rename the existing file first if you want to replace it.
                       </div>
                     </div>
                   </button>
