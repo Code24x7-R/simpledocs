@@ -29,6 +29,7 @@ import {
   IndentIncrease,
   IndentDecrease,
   Monitor,
+  XCircle,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { useEditorClipboard } from '../../hooks/useEditorClipboard';
@@ -85,6 +86,7 @@ export default function Navbar() {
   const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
   const [lineHeightFlyout, setLineHeightFlyout] = useState(false);
   const [paraSpacingFlyout, setParaSpacingFlyout] = useState(false);
+  const [uninstallModalOpen, setUninstallModalOpen] = useState(false);
 
   // Keyboard navigation for each open dropdown (focus into menu on open,
   // arrow keys move between items, Escape closes).
@@ -208,6 +210,7 @@ export default function Navbar() {
   };
 
   return (
+    <>
     <nav className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0 shadow-sm z-10">
       {/* Brand */}
       <div className="flex items-center shrink-0">
@@ -679,9 +682,17 @@ export default function Navbar() {
                 </button>
               )}
               {isInstalled && (
-                <div className="px-4 py-2 text-sm text-gray-500 flex items-center gap-2">
-                  <Monitor className="w-4 h-4 text-green-600" /> App installed — open .sdjson files directly
-                </div>
+                <>
+                  <div className="px-4 py-2 text-sm text-gray-500 flex items-center gap-2">
+                    <Monitor className="w-4 h-4 text-green-600" /> App installed — open .sdjson files directly
+                  </div>
+                  <button
+                    onClick={() => { setUninstallModalOpen(true); setHelpMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <XCircle className="w-4 h-4 text-red-500" /> Uninstall App
+                  </button>
+                </>
               )}
               <button
                 onClick={() => { setShortcutsOpen(true); setHelpMenuOpen(false); }}
@@ -727,5 +738,54 @@ export default function Navbar() {
         className="hidden"
       />
     </nav>
+    {uninstallModalOpen && (
+      <div
+        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+        onClick={() => setUninstallModalOpen(false)}
+      >
+        <div
+          className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <XCircle className="w-6 h-6 text-red-500" />
+            <h2 className="text-lg font-semibold text-gray-900">Uninstall SimpleDocs</h2>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            To remove SimpleDocs from your device, follow the steps for your browser:
+          </p>
+          <div className="space-y-3 text-sm text-gray-700">
+            <div className="bg-gray-50 rounded p-3">
+              <p className="font-medium text-gray-900 mb-1">Chrome / Edge</p>
+              <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                <li>Click the <strong>⋮</strong> menu (top-right)</li>
+                <li>Select <strong>More tools → Create shortcut…</strong></li>
+                <li>Or go to <code className="text-xs bg-gray-200 px-1 rounded">chrome://apps</code>, right-click SimpleDocs, <strong>Uninstall</strong></li>
+              </ol>
+            </div>
+            <div className="bg-gray-50 rounded p-3">
+              <p className="font-medium text-gray-900 mb-1">Windows (system uninstall)</p>
+              <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                <li>Open <strong>Settings → Apps → Installed apps</strong></li>
+                <li>Search for <strong>SimpleDocs</strong></li>
+                <li>Click <strong>Uninstall</strong></li>
+              </ol>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">
+            Your documents are stored in this browser's localStorage and on any files you saved — uninstalling does not delete them.
+          </p>
+          <div className="flex justify-end gap-2 mt-5">
+            <button
+              onClick={() => setUninstallModalOpen(false)}
+              className="px-4 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -462,6 +462,48 @@ describe('Navbar — menu close behavior', () => {
       expect(screen.getByText(/App installed/)).toBeInTheDocument();
     });
 
+    it('shows Uninstall App button when isInstalled is true', () => {
+      installPromptMock.isInstalled = true;
+      installPromptMock.canInstall = false;
+
+      render(<Navbar />);
+      openMenu('Help');
+      expect(screen.getByText('Uninstall App')).toBeInTheDocument();
+    });
+
+    it('opens uninstall modal when Uninstall App is clicked', () => {
+      installPromptMock.isInstalled = true;
+      installPromptMock.canInstall = false;
+
+      render(<Navbar />);
+      openMenu('Help');
+      fireEvent.click(screen.getByText('Uninstall App'));
+      expect(screen.getByText('Uninstall SimpleDocs')).toBeInTheDocument();
+    });
+
+    it('uninstall modal shows Chrome and Windows instructions', () => {
+      installPromptMock.isInstalled = true;
+      installPromptMock.canInstall = false;
+
+      render(<Navbar />);
+      openMenu('Help');
+      fireEvent.click(screen.getByText('Uninstall App'));
+      expect(screen.getByText(/Chrome \/ Edge/)).toBeInTheDocument();
+      expect(screen.getByText(/Windows \(system uninstall\)/)).toBeInTheDocument();
+    });
+
+    it('closes uninstall modal on Close button click', () => {
+      installPromptMock.isInstalled = true;
+      installPromptMock.canInstall = false;
+
+      render(<Navbar />);
+      openMenu('Help');
+      fireEvent.click(screen.getByText('Uninstall App'));
+      expect(screen.getByText('Uninstall SimpleDocs')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Close'));
+      expect(screen.queryByText('Uninstall SimpleDocs')).not.toBeInTheDocument();
+    });
+
     it('hides install entry when not installable and not installed', () => {
       // Default mock already returns canInstall: false, isInstalled: false.
       installPromptMock.isInstalled = false;
