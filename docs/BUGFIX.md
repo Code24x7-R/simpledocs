@@ -104,3 +104,4 @@
 | L-004 | No @media print styles (print output may include UI) | Low | Use Export PDF for clean output |
 | L-005 | Fit-to-width zoom not implemented | Low | 75%/100%/125% cover most use cases |
 | L-006 | E2E tests require Playwright browser install | Medium | Run `npx playwright install chromium` to enable |
+| L-007 | `HeadingStyle.test.tsx` flaky in full-suite runs | Low | jsdom doesn't implement `getClientRects()` — ProseMirror's `scrollToSelection` throws on heading style changes. Passes in isolation; fails 1-2 times in full-suite runs due to test order. No production impact. |

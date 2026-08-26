@@ -118,6 +118,31 @@
   font-weight: 600;
 }
 
+/* Make the built-in column-resize-handle visible.
+   The element already exists in the DOM on hover (rendered by
+   prosemirror-tables' handleDecorations via the columnResizing plugin).
+   We just style it so users can see and interact with it. */
+.column-resize-handle {
+  position: absolute;
+  width: 6px;
+  margin-left: -3px;
+  top: 0;
+  bottom: 0;
+  cursor: col-resize;
+  z-index: 10;
+  background: rgba(59, 130, 246, 0.2);   /* blue-500 @ 20% */
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+.column-resize-handle:hover {
+  background: rgba(59, 130, 246, 0.55);  /* blue-500 @ 55% */
+}
+
+/* Built-in class applied to the editor while hovering a handle */
+.resize-cursor {
+  cursor: col-resize !important;
+}
+
 .tiptap a {
   color: #2563eb;
   text-decoration: underline;

@@ -23,6 +23,7 @@ import { PageBreak } from './PageBreak';
 import { ParagraphStyle } from './ParagraphStyle';
 import { HeadingStyle } from './HeadingStyle';
 import { TableOfContents, TocEntry } from './TableOfContents';
+import { TableAutofit } from './TableAutofit';
 
 export function createExtensions() {
   return [
@@ -79,5 +80,6 @@ export function createExtensions() {
       placeholder: 'Start typing...',
     }),
     CharacterCount.configure({}),
+    TableAutofit,
   ];
 }

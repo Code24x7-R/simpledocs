@@ -45,13 +45,14 @@
 | 39 | Text-to-Speech (TTS) Reader | COMPLETE ✅ |
 | 40 | Zero-Friction Sharing (URL link, native share, file) | COMPLETE ✅ |
 | 41 | PWA File Association (.sdjson double-click launch) | COMPLETE ✅ |
+| 42 | Table Cell Resize & Autofit (border drag + double-click autofit) | COMPLETE ✅ |
 
 ### Final Results (2026-08-26)
-- **1012 tests pass** (57 suites)
+- **1037 tests pass** (60 suites)
 - **Lint**: 0 errors, 0 warnings
 - **Type-check**: Clean
 - **Build**: Succeeds
-- **Phases**: 41 complete
+- **Phases**: 42 complete
 
 - [x] Update PLAN.md with results and coverage stats
 - [x] Log completion in PROGRESS_LOG.md
@@ -677,6 +678,7 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 
 ## Future Enhancements (Not Yet Planned)
 
+- [x] Table cell resize & autofit (Phase 42)
 - [ ] Table formatting (border thickness, cell background color)
 - [ ] Custom margins in inches (currently only mm display)
 - [ ] Drag-and-drop JSON import (currently file input only)
@@ -1193,3 +1195,40 @@ Enable double-click launching of `.sdjson` files on Windows when SimpleDocs is i
 - **1012 tests pass** (57 suites) — up from 1005
 - Lint clean, type-check clean, build succeeds
 - 7 new tests for file launch hook
+
+---
+
+## Phase 42: Table Cell Resize & Autofit — COMPLETE ✅
+
+**2026-08-26** — Added visible column resize handles and double-click-to-autofit for table columns.
+
+### Design (Occam's Razor)
+Tiptap's built-in `columnResizing` plugin (active via `resizable: true`) already renders invisible `.column-resize-handle` DOM elements on hover and handles all drag mechanics + `colwidth` transactions. **We only add what's missing:**
+1. **CSS** to make existing handles visible (blue vertical bar, highlights on hover)
+2. **Double-click autofit** via a small `TableAutofit` extension
+
+No need to reinvent drag handling, hit-testing, or handle rendering.
+
+### Features
+| Feature | Description |
+|---------|-------------|
+| Visible resize handles | Blue bar appears at column borders on hover (was invisible) |
+| Drag to resize | Built-in — click and drag column border to resize |
+| Double-click autofit | Double-click a border → column fits to widest content + padding |
+| Min width | Columns can't be resized below 40px |
+
+### Implementation
+| File | Purpose |
+|------|--------|
+| `src/extensions/TableAutofit.ts` | Extension: `autofitColumn` command + `dblclick` DOM handler |
+| `src/extensions/TableAutofit.test.tsx` | 11 tests (measurement, transaction, dblclick, integration) |
+| `src/extensions/index.ts` | Added `TableAutofit` to extension list |
+| `src/index.css` | `.column-resize-handle` and `.resize-cursor` styles |
+
+### Key technical detail
+The `autofitColumn` command mutates Tiptap's shared chain transaction (not its own), letting Tiptap dispatch after the chain completes. The `dblclick` handler builds its own transaction since it has the real ProseMirror view.
+
+### Results
+- **1037 tests pass** (60 suites) — up from 1026
+- Lint clean, type-check clean, build succeeds
+- 11 new tests for table autofit
