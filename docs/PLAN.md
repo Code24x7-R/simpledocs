@@ -44,13 +44,14 @@
 | 38 | Additional Common Styles (Headings H1-H6, Line Spacing, Indent/Outdent, Paragraph Spacing) | COMPLETE ✅ |
 | 39 | Text-to-Speech (TTS) Reader | COMPLETE ✅ |
 | 40 | Zero-Friction Sharing (URL link, native share, file) | COMPLETE ✅ |
+| 41 | PWA File Association (.sdjson double-click launch) | COMPLETE ✅ |
 
-### Final Results (2026-08-22)
-- **952 tests pass** (53 suites)
+### Final Results (2026-08-26)
+- **1012 tests pass** (57 suites)
 - **Lint**: 0 errors, 0 warnings
 - **Type-check**: Clean
 - **Build**: Succeeds
-- **Phases**: 40 complete
+- **Phases**: 41 complete
 
 - [x] Update PLAN.md with results and coverage stats
 - [x] Log completion in PROGRESS_LOG.md
@@ -1166,3 +1167,29 @@ A 30 KB size guard (`estimateShareSize` / `canShareViaUrl`) disables Copy Link f
 - QR code generation for share links
 - File System Access API (save/link to a local folder without re-downloading)
 - Encrypted share links (password-protected docs)
+
+## Phase 41: PWA File Association — COMPLETE ✅
+
+### Overview
+Enable double-click launching of `.sdjson` files on Windows when SimpleDocs is installed as a PWA. Uses the Web App Launch Queue API (`window.launchQueue`) with a `file_handlers` entry in the PWA manifest.
+
+### Design
+- **Why PWA over protocol handler**: Protocol handlers encode the document in the URL, capped at ~30KB (same constraint as existing `#doc=` share links). PWA file_handlers deliver the file as a `File` object — no size limit.
+- **Validation**: Same shape as Drive open handler — `id`, `settings`, and (`content` || `pages`). Invalid files logged to console (no alert) since launch is not user-initiated.
+- **Graceful fallback**: In plain tab mode (no PWA), `launchQueue` is absent and the hook is a silent no-op.
+- **Reuse**: Routes through existing `loadDocument` (handles migration of legacy `pages[]` format and content sanitization).
+
+### Files
+- `public/manifest.json` — PWA manifest with `file_handlers` for `.sdjson`
+- `public/icon-192.png`, `public/icon-512.png` — PWA installability icons
+- `scripts/generateIcons.mjs` — icon generator
+- `src/hooks/useFileLaunch.ts` — launch queue consumer hook
+- `src/hooks/useFileLaunch.test.tsx` — 7 tests
+- `src/types/launch-queue.d.ts` — TypeScript declarations for experimental API
+- `index.html` — manifest link + theme-color
+- `src/App.tsx` — wired in `useFileLaunch()`
+
+### Results
+- **1012 tests pass** (57 suites) — up from 1005
+- Lint clean, type-check clean, build succeeds
+- 7 new tests for file launch hook

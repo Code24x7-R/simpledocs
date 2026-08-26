@@ -663,6 +663,15 @@ Before using OneDrive, you need to configure OAuth credentials:
 - When you reopen the app, your document is restored from the last auto-save.
 - Auto-save is a browser safety net — use **Save JSON** for portable backups.
 
+### Installing as a PWA
+
+SimpleDocs can be installed as a Progressive Web App (PWA) for a native-like experience:
+
+- **Chrome/Edge:** Click the install icon (⊕) in the address bar, or use **Menu → Install SimpleDocs**.
+- **Once installed:** SimpleDocs opens in its own window without the browser chrome, and you can **double-click any `.sdjson` file** on Windows to open it directly in SimpleDocs.
+
+> **Note:** PWA file association requires Windows 10/11 with a Chromium-based browser (Chrome, Edge, Brave, etc.). Firefox does not yet support file handlers.
+
 ---
 
 ## AI Chat Panel

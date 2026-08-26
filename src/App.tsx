@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useDocStore } from './store/useDocStore';
 import { exportToPdf } from './utils/pdfExport';
 import { loadDocFromUrl } from './utils/shareUrl';
+import { useFileLaunch } from './hooks/useFileLaunch';
 import Navbar from './components/layout/Navbar';
 import Toolbar from './components/layout/Toolbar/Toolbar';
 import PageSetupModal from './components/layout/PageSetupModal';
@@ -26,6 +27,9 @@ import PageNavigation from './components/editor/PageNavigation';
 export default function App() {
   const { docState, loadDocument, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
+
+  // Handle PWA file-launch (double-click .sdjson when installed).
+  useFileLaunch();
 
   // Link modal handler
   const handleLinkSubmit = useCallback((url: string, text: string) => {

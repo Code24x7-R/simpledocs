@@ -23,6 +23,7 @@ The editor uses a continuous-scroll architecture where a single Tiptap instance 
 - Search & replace (regex, case-sensitive, whole-word)
 - File I/O (PDF export, Markdown export, Word import) via a unified Open/Save dialog that also handles sharing and cloud storage
 - Sharing — copy link (self-contained URL), native share sheet, save/open as file (no accounts needed)
+- **PWA installable** — install as a desktop app and double-click `.sdjson` files to open them (Windows 10/11)
 - Cloud storage (Google Drive, OneDrive, S3-compatible) — advanced, optional
 - AI chat panel (multi-provider: LM Studio, Google Gemini)
 - Named ranges (Excel-like named cell references)
@@ -215,6 +216,11 @@ Tests are colocated with source files (`*.test.ts`, `*.test.tsx`). Coverage targ
 | Lint errors | 0 |
 | Type errors | 0 |
 
+### Current Results (2026-08-26)
+
+- **1012 tests pass** (57 suites)
+- Lint clean, type-check clean, build succeeds
+
 ### E2E Tests (Playwright)
 
 Located in `tests/e2e/`:
@@ -237,13 +243,16 @@ npx jest --testPathPattern=extension   # pattern match
 simpledocs/
 ├── docs/
 │   ├── BUGFIX.md                    # Bug fix log
-│   ├── PLAN.md                      # Project roadmap (33 phases)
+│   ├── PLAN.md                      # Project roadmap (41 phases)
 │   ├── PROGRESS_LOG.md              # Development progress
 │   ├── requirements.md              # Functional specification
 │   ├── wysiwyg-pagination.md        # Pagination design doc
 │   └── single-editor-constraints.md # Single-editor architecture reference
 ├── public/
-│   └── favicon.svg
+│   ├── favicon.svg
+│   ├── manifest.json            # PWA manifest (file handlers for .sdjson)
+│   ├── icon-192.png             # PWA icon
+│   └── icon-512.png             # PWA icon
 ├── src/
 │   ├── components/
 │   │   ├── editor/                  # Editor components
@@ -275,7 +284,8 @@ simpledocs/
 │   │       └── AboutModal.tsx
 │   ├── constants.ts                 # Shared color palettes
 │   ├── hooks/                       # Shared hooks
-│   │   └── useEditorClipboard.ts        # Consolidated copy/cut/paste
+│   │   ├── useEditorClipboard.ts        # Consolidated copy/cut/paste
+│   │   └── useFileLaunch.ts             # PWA file-launch (double-click .sdjson)
 │   ├── extensions/                  # Custom Tiptap extensions
 │   │   ├── index.ts                     # Extension registry
 │   │   ├── FontSize.ts
@@ -288,7 +298,8 @@ simpledocs/
 │   │   ├── page.ts
 │   │   ├── provider.ts
 │   │   ├── chat.ts
-│   │   └── promptTemplate.ts
+│   │   ├── promptTemplate.ts
+│   │   └── launch-queue.d.ts         # Launch Queue API declarations
 │   ├── utils/                       # Helpers
 │   │   ├── fileIO.ts                   # JSON save/load, Markdown export
 │   │   ├── pdfExport.ts                # PDF generation via html2pdf.js
