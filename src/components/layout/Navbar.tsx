@@ -81,6 +81,8 @@ export default function Navbar() {
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
   const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+  const [lineHeightFlyout, setLineHeightFlyout] = useState(false);
+  const [paraSpacingFlyout, setParaSpacingFlyout] = useState(false);
 
   // Keyboard navigation for each open dropdown (focus into menu on open,
   // arrow keys move between items, Escape closes).
@@ -456,55 +458,86 @@ export default function Navbar() {
                 ))}
               </div>
               <div className="border-t border-gray-100 my-1" />
-              {/* Line Height */}
+              {/* Spacing — collapsible flyout rows */}
               <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Line Height
+                Spacing
               </div>
-              {LINE_HEIGHTS.map((lh) => (
+              <div
+                className="relative"
+                onMouseEnter={() => setLineHeightFlyout(true)}
+                onMouseLeave={() => setLineHeightFlyout(false)}
+              >
                 <button
-                  key={lh.value}
-                  onClick={() => {
-                    if (lh.value === '') {
-                      editor?.chain().focus().unsetLineHeight().run();
-                    } else {
-                      editor?.chain().focus().setLineHeight(lh.value).run();
-                    }
-                    setLayoutMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                    getActiveLineHeight() === lh.value ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                  }`}
+                  onClick={() => setLineHeightFlyout((v) => !v)}
+                  className="w-full flex items-center justify-between text-left px-4 py-2 text-sm hover:bg-gray-50"
                 >
-                  {lh.label}
+                  <span>Line Height</span>
+                  <span className="text-xs text-gray-400">{getActiveLineHeight() || 'Default'} ›</span>
                 </button>
-              ))}
-              <div className="border-t border-gray-100 my-1" />
-              {/* Paragraph Spacing */}
-              <div className="px-4 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Paragraph Spacing
+                {lineHeightFlyout && (
+                  <div className="absolute top-0 left-full ml-0 w-44 bg-white border border-gray-200 rounded shadow-lg z-50">
+                    {LINE_HEIGHTS.map((lh) => (
+                      <button
+                        key={lh.value}
+                        onClick={() => {
+                          if (lh.value === '') {
+                            editor?.chain().focus().unsetLineHeight().run();
+                          } else {
+                            editor?.chain().focus().setLineHeight(lh.value).run();
+                          }
+                          setLineHeightFlyout(false);
+                          setLayoutMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                          getActiveLineHeight() === lh.value ? 'bg-blue-50 text-blue-700 font-medium' : ''
+                        }`}
+                      >
+                        {lh.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {PARAGRAPH_SPACING.map((ps) => {
-                const activePs = getActiveParagraphSpacing();
-                const isActive = activePs?.before === ps.before && activePs?.after === ps.after;
-                return (
-                  <button
-                    key={ps.label}
-                    onClick={() => {
-                      if (ps.before === 0 && ps.after === 0) {
-                        editor?.chain().focus().unsetParagraphSpacing().run();
-                      } else {
-                        editor?.chain().focus().setParagraphSpacing({ before: ps.before, after: ps.after }).run();
-                      }
-                      setLayoutMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                      isActive ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                    }`}
-                  >
-                    {ps.label}
-                  </button>
-                );
-              })}
+              <div
+                className="relative"
+                onMouseEnter={() => setParaSpacingFlyout(true)}
+                onMouseLeave={() => setParaSpacingFlyout(false)}
+              >
+                <button
+                  onClick={() => setParaSpacingFlyout((v) => !v)}
+                  className="w-full flex items-center justify-between text-left px-4 py-2 text-sm hover:bg-gray-50"
+                >
+                  <span>Paragraph Spacing</span>
+                  <span className="text-xs text-gray-400">›</span>
+                </button>
+                {paraSpacingFlyout && (
+                  <div className="absolute top-0 left-full ml-0 w-44 bg-white border border-gray-200 rounded shadow-lg z-50">
+                    {PARAGRAPH_SPACING.map((ps) => {
+                      const activePs = getActiveParagraphSpacing();
+                      const isActive = activePs?.before === ps.before && activePs?.after === ps.after;
+                      return (
+                        <button
+                          key={ps.label}
+                          onClick={() => {
+                            if (ps.before === 0 && ps.after === 0) {
+                              editor?.chain().focus().unsetParagraphSpacing().run();
+                            } else {
+                              editor?.chain().focus().setParagraphSpacing({ before: ps.before, after: ps.after }).run();
+                            }
+                            setParaSpacingFlyout(false);
+                            setLayoutMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                            isActive ? 'bg-blue-50 text-blue-700 font-medium' : ''
+                          }`}
+                        >
+                          {ps.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               <div className="border-t border-gray-100 my-1" />
               {/* Indent / Outdent */}
               <div className="flex items-center gap-2 px-3 pb-2 pt-1">

@@ -316,9 +316,11 @@ describe('Navbar — menu close behavior', () => {
       expect(screen.getByText('Outdent')).toBeInTheDocument();
     });
 
-    it('lists the line height options', () => {
+    it('lists the line height options after opening the flyout', () => {
       render(<Navbar />);
       openMenu('Layout');
+      // Line height options live in a flyout — open it via hover.
+      fireEvent.mouseEnter(screen.getByText('Line Height').closest('div')!);
       expect(screen.getByText('1.15')).toBeInTheDocument();
       expect(screen.getByText('1.5')).toBeInTheDocument();
       expect(screen.getByText('2.0')).toBeInTheDocument();
@@ -328,14 +330,16 @@ describe('Navbar — menu close behavior', () => {
       render(<Navbar />);
       openMenu('Layout');
       fireEvent.click(screen.getByTitle('Align Left'));
-      expect(screen.queryByText('Line Height')).not.toBeInTheDocument();
+      expect(screen.queryByText('Alignment')).not.toBeInTheDocument();
     });
 
     it('closes after clicking a line height option', () => {
       render(<Navbar />);
       openMenu('Layout');
+      // Open the flyout then click an option.
+      fireEvent.mouseEnter(screen.getByText('Line Height').closest('div')!);
       fireEvent.click(screen.getByText('1.5'));
-      expect(screen.queryByText('Line Height')).not.toBeInTheDocument();
+      expect(screen.queryByText('Alignment')).not.toBeInTheDocument();
     });
 
     it('closes after clicking Indent', () => {

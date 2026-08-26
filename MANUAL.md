@@ -82,6 +82,7 @@ SimpleDocs is a browser-based WYSIWYG document editor — no installation requir
 > **Open** and **Save** open a single dialog that covers local files, sharing (copy link / native share sheet), and cloud storage (Google Drive / OneDrive / S3 under an "Advanced" section). |
 | **Edit** | Copy, Cut, Paste |
 | **Insert** | Image, Link, Table, Field, Merge Fields, Page Break |
+| **Layout** | Alignment, Spacing (Line Height / Paragraph Spacing flyouts), Indent / Outdent |
 | **View** | Zoom levels (50%–200% with +/− step buttons), Full-Bleed view toggle, Launch in Full-Bleed by Default |
 | **Help** | Keyboard Shortcuts, About SimpleDocs, SimpleSheet link |
 
