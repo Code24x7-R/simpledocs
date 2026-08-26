@@ -25,7 +25,7 @@ import PaginatedViewport from './components/editor/PaginatedViewport';
 import PageNavigation from './components/editor/PageNavigation';
 
 export default function App() {
-  const { docState, loadDocument, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
+  const { docState, loadDocument, addRecentFile, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
   // Handle PWA file-launch (double-click .sdjson when installed).
@@ -103,6 +103,7 @@ export default function App() {
         // `pages[]` files migrate to `content` (which the editor sync
         // requires) and the document is sanitized + persisted.
         loadDocument(parsed);
+        addRecentFile(fileName, JSON.stringify(parsed).length);
         console.log('[App] Opened document from Drive:', fileName);
       } else {
         alert('Invalid document format in Drive file');
@@ -110,7 +111,7 @@ export default function App() {
     } catch {
       alert('Failed to parse document from Drive');
     }
-  }, [loadDocument]);
+  }, [loadDocument, addRecentFile]);
 
   // Image modal handler
   const handleImageSubmit = useCallback((src: string, alt: string, width: number, height: number) => {

@@ -183,6 +183,31 @@ describe('useFileLaunch', () => {
     loadSpy.mockRestore();
   });
 
+  it('adds the opened file to the MRU list', async () => {
+    const consumerFn = vi.fn();
+    const setConsumer = vi.fn((cb) => {
+      consumerFn.mockImplementation(cb);
+    });
+    setLaunchQueue({ setConsumer });
+
+    const loadSpy = vi.spyOn(useDocStore.getState(), 'loadDocument');
+    const mruSpy = vi.spyOn(useDocStore.getState(), 'addRecentFile');
+    renderHook(() => useFileLaunch());
+
+    const docText = JSON.stringify(validDoc);
+    const handle = mockFileHandle(docText, 'MyLetter.sdjson');
+
+    await act(async () => {
+      await consumerFn({ files: [handle] });
+    });
+
+    expect(loadSpy).toHaveBeenCalledTimes(1);
+    expect(mruSpy).toHaveBeenCalledTimes(1);
+    expect(mruSpy).toHaveBeenCalledWith('MyLetter.sdjson', docText.length);
+    mruSpy.mockRestore();
+    loadSpy.mockRestore();
+  });
+
   it('handles multiple files from a single launch', async () => {
     const consumerFn = vi.fn();
     const setConsumer = vi.fn((cb) => {

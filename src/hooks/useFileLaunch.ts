@@ -18,6 +18,7 @@ import { useDocStore } from '../store/useDocStore';
  */
 export function useFileLaunch(): void {
   const loadDocument = useDocStore((s) => s.loadDocument);
+  const addRecentFile = useDocStore((s) => s.addRecentFile);
 
   useEffect(() => {
     const launchQueue = window.launchQueue;
@@ -38,6 +39,7 @@ export function useFileLaunch(): void {
             (parsed.content || parsed.pages)
           ) {
             loadDocument(parsed as Parameters<typeof loadDocument>[0]);
+            addRecentFile(file.name, text.length);
             console.log('[FileLaunch] Opened document from file:', file.name);
           } else {
             console.warn('[FileLaunch] Skipped file with invalid document shape:', file.name);
@@ -47,5 +49,5 @@ export function useFileLaunch(): void {
         }
       }
     });
-  }, [loadDocument]);
+  }, [loadDocument, addRecentFile]);
 }
