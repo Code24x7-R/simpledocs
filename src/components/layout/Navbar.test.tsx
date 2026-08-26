@@ -28,6 +28,19 @@ vi.mock('../../utils/wordImport', () => ({
   importWordDocument: vi.fn().mockResolvedValue({ html: '<p>Imported</p>', messages: [] }),
 }));
 
+// ---------------------------------------------------------------------------
+// Mock useInstallPrompt — PWA install is browser-environment-specific.
+// Uses a mutable ref so individual tests can override the return value.
+// ---------------------------------------------------------------------------
+const installPromptMock = {
+  isInstalled: false,
+  canInstall: false,
+  promptInstall: vi.fn().mockResolvedValue(false),
+};
+vi.mock('../../hooks/useInstallPrompt', () => ({
+  useInstallPrompt: () => installPromptMock,
+}));
+
 // Mock clipboard utils — jsdom lacks document.execCommand('paste')
 vi.mock('../../utils/clipboard', () => ({
   copyToClipboard: vi.fn().mockResolvedValue(undefined),
@@ -423,6 +436,41 @@ describe('Navbar — menu close behavior', () => {
       expect(screen.getByText('About simpledocs')).toBeInTheDocument();
       fireEvent.click(screen.getByText('About simpledocs'));
       expect(screen.queryByText('About simpledocs')).not.toBeInTheDocument();
+    });
+  });
+
+  // =======================================================================
+  // PWA install prompt — Help menu entry visibility
+  // =======================================================================
+  describe('PWA install prompt', () => {
+    it('shows Install App in Help menu when canInstall is true', () => {
+      // Override the mock for this test only.
+      installPromptMock.isInstalled = false;
+      installPromptMock.canInstall = true;
+
+      render(<Navbar />);
+      openMenu('Help');
+      expect(screen.getByText('Install App')).toBeInTheDocument();
+    });
+
+    it('shows installed hint when isInstalled is true', () => {
+      installPromptMock.isInstalled = true;
+      installPromptMock.canInstall = false;
+
+      render(<Navbar />);
+      openMenu('Help');
+      expect(screen.getByText(/App installed/)).toBeInTheDocument();
+    });
+
+    it('hides install entry when not installable and not installed', () => {
+      // Default mock already returns canInstall: false, isInstalled: false.
+      installPromptMock.isInstalled = false;
+      installPromptMock.canInstall = false;
+
+      render(<Navbar />);
+      openMenu('Help');
+      expect(screen.queryByText('Install App')).not.toBeInTheDocument();
+      expect(screen.queryByText(/App installed/)).not.toBeInTheDocument();
     });
   });
 });

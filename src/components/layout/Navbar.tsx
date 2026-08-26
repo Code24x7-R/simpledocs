@@ -28,9 +28,11 @@ import {
   AlignJustify,
   IndentIncrease,
   IndentDecrease,
+  Monitor,
 } from 'lucide-react';
 import { useDocStore } from '../../store/useDocStore';
 import { useEditorClipboard } from '../../hooks/useEditorClipboard';
+import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { exportToMarkdown } from '../../utils/fileIO';
 import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
@@ -122,6 +124,7 @@ export default function Navbar() {
     !!editor && editor.isActive({ textAlign: align });
 
   const { handleCopy, handleCut, handlePaste } = useEditorClipboard(editor);
+  const { isInstalled, canInstall, promptInstall } = useInstallPrompt();
 
   const handleExportPdf = () => {
     // Triggered via custom event - App listens for this
@@ -666,7 +669,20 @@ export default function Navbar() {
             Help
           </button>
           {helpMenuOpen && (
-            <div ref={helpMenuKb.ref} onKeyDown={helpMenuKb.onKeyDown} className="absolute top-full right-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
+            <div ref={helpMenuKb.ref} onKeyDown={helpMenuKb.onKeyDown} className="absolute top-full right-0 mt-1 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
+              {canInstall && (
+                <button
+                  onClick={() => { promptInstall(); setHelpMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Monitor className="w-4 h-4 text-blue-600" /> Install App
+                </button>
+              )}
+              {isInstalled && (
+                <div className="px-4 py-2 text-sm text-gray-500 flex items-center gap-2">
+                  <Monitor className="w-4 h-4 text-green-600" /> App installed — open .sdjson files directly
+                </div>
+              )}
               <button
                 onClick={() => { setShortcutsOpen(true); setHelpMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
