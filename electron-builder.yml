@@ -1,0 +1,38 @@
+appId: au.mouseclick.simpledocs
+productName: SimpleDocs
+copyright: Copyright © 2026 Richard Robertson
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  # Renderer and main/preload are fully bundled; no runtime node_modules needed.
+  - '!node_modules/**/*'
+asar: true
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SimpleDocs
+  # Preserve autosaved documents and settings across uninstall/reinstall.
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh
+fileAssociations:
+  - ext: sdjson
+    name: SimpleDocs.sdjson
+    description: SimpleDocs Document
+    mimeType: application/json
+    role: Editor
+    icon: build/sdjson.ico

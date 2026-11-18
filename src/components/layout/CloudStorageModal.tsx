@@ -27,6 +27,7 @@ import { shareDocument } from '../../utils/webShare';
 import type { DocState } from '../../store/useDocStore';
 import S3ConfigModal from './S3ConfigModal';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { isDesktop } from '../../utils/desktop';
 
 type CloudProvider = 'google' | 'onedrive' | 's3';
 
@@ -591,6 +592,12 @@ const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
               )}
 
               {/* --- Advanced: cloud accounts (collapsible) --- */}
+              {isDesktop() ? (
+                <p className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-400">
+                  Cloud accounts are available in the browser version of SimpleDocs. The desktop
+                  app uses native Windows file dialogs and local files.
+                </p>
+              ) : (
               <details className="mt-4 pt-3 border-t border-gray-100 group">
                 <summary className="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700 select-none list-none flex items-center gap-1">
                   <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
@@ -655,6 +662,7 @@ const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
                   </button>
                 </div>
               </details>
+              )}
 
               {/* Footer info */}
               <div className="mt-4 pt-3 border-t border-gray-100">

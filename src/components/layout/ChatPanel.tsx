@@ -22,6 +22,7 @@ import {
   Download,
 } from 'lucide-react';
 import { useChatStore } from '../../store/useChatStore';
+import { base64ToBlob, saveBlob } from '../../utils/desktop';
 import { useDocStore } from '../../store/useDocStore';
 import { getProvider } from '../../utils/providers/providerRegistry';
 import { markdownToHtml, containsMarkdown } from '../../utils/markdownToHtml';
@@ -218,21 +219,23 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     showStatus('Image inserted into document');
   };
 
-  // Download generated image
-  const handleDownloadImage = () => {
+  // Save generated image (native dialog on desktop, download on the web)
+  const handleDownloadImage = async () => {
     if (!lastGeneratedImage) {
       showStatus('No image to download');
       return;
     }
     const { base64, mimeType } = lastGeneratedImage;
-    const src = `data:${mimeType};base64,${base64}`;
-    const link = document.createElement('a');
-    link.href = src;
-    link.download = `generated-image-${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showStatus('Image downloaded');
+    const extension = mimeType.split('/')[1] || 'png';
+    try {
+      await saveBlob(base64ToBlob(base64, mimeType), {
+        suggestedName: `generated-image-${Date.now()}.${extension}`,
+        filters: [{ name: 'Image', extensions: [extension] }],
+      });
+      showStatus('Image saved');
+    } catch {
+      showStatus('Failed to save image');
+    }
   };
 
   // Template handlers

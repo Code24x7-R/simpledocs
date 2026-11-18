@@ -31,3 +31,5 @@ Agents.md
 *.sln
 *.sw?
 fonts/
+/dist-electron/
+/release/

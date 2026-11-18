@@ -150,9 +150,10 @@ describe('useFileLaunch', () => {
     });
 
     expect(loadSpy).not.toHaveBeenCalled();
+    // Invalid JSON is rejected by the shared document validator.
     expect(warnSpy).toHaveBeenCalledWith(
-      '[FileLaunch] Failed to open file:',
-      expect.any(Error),
+      '[FileLaunch] Skipped file with invalid document shape:',
+      expect.any(String),
     );
     warnSpy.mockRestore();
     loadSpy.mockRestore();

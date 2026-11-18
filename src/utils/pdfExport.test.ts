@@ -150,7 +150,7 @@ describe('pdfExport', () => {
       vi.unstubAllGlobals();
     });
 
-    it('calls pdf.download() with sanitized filename', async () => {
+    it('renders a Blob and saves it with the sanitized filename', async () => {
       // Import here so the mock is in place
       const { exportToPdf } = await import('./pdfExport');
 
@@ -179,13 +179,19 @@ describe('pdfExport', () => {
 
       await exportToPdf(doc, []);
 
-      // pdfmake v0.3.x: download() is called directly (uses file-saver internally)
-      // The mock returns a resolved promise, so we just verify no error was thrown.
-      // Also verify addVirtualFileSystem was called with font data and fonts were registered.
+      // The PDF is rendered to a Blob and saved through the shared saveBlob
+      // adapter (native dialog on desktop, anchor download on the web).
       const pdfMakeMock = await import('pdfmake/build/pdfmake');
       expect(pdfMakeMock.default.addVirtualFileSystem).toHaveBeenCalled();
       expect(pdfMakeMock.default.fonts).toBeDefined();
       expect(pdfMakeMock.default.fonts.Arial).toBeDefined();
+
+      const createPdf = vi.mocked(pdfMakeMock.default.createPdf);
+      const pdf = createPdf.mock.results[createPdf.mock.results.length - 1]?.value;
+      expect(pdf.getBlob).toHaveBeenCalledOnce();
+      expect(pdf.download).not.toHaveBeenCalled();
+      expect(clickSpy).toHaveBeenCalledOnce();
+      expect(link.download).toBe('Export_Test.pdf');
     });
   });
 });

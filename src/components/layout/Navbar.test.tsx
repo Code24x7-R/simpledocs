@@ -21,7 +21,7 @@ vi.mock('../../hooks/useEditorClipboard', () => ({
 // Mock utility modules triggered by menu item actions
 // ---------------------------------------------------------------------------
 vi.mock('../../utils/fileIO', () => ({
-  exportToMarkdown: vi.fn(),
+  exportToMarkdown: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../utils/wordImport', () => ({

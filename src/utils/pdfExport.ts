@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Richard Robertson
 import type { DocState } from '../store/useDocStore';
 import { convertToPdfmake, collectImageSources, type PageSetup } from './pdfmakeConverter';
+import { saveBlob } from './desktop';
 
 /**
  * Load an image and return its natural dimensions in pixels.
@@ -115,31 +116,18 @@ export async function exportToPdf(
   }
   pdfMakeInstance.fonts = fonts;
 
-  // Create and download PDF
+  // Create the PDF, then save it. Desktop routes through the native Save
+  // dialog; the browser keeps the anchor-download behaviour.
   const pdf = pdfMakeInstance.createPdf(pdfDoc);
   const filename = `${doc.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 
-  // pdfmake v0.3.x: download() is async and uses file-saver internally
-  if (typeof pdf.download === 'function') {
-    await pdf.download(filename);
-  } else {
-    // Legacy pdfmake v0.2.x API: getBuffer(callback)
-    await new Promise<void>((resolve, reject) => {
-      pdf.getBuffer((blob: Blob) => {
-        try {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      });
-    });
-  }
+  const blob =
+    typeof pdf.getBlob === 'function'
+      ? await pdf.getBlob()
+      : new Blob([await pdf.getBuffer()], { type: 'application/pdf' });
+
+  await saveBlob(blob, {
+    suggestedName: filename,
+    filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
+  });
 }

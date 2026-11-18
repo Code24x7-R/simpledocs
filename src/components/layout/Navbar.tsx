@@ -39,6 +39,8 @@ import { importWordDocument } from '../../utils/wordImport';
 import { formatMRUTimestamp } from '../../utils/mru';
 import { LINE_HEIGHTS, PARAGRAPH_SPACING } from '../../constants';
 import { useDropdownKeyboard } from '../../hooks/useDropdownKeyboard';
+import { isDesktop } from '../../utils/desktop';
+import { openDocumentFromDisk, saveDocumentToDisk } from '../../utils/desktopFiles';
 
 const ZOOM_LEVELS = [
   { label: '50%', value: 0.5 },
@@ -134,10 +136,23 @@ export default function Navbar() {
   };
 
   const handleSave = () => {
+    if (isDesktop()) {
+      void saveDocumentToDisk().then((outcome) => {
+        if (outcome === 'error') alert('Failed to save the document. See console for details.');
+      });
+      return;
+    }
     setDriveOpen(true, 'save');
   };
 
   const handleOpen = () => {
+    if (isDesktop()) {
+      void openDocumentFromDisk().then((outcome) => {
+        if (outcome === 'invalid') alert('Invalid document format');
+        if (outcome === 'error') alert('Failed to open the document. See console for details.');
+      });
+      return;
+    }
     setDriveOpen(true, 'open');
   };
 
@@ -153,7 +168,15 @@ export default function Navbar() {
     }
     // Use the document title for the filename
     const filename = docState.title || 'document';
-    exportToMarkdown(html, filename);
+    const reportFailure = (err: unknown) => {
+      console.error('Markdown export failed:', err);
+      alert('Markdown export failed. See console for details.');
+    };
+    try {
+      void Promise.resolve(exportToMarkdown(html, filename)).catch(reportFailure);
+    } catch (err) {
+      reportFailure(err);
+    }
   };
 
   const handlePrint = () => {

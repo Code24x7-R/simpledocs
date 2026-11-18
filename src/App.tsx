@@ -5,6 +5,8 @@ import { useDocStore } from './store/useDocStore';
 import { exportToPdf } from './utils/pdfExport';
 import { loadDocFromUrl } from './utils/shareUrl';
 import { useFileLaunch } from './hooks/useFileLaunch';
+import { useDesktopCommands } from './hooks/useDesktopCommands';
+import { parseDocumentText } from './utils/documentFile';
 import Navbar from './components/layout/Navbar';
 import Toolbar from './components/layout/Toolbar/Toolbar';
 import PageSetupModal from './components/layout/PageSetupModal';
@@ -28,8 +30,10 @@ export default function App() {
   const { docState, loadDocument, addRecentFile, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
 
-  // Handle PWA file-launch (double-click .sdjson when installed).
+  // Handle document launches (Electron association or installed PWA).
   useFileLaunch();
+  // Native menu commands (desktop only; no-op on the web).
+  useDesktopCommands();
 
   // Link modal handler
   const handleLinkSubmit = useCallback((url: string, text: string) => {
@@ -96,21 +100,16 @@ export default function App() {
 
   // Drive open handler
   const handleOpenFromDrive = useCallback((content: string, fileName: string) => {
-    try {
-      const parsed = JSON.parse(content);
-      if (parsed.id && parsed.settings && (parsed.content || parsed.pages)) {
-        // Valid DocState format — route through loadDocument so legacy
-        // `pages[]` files migrate to `content` (which the editor sync
-        // requires) and the document is sanitized + persisted.
-        loadDocument(parsed);
-        addRecentFile(fileName, JSON.stringify(parsed).length);
-        console.log('[App] Opened document from Drive:', fileName);
-      } else {
-        alert('Invalid document format in Drive file');
-      }
-    } catch {
-      alert('Failed to parse document from Drive');
+    const parsed = parseDocumentText(content);
+    if (!parsed) {
+      alert('Invalid document format in file');
+      return;
     }
+    // Route through loadDocument so legacy `pages[]` files migrate to
+    // `content` (which the editor sync requires) and are sanitized.
+    loadDocument(parsed);
+    addRecentFile(fileName, content.length);
+    console.log('[App] Opened document from file:', fileName);
   }, [loadDocument, addRecentFile]);
 
   // Image modal handler

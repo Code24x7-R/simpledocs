@@ -2,17 +2,25 @@
   "name": "simpledocs",
   "private": true,
   "version": "1.0.0",
+  "description": "Paginated WYSIWYG document editor with Word/Google Docs feature parity. Fully client-side.",
+  "author": "Richard Robertson",
+  "main": "dist-electron/main.js",
   "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
+    "electron:dev": "vite --mode electron",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:desktop": "playwright test -c playwright.desktop.config.ts",
+    "verify": "npm run lint && npm run type-check && npm run test && npm run build",
+    "electron:dir": "npm run type-check && vite build --mode electron && electron-builder --win --x64 --dir",
+    "electron:build": "npm run type-check && vite build --mode electron && electron-builder --win nsis --x64",
     "setup:fonts": "tsx scripts/generateFontVfs.ts"
   },
   "dependencies": {
@@ -62,6 +70,8 @@
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "^1.6.1",
     "autoprefixer": "^10.4.19",
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
@@ -70,6 +80,7 @@
     "tailwindcss": "^3.4.3",
     "typescript": "^5.4.5",
     "vite": "^5.4.21",
+    "vite-plugin-electron": "^0.29.0",
     "vitest": "^1.6.0"
   }
 }
