@@ -161,6 +161,18 @@ test('native Save writes a .sdjson document through the menu accelerator', async
   expect(mru).toContain('Saved-By-Dialog.sdjson');
 });
 
+test('Save As adopts the chosen filename as the document title', async () => {
+  const target = path.join(workDir, 'Renamed-Letter.sdjson');
+  await stubSaveDialog(target);
+
+  await page.getByTestId('document-title').fill('Untitled Document');
+  await page.getByTestId('menu-file').click();
+  await page.getByTestId('file-save').click();
+
+  await expect.poll(() => existsSync(target), { timeout: 15_000 }).toBe(true);
+  await expect(page.getByTestId('document-title')).toHaveValue('Renamed-Letter');
+});
+
 test('native Open loads a document through the menu accelerator', async () => {
   const source = path.join(workDir, 'Opened-By-Dialog.sdjson');
   writeFileSync(source, JSON.stringify(fixtureDocument('Opened By Dialog', 'Opened natively.'), null, 2));

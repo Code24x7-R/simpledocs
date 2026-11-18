@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useDocStore } from './store/useDocStore';
 import { exportToPdf } from './utils/pdfExport';
 import { loadDocFromUrl } from './utils/shareUrl';
@@ -29,6 +29,12 @@ import PageNavigation from './components/editor/PageNavigation';
 export default function App() {
   const { docState, loadDocument, addRecentFile, aboutOpen, setAboutOpen, shortcutsOpen, setShortcutsOpen, searchReplaceOpen, setSearchReplaceOpen, fieldMergeOpen, setFieldMergeOpen, linkOpen, setLinkOpen, imageOpen, setImageOpen, tocOpen, setTocOpen, ttsOpen, setTtsOpen, driveOpen, driveMode, setDriveOpen, chatOpen, setChatOpen, providerSetupOpen, setProviderSetupOpen, editor, savedLinkSelection, setSavedLinkSelection } = useDocStore();
   const [linkModalState, setLinkModalState] = useState<{ url: string; text: string }>({ url: '', text: '' });
+  // Serialising a large document (inline images) is expensive; only do it while
+  // the share/save modal is actually open.
+  const shareModalDocument = useMemo(
+    () => (driveOpen ? JSON.stringify(docState, null, 2) : '{}'),
+    [driveOpen, docState]
+  );
 
   // Handle document launches (Electron association or installed PWA).
   useFileLaunch();
@@ -205,7 +211,7 @@ export default function App() {
         onClose={() => setDriveOpen(false)}
         mode={driveMode}
         documentTitle={docState.title || 'Untitled'}
-        documentContent={JSON.stringify(docState, null, 2)}
+        documentContent={shareModalDocument}
         onOpenDocument={handleOpenFromDrive}
       />
       <TableOfContentsModal

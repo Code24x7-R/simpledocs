@@ -109,6 +109,7 @@ const fullDocContent = JSON.stringify({
 // Mock shareUrl + webShare so modal tests focus on UI wiring, not the
 // compression / clipboard internals (those have their own unit tests).
 vi.mock('../../utils/shareUrl', () => ({
+  encodeDoc: vi.fn(() => 'ENCODED'),
   encodeDocToUrl: vi.fn((doc: Record<string, unknown>) =>
     `https://simpledocs.app/#doc=ENCODED_${(doc as { title?: string }).title ?? 'untitled'}`,
   ),
@@ -121,7 +122,7 @@ vi.mock('../../utils/webShare', () => ({
   shareDocument: vi.fn(() => Promise.resolve('shared' as const)),
 }));
 
-import { encodeDocToUrl, canShareViaUrl } from '../../utils/shareUrl';
+import { encodeDoc, encodeDocToUrl, canShareViaUrl, MAX_SHARE_SIZE } from '../../utils/shareUrl';
 import { shareDocument } from '../../utils/webShare';
 
 describe('CloudStorageModal', () => {
@@ -933,6 +934,13 @@ describe('CloudStorageModal', () => {
   // ── Userland sharing (no accounts) ──────────────────────
 
   describe('userland sharing', () => {
+    it('does no compression or parsing while closed', () => {
+      vi.mocked(encodeDoc).mockClear();
+      render(<CloudStorageModal {...defaultProps} isOpen={false} documentContent={fullDocContent} />);
+      expect(encodeDoc).not.toHaveBeenCalled();
+      expect(screen.queryByText('Copy Link')).not.toBeInTheDocument();
+    });
+
     it('shows Copy Link / Share File / Save to File in save mode', () => {
       render(<CloudStorageModal {...defaultProps} mode="save" />);
       expect(screen.getByText('Copy Link')).toBeInTheDocument();
@@ -1073,6 +1081,7 @@ describe('CloudStorageModal', () => {
     it('disables Copy Link and warns when the document is too large', () => {
       // Force the size guard to treat the doc as too large for this test.
       vi.mocked(canShareViaUrl).mockReturnValue(false);
+      vi.mocked(encodeDoc).mockReturnValueOnce('x'.repeat(MAX_SHARE_SIZE + 1));
 
       render(<CloudStorageModal {...defaultProps} mode="save" />);
 

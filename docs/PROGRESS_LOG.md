@@ -798,3 +798,27 @@ exits 0; removed accidentally added `present`, `scripts` and a direct `esbuild`.
 - Installer built; local install → association → app smoke → uninstall → registry cleanup verified
 - Lint, type-check (renderer + Electron), web build clean
 - SmartScreen/signing and auto-update remain out of scope (unsigned installer)
+
+
+## 2026-11-18 — Desktop feedback fixes
+
+### [FIX] Slow rendering with many inline images
+The closed Cloud Storage modal parsed and lz-compressed the whole document on every
+render (even while hidden). With 150 inline PNGs this cost ~5.2 s of compression per
+keystroke. The modal now returns early when closed and memoizes the size guard; the app
+only serializes the document while the modal is open.
+Benchmark (150 images, 1.45 MB JSON): load 1.68 s → 0.09 s; 10 keystrokes 6.65 s → 0.17 s.
+
+### [FIX] Document title after reinstall
+Save As now adopts the chosen filename as the document title (untitled docs and explicit
+renames); untitled files opened from disk also adopt a meaningful filename. This keeps the
+title meaningful across restart/uninstall/reinstall.
+
+### [FIX] Blank Windows icon
+The Electron `.ico` files were generated from the cream/dark PWA raster, which looked
+blank at small sizes. `build/icon.ico`/`build/sdjson.ico` and the PWA PNGs are now
+generated from `public/favicon.svg` (blue rounded square, white "S").
+
+### Results
+- **1074 unit tests**, **24 browser E2E**, **10 Electron smoke** pass
+- Installer rebuilt; install → installed-app smoke → uninstall verified again

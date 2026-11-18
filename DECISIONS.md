@@ -52,9 +52,9 @@ limits, and decisions that code alone does not explain.
 | `npm run type-check` | pass (renderer + Electron) |
 | `npm run lint` | pass (0 warnings) |
 | `npm run build` | pass (large chunks: `pdfFonts` 21 MB, `index` 1.66 MB) |
-| `npm run test` (`verify`) | **1071/1071 pass, 63 files, exit 0** |
+| `npm run test` (`verify`) | **1074/1074 pass, 63 files, exit 0** |
 | `npm run test:e2e` | **24/24 pass** |
-| `npm run test:desktop` | **9/9 pass** (win-unpacked and installed app) |
+| `npm run test:desktop` | **10/10 pass** (win-unpacked and installed app) |
 | Installer smoke | install → association → smoke → uninstall → registry cleanup verified |
 | `npm run electron:build` | `release/SimpleDocs-1.0.0-x64-setup.exe` (~126 MB) |
 
@@ -100,6 +100,22 @@ invalid-import failure case was added.
   the `.sdjson` extension default behind. `build/installer.nsh` (`customUnInstall`)
   removes the extension key when it still points at `SimpleDocs.sdjson`; verified by
   install/uninstall on Windows 11.
+- **D-12 — Closed modals must do no work.** `CloudStorageModal` was compressing
+  the entire document with lz-string on every render to show the share-link size,
+  even when closed. With inline images this cost seconds per keystroke. The modal now
+  returns null before building its tree and memoizes the size guard; the app only
+  serializes the document while the modal is open. Benchmark (150 inline PNGs,
+  1.45 MB JSON): load 1.68 s → 0.09 s, 10 keystrokes 6.65 s → 0.17 s.
+  Regression test: "does no compression or parsing while closed".
+- **D-13 — Save As names the document.** When the user picks a filename different from
+  the suggested one (or the document is untitled), the title becomes the filename stem
+  (underscores → spaces). Untitled files opened from disk also adopt a meaningful
+  filename. `Untitled_Document.sdjson` never becomes a title. This keeps the title
+  meaningful after restart/reinstall instead of showing "Untitled Document".
+- **D-14 — Windows icon comes from the web favicon.** `public/favicon.svg`
+  (blue rounded square, white "S") is the source for `public/icon-192/512.png` and
+  `build/icon.ico`/`build/sdjson.ico`; the previous cream/dark PWA raster looked blank
+  in the taskbar and shortcuts. Re-run the ImageMagick commands when the favicon changes.
 - **D-11 — Native menu is intentionally minimal.** File (New/Open/Save/Save As/Export
   PDF/Exit), Edit (cut/copy/paste/select all), View (fullscreen; dev-only reload/devtools),
   Help (About). The menu bar is auto-hidden (Alt reveals). Document commands are forwarded

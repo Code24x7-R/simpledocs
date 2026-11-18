@@ -6,7 +6,7 @@
  */
 import { useDocStore } from '../store/useDocStore';
 import { getDesktopBridge, saveBlob } from './desktop';
-import { parseDocumentText, sanitizeFileName } from './documentFile';
+import { parseDocumentText, sanitizeFileName, titleFromFileName } from './documentFile';
 
 export type OpenOutcome = 'opened' | 'canceled' | 'invalid' | 'error' | 'unsupported';
 export type SaveOutcome = 'saved' | 'canceled' | 'error' | 'unsupported';
@@ -27,6 +27,11 @@ export async function openDocumentFromDisk(): Promise<OpenOutcome> {
     if (!doc) return 'invalid';
 
     const store = useDocStore.getState();
+    // Untitled documents adopt the filename so the title bar is meaningful.
+    if (!doc.title || /^untitled( document)?$/i.test(doc.title)) {
+      const title = titleFromFileName(result.name);
+      if (title) doc.title = title;
+    }
     store.loadDocument(doc);
     store.addRecentFile(result.name, result.text.length);
     return 'opened';
@@ -54,7 +59,17 @@ export async function saveDocumentToDisk(): Promise<SaveOutcome> {
   });
 
   if (outcome.saved) {
-    store.addRecentFile(outcome.name ?? suggestedName, json.length);
+    const savedName = outcome.name ?? suggestedName;
+    store.addRecentFile(savedName, json.length);
+
+    // Windows convention: Save As names the document. Adopt the chosen
+    // filename for untitled documents and for explicit renames, so a restored
+    // autosave has a meaningful title instead of "Untitled Document".
+    const titleIsDefault = !store.docState.title || /^untitled( document)?$/i.test(store.docState.title);
+    if (titleIsDefault || savedName !== suggestedName) {
+      const title = titleFromFileName(savedName);
+      if (title && title !== store.docState.title) store.updateTitle(title);
+    }
     return 'saved';
   }
   return outcome.error ? 'error' : 'canceled';

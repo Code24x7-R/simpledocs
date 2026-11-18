@@ -32,3 +32,15 @@ export function sanitizeFileName(input: string): string {
   const base = input.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
   return base || 'Untitled';
 }
+
+/**
+ * Derive a human document title from a saved filename.
+ * Returns null for default/meaningless names so the caller keeps the existing
+ * title (e.g. `Untitled_Document.sdjson` must not become "Untitled_Document").
+ */
+export function titleFromFileName(fileName: string): string | null {
+  const stem = fileName.replace(/\.(sdjson|json)$/i, '').replace(/_/g, ' ').trim();
+  if (!stem) return null;
+  if (/^untitled( document)?$/i.test(stem)) return null;
+  return stem;
+}

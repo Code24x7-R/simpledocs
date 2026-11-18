@@ -13,7 +13,7 @@
  * - "open": Browse cloud and open a document
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { X, FolderOpen, Save, Loader2, AlertCircle, FileText, Trash2, Cloud, Server, Settings, Link, Check, Download, Share2 } from 'lucide-react';
 import { listFiles as listGoogleFiles, createFile as createGoogleFile, downloadFile as downloadGoogleFile, deleteFile as deleteGoogleFile, DriveFile } from '../../utils/driveApi';
 import { openPicker } from '../../utils/pickerApi';
@@ -22,7 +22,7 @@ import { requestAccessToken as getGoogleToken } from '../../utils/driveAuth';
 import { signIn as signInOneDrive, signOut as signOutOneDrive } from '../../utils/onedriveAuth';
 import { listFiles as listS3Files, createFile as createS3File, downloadFile as downloadS3File, deleteFile as deleteS3File, S3Object } from '../../utils/s3Api';
 import { loadS3Config, isS3Configured } from '../../utils/s3Config';
-import { encodeDocToUrl, canShareViaUrl, estimateShareSize } from '../../utils/shareUrl';
+import { encodeDoc, encodeDocToUrl, MAX_SHARE_SIZE } from '../../utils/shareUrl';
 import { shareDocument } from '../../utils/webShare';
 import type { DocState } from '../../store/useDocStore';
 import S3ConfigModal from './S3ConfigModal';
@@ -87,18 +87,27 @@ const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
 
   const clearError = () => setError(null);
 
-  // Size guard: can this document fit in a share link? Computed each render
-  // from the current content string.
-  let linkTooLarge = false;
-  let linkSizeLabel = '';
-  try {
-    const doc = JSON.parse(documentContent) as DocState;
-    const size = estimateShareSize(doc);
-    linkTooLarge = !canShareViaUrl(doc);
-    linkSizeLabel = `${Math.round(size / 1024)} KB`;
-  } catch {
-    linkTooLarge = true;
-  }
+  // Link-size guard: compress once per document, not once per render.
+  // (Must run as an unconditional hook; it is a no-op while closed.)
+  const shareInfo = useMemo(() => {
+    if (!isOpen) return { linkTooLarge: false, linkSizeLabel: '' };
+    try {
+      const doc = JSON.parse(documentContent) as DocState;
+      const compressed = encodeDoc(doc);
+      const size = new Blob([compressed]).size;
+      return {
+        linkTooLarge: size > MAX_SHARE_SIZE,
+        linkSizeLabel: `${Math.round(size / 1024)} KB`,
+      };
+    } catch {
+      return { linkTooLarge: true, linkSizeLabel: '' };
+    }
+  }, [isOpen, documentContent]);
+  const { linkTooLarge, linkSizeLabel } = shareInfo;
+
+  // Closed modals must do no work: this early return also skips rebuilding the
+  // entire modal tree on every editor update.
+  if (!isOpen) return null;
 
   // --- Userland sharing (no accounts, no setup) ---
 
@@ -464,8 +473,6 @@ const [s3ConfigOpen, setS3ConfigOpen] = useState(false);
     else if (provider === 'onedrive') loadOneDriveFiles();
     else if (provider === 's3') loadS3FilesHandler();
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>

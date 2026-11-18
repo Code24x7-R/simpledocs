@@ -10,3 +10,6 @@ date | id | type | tier | area | cause | req-ids | rung | evidence | notes
 2026-11-18 | FR-18 | feature | L | electron | - | FR-18 | 4 | automated-pass | sandbox/contextIsolation/no-node, CSP, external links, cloud gating; verified in packaged smoke
 2026-11-18 | FR-19 | feature | M | ci | - | FR-19 | 3e | automated-pass | release-windows.yml builds artifact; E2E+desktop smoke wired; 1071 unit / 24 e2e / 9 desktop green
 2026-11-18 | ENV-4 | bug | S | packaging | platform-env | - | 1 | automated-pass | tsc -b emitted root vite.config.js which Vite preferred over .ts; moved tsc output to node_modules cache
+2026-11-18 | PERF-1 | bug | M | CloudStorageModal | perf | - | 2 | automated-pass | closed modal lz-compressed whole doc per render; early return + memoized size guard; 150 images load 1684ms->94ms, 10 keys 6654ms->167ms; regression test added
+2026-11-18 | TITLE-1 | bug | S | desktopFiles | ui-state | - | 2 | automated-pass | Save As adopts chosen filename as title; untitled files adopt filename on open; desktop smoke covers it
+2026-11-18 | ICON-1 | bug | S | build | platform-env | - | 4 | unverified-environment | generated build/icon.ico + PWA icons from favicon.svg; installer rebuilt; visual taskbar/Start Menu confirmation pending user

@@ -65,7 +65,7 @@ bundle as the web app inside a hardened Electron shell.
   double-click reuses the running instance instead of opening a duplicate window.
 - **Native dialogs:** File → Open, File → Save, Save As, Export PDF and Export Markdown
   use the Windows Open/Save dialogs. `Ctrl+N`, `Ctrl+O`, `Ctrl+S`, `Ctrl+Shift+S` work
-  through the native menu.
+  through the native menu. Save As adopts the chosen filename as the document title.
 - **Persistence:** autosave lives under `%APPDATA%\SimpleDocs` and survives app updates
   and uninstall (uninstall removes the app and file association, not your documents).
 - **Cloud providers** (Drive/OneDrive/S3) are hidden in the desktop build; OAuth is

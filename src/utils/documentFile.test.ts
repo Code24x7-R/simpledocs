@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { parseDocumentText, sanitizeFileName } from './documentFile';
+import { parseDocumentText, sanitizeFileName, titleFromFileName } from './documentFile';
 import { blobToBase64, getDesktopBridge, isDesktop, saveBlob } from './desktop';
 
 const validDoc = {
@@ -34,6 +34,20 @@ describe('parseDocumentText', () => {
     expect(parseDocumentText(JSON.stringify({ hello: 'world' }))).toBeNull();
     expect(parseDocumentText(JSON.stringify({ id: 'x', settings: {} }))).toBeNull();
     expect(parseDocumentText('null')).toBeNull();
+  });
+});
+
+describe('titleFromFileName', () => {
+  it('derives a title from a saved filename', () => {
+    expect(titleFromFileName('Quarterly Report.sdjson')).toBe('Quarterly Report');
+    expect(titleFromFileName('letter.JSON')).toBe('letter');
+    expect(titleFromFileName('My_Notes.sdjson')).toBe('My Notes');
+  });
+
+  it('ignores default or empty names', () => {
+    expect(titleFromFileName('Untitled_Document.sdjson')).toBeNull();
+    expect(titleFromFileName('Untitled.sdjson')).toBeNull();
+    expect(titleFromFileName('.sdjson')).toBeNull();
   });
 });
 

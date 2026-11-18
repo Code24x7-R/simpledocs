@@ -61,6 +61,8 @@ the app is already running, the document opens in the existing window. You can a
 
 **Save documents:** **File → Save** (`Ctrl+S`) or **File → Save As** (`Ctrl+Shift+S`)
 opens the native Windows Save dialog. PDF and Markdown exports use the same dialog.
+If you choose a different filename in Save As, that name becomes the document title,
+so restored documents are no longer labelled "Untitled Document".
 
 **Autosave:** your work is stored under `%APPDATA%\SimpleDocs` and restored on the next
 launch. Uninstalling the app does not delete this data.
