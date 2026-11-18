@@ -53,7 +53,17 @@ export async function loadDocument(page: Page, { title = 'E2E Document', paragra
       content,
     });
   }, { title, paragraphs });
-  await page.waitForTimeout(150);
+  // Wait until the editor has applied the fixture (avoids racing the Tiptap
+  // setContent microtask before keyboard interaction).
+  await page.waitForFunction(
+    (expected) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const editor = (window as any).__docStore.getState().editor;
+      return Boolean(editor) && editor.state.doc.childCount === expected;
+    },
+    paragraphs.length,
+    { timeout: 5000 }
+  );
 }
 
 export interface EditorSnapshot {

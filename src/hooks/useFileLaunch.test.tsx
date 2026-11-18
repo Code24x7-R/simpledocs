@@ -204,7 +204,44 @@ describe('useFileLaunch', () => {
 
     expect(loadSpy).toHaveBeenCalledTimes(1);
     expect(mruSpy).toHaveBeenCalledTimes(1);
-    expect(mruSpy).toHaveBeenCalledWith('MyLetter.sdjson', docText.length);
+    expect(mruSpy).toHaveBeenCalledWith('MyLetter.sdjson', docText.length, undefined);
+    mruSpy.mockRestore();
+    loadSpy.mockRestore();
+  });
+
+  it('forwards the path when the desktop bridge delivers a document', async () => {
+    let deliver: ((doc: { name: string; path: string; text: string }) => void) | undefined;
+    const rendererReady = vi.fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).simpleDocsDesktop = {
+      isDesktop: true,
+      platform: 'win32',
+      getVersion: vi.fn(),
+      openDocument: vi.fn(),
+      openRecent: vi.fn(),
+      saveFile: vi.fn(),
+      onOpenDocument: vi.fn((cb) => {
+        deliver = cb;
+        return () => {};
+      }),
+      onCommand: vi.fn(() => () => {}),
+      rendererReady,
+    };
+
+    const loadSpy = vi.spyOn(useDocStore.getState(), 'loadDocument');
+    const mruSpy = vi.spyOn(useDocStore.getState(), 'addRecentFile');
+    renderHook(() => useFileLaunch());
+
+    expect(rendererReady).toHaveBeenCalledOnce();
+    const docText = JSON.stringify(validDoc);
+    act(() => {
+      deliver?.({ name: 'Recent.sdjson', path: 'C:/Docs/Recent.sdjson', text: docText });
+    });
+
+    expect(loadSpy).toHaveBeenCalledTimes(1);
+    expect(mruSpy).toHaveBeenCalledWith('Recent.sdjson', docText.length, 'C:/Docs/Recent.sdjson');
+
+    delete (window as unknown as { simpleDocsDesktop?: unknown }).simpleDocsDesktop;
     mruSpy.mockRestore();
     loadSpy.mockRestore();
   });

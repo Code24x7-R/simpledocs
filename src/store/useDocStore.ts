@@ -56,7 +56,7 @@ interface DocStore {
   helpMenuOpen: boolean;
   aboutOpen: boolean;
   shortcutsOpen: boolean;
-  mruList: { name: string; timestamp: number; size: number }[];
+  mruList: { name: string; timestamp: number; size: number; path?: string }[];
   searchReplaceOpen: boolean;
   fieldMergeOpen: boolean;
   linkOpen: boolean;
@@ -86,9 +86,9 @@ interface DocStore {
   setHelpMenuOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setShortcutsOpen: (open: boolean) => void;
-  setMruList: (list: { name: string; timestamp: number; size: number }[]) => void;
-  addRecentFile: (name: string, size: number) => void;
-  removeRecentFile: (name: string) => void;
+  setMruList: (list: { name: string; timestamp: number; size: number; path?: string }[]) => void;
+  addRecentFile: (name: string, size: number, path?: string) => void;
+  removeRecentFile: (key: string) => void;
   setSearchReplaceOpen: (open: boolean) => void;
   setFieldMergeOpen: (open: boolean) => void;
   setLinkOpen: (open: boolean) => void;
@@ -312,12 +312,12 @@ export const useDocStore = create<DocStore>((set, get) => {
     setAboutOpen: (open) => set({ aboutOpen: open }),
     setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
     setMruList: (list) => set({ mruList: list }),
-    addRecentFile: (name: string, size: number) => {
-      const list = addMRUEntry({ name, size });
+    addRecentFile: (name, size, path) => {
+      const list = addMRUEntry({ name, size, path });
       set({ mruList: list });
     },
-    removeRecentFile: (name: string) => {
-      const list = removeMRUEntry(name);
+    removeRecentFile: (key) => {
+      const list = removeMRUEntry(key);
       set({ mruList: list });
     },
     setSearchReplaceOpen: (open) => set({ searchReplaceOpen: open }),

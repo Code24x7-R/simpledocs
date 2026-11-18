@@ -185,6 +185,14 @@ test('native Open loads a document through the menu accelerator', async () => {
   await expect(page.locator('.tiptap')).toContainText('Opened natively.');
 });
 
+test('Recent Files reopens a saved document', async () => {
+  await page.getByTestId('menu-file').click();
+  await page.getByRole('button', { name: /Saved-By-Dialog\.sdjson/ }).click();
+
+  await expect(page.getByTestId('document-title')).toHaveValue('Saved By Dialog');
+  await expect(page.locator('.tiptap')).toContainText('Saved through the native Windows dialog.');
+});
+
 test('native menu exposes the standard file accelerators', async () => {
   const menu = await app.evaluate(({ Menu }) => {
     const file = Menu.getApplicationMenu()?.items.find((item) => item.label === 'File');
@@ -237,6 +245,26 @@ test('native Export PDF writes a PDF through the save dialog', async () => {
   expect(bytes.length).toBeGreaterThan(1000);
 });
 
+test('Recent Files removes an entry whose file was deleted', async () => {
+  const target = path.join(workDir, 'Renamed-Letter.sdjson');
+  rmSync(target, { force: true });
+
+  const messages: string[] = [];
+  page.on('dialog', async (dialog) => {
+    messages.push(dialog.message());
+    await dialog.dismiss();
+  });
+
+  await page.getByTestId('menu-file').click();
+  await page.getByRole('button', { name: /Renamed-Letter\.sdjson/ }).click();
+
+  await expect.poll(() => messages.join(' '), { timeout: 10_000 }).toContain('File not found');
+
+  await page.getByTestId('menu-file').click();
+  await expect(page.getByRole('button', { name: /Renamed-Letter\.sdjson/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+});
+
 test('autosaved document survives an app restart in the same profile', async () => {
   await page.getByTestId('document-title').fill('Persisted Across Restart');
   await page.waitForTimeout(600); // let the debounced autosave persist
@@ -251,4 +279,12 @@ test('autosaved document survives an app restart in the same profile', async () 
   await page.waitForSelector('.tiptap', { timeout: 30_000 });
 
   await expect(page.getByTestId('document-title')).toHaveValue('Persisted Across Restart');
+});
+
+test('Recent Files survives an app restart', async () => {
+  await page.getByTestId('menu-file').click();
+  await page.getByRole('button', { name: /Saved-By-Dialog\.sdjson/ }).click();
+
+  await expect(page.getByTestId('document-title')).toHaveValue('Saved By Dialog');
+  await expect(page.locator('.tiptap')).toContainText('Saved through the native Windows dialog.');
 });

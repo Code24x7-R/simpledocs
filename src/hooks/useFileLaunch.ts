@@ -21,14 +21,14 @@ export function useFileLaunch(): void {
   const addRecentFile = useDocStore((s) => s.addRecentFile);
 
   useEffect(() => {
-    const ingest = (name: string, text: string): boolean => {
+    const ingest = (name: string, text: string, filePath?: string): boolean => {
       const doc = parseDocumentText(text);
       if (!doc) {
         console.warn('[FileLaunch] Skipped file with invalid document shape:', name);
         return false;
       }
       loadDocument(doc);
-      addRecentFile(name, text.length);
+      addRecentFile(name, text.length, filePath);
       console.log('[FileLaunch] Opened document from file:', name);
       return true;
     };
@@ -36,7 +36,7 @@ export function useFileLaunch(): void {
     const desktop = getDesktopBridge();
     if (desktop) {
       const unsubscribe = desktop.onOpenDocument((doc) => {
-        ingest(doc.name, doc.text);
+        ingest(doc.name, doc.text, doc.path);
       });
       // Queued association documents are flushed once the renderer is ready.
       desktop.rendererReady();

@@ -69,8 +69,8 @@ This ensures that you're testing the behavior the user would see in the browser.
 Error: Not implemented: window.print
     at module.exports (C:\dev\simpledocs\node_modules\jsdom\lib\jsdom\browser\not-implemented.js:9:17)
     at C:\dev\simpledocs\node_modules\jsdom\lib\jsdom\browser\Window.js:962:7
-    at handlePrint (C:\dev\simpledocs\src\components\layout\Navbar.tsx:183:12)
-    at onClick (C:\dev\simpledocs\src\components\layout\Navbar.tsx:332:32)
+    at handlePrint (C:\dev\simpledocs\src\components\layout\Navbar.tsx:184:12)
+    at onClick (C:\dev\simpledocs\src\components\layout\Navbar.tsx:352:32)
     at HTMLUnknownElement.callCallback (C:\dev\simpledocs\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
     at HTMLUnknownElement.callTheUserObjectsOperation (C:\dev\simpledocs\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
     at innerInvokeEventListeners (C:\dev\simpledocs\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:350:25)

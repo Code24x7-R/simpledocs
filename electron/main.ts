@@ -26,11 +26,13 @@ import { readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractDocumentPaths } from './argv';
+import { addRecentPath, isRecentPath, normalizeRecentPaths } from './recent';
 import { APP_HOST, DOC_EXTENSION } from './paths';
 import { installAppProtocol, registerAppScheme } from './protocol';
 import type {
   DesktopCommand,
   DesktopFileFilter,
+  DesktopOpenRecentResult,
   DesktopOpenedDocument,
   DesktopSaveRequest,
   DesktopSaveResult,
@@ -50,6 +52,8 @@ const isDev = Boolean(DEV_URL);
 
 let mainWindow: BrowserWindow | null = null;
 let rendererReady = false;
+/** Paths the renderer may reopen from Recent Files (see electron/recent.ts). */
+let recentPaths: string[] = [];
 const pendingDocuments: DesktopOpenedDocument[] = [];
 
 registerAppScheme();
@@ -77,10 +81,37 @@ function deliverDocument(doc: DesktopOpenedDocument): void {
   }
 }
 
+function recentPathsFile(): string {
+  return path.join(app.getPath('userData'), 'recent-files.json');
+}
+
+async function loadRecentPaths(): Promise<void> {
+  try {
+    const raw = await readFile(recentPathsFile(), 'utf8');
+    const parsed = JSON.parse(raw) as { paths?: unknown };
+    recentPaths = normalizeRecentPaths(parsed.paths);
+  } catch {
+    recentPaths = [];
+  }
+}
+
+function rememberRecentPath(filePath: string): void {
+  const next = addRecentPath(recentPaths, filePath);
+  if (next.length === recentPaths.length && next.every((entry, i) => entry === recentPaths[i])) {
+    return;
+  }
+  recentPaths = next;
+  void writeFile(recentPathsFile(), JSON.stringify({ version: 1, paths: recentPaths }), 'utf8').catch(
+    (err) => console.warn('[desktop] Could not persist recent files:', err)
+  );
+}
+
 async function queueDocuments(filePaths: readonly string[]): Promise<void> {
   for (const filePath of filePaths) {
     try {
-      deliverDocument(await readDocument(filePath));
+      const doc = await readDocument(filePath);
+      rememberRecentPath(filePath);
+      deliverDocument(doc);
     } catch (err) {
       console.warn('[desktop] Could not open document:', filePath, err);
     }
@@ -224,8 +255,29 @@ function registerIpc(): void {
       ? await dialog.showOpenDialog(owner, options)
       : await dialog.showOpenDialog(options);
     if (result.canceled || result.filePaths.length === 0) return { canceled: true };
-    return readDocument(result.filePaths[0]);
+    const filePath = result.filePaths[0];
+    const doc = await readDocument(filePath);
+    rememberRecentPath(filePath);
+    return doc;
   });
+
+  ipcMain.handle(
+    'desktop:open-recent',
+    async (_event, rawPath: unknown): Promise<DesktopOpenRecentResult> => {
+      if (typeof rawPath !== 'string' || !rawPath.trim()) return { status: 'forbidden' };
+      const filePath = path.resolve(rawPath);
+      if (!isRecentPath(recentPaths, filePath)) return { status: 'forbidden' };
+      const extension = path.extname(filePath).toLowerCase();
+      if (extension !== DOC_EXTENSION && extension !== '.json') return { status: 'forbidden' };
+
+      try {
+        return { status: 'ok', document: await readDocument(filePath) };
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { status: 'missing' };
+        throw err;
+      }
+    }
+  );
 
   ipcMain.handle(
     'desktop:save-file',
@@ -250,6 +302,7 @@ function registerIpc(): void {
         filePath = `${filePath}.${filters[0].extensions[0]}`;
       }
       await writeFile(filePath, Buffer.from(request.base64, 'base64'));
+      rememberRecentPath(filePath);
       return { canceled: false, path: filePath, name: path.basename(filePath) };
     }
   );
@@ -341,7 +394,8 @@ if (!gotLock) {
     });
   }
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    await loadRecentPaths();
     if (!isDev) installAppProtocol(DIST_DIR);
     registerIpc();
     Menu.setApplicationMenu(buildMenu());

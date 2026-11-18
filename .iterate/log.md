@@ -13,3 +13,4 @@ date | id | type | tier | area | cause | req-ids | rung | evidence | notes
 2026-11-18 | PERF-1 | bug | M | CloudStorageModal | perf | - | 2 | automated-pass | closed modal lz-compressed whole doc per render; early return + memoized size guard; 150 images load 1684ms->94ms, 10 keys 6654ms->167ms; regression test added
 2026-11-18 | TITLE-1 | bug | S | desktopFiles | ui-state | - | 2 | automated-pass | Save As adopts chosen filename as title; untitled files adopt filename on open; desktop smoke covers it
 2026-11-18 | ICON-1 | bug | S | build | platform-env | - | 4 | unverified-environment | generated build/icon.ico + PWA icons from favicon.svg; installer rebuilt; visual taskbar/Start Menu confirmation pending user
+2026-11-18 | MRU-1 | feature | M | mru/electron | - | FR-20 | 4 | automated-pass | real recent files: paths in MRU, main allowlist persisted in userData, open-recent IPC, missing-file pruning; 13/13 desktop smoke incl. reopen, removal, restart

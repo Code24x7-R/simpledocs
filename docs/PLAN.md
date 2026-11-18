@@ -1256,7 +1256,7 @@ The `autofitColumn` command mutates Tiptap's shared chain transaction (not its o
 - Installer: `release/SimpleDocs-1.0.0-x64-setup.exe` (~126 MB), per-user, unsigned.
 - Installed, verified and uninstalled locally on Windows 11: registry association,
   shortcuts, uninstall cleanup all verified.
-- Desktop smoke: **10/10 pass** against both `win-unpacked` and the installed app.
+- Desktop smoke: **13/13 pass** against both `win-unpacked` and the installed app.
 - Browser E2E: **24/24 pass** (suite refreshed for the single-editor architecture).
-- Unit tests: **1074/1074 pass** (63 files); lint, type-check, web build clean.
+- Unit tests: **1089/1089 pass** (63 files); lint, type-check, web build clean.
 - Desktop app is fully offline; cloud providers gated off; OAuth deferred.

@@ -302,6 +302,13 @@ SHALL be served from a privileged `app://` scheme, not `file://`. External HTTP(
 SHALL open in the system browser; navigation and window creation SHALL otherwise be denied.
 Cloud OAuth providers SHALL be hidden in the desktop build.
 
+### FR-20: Recent Files (desktop)
+The desktop app SHALL store absolute paths for Recent Files and reopen them from the
+File menu. Reads SHALL be restricted to paths previously supplied by a native Open/Save
+dialog or a `.sdjson` association, persisted by the main process. Missing files SHALL be
+removed from the list with a user-visible message. Browser builds SHALL retain the
+existing informational behaviour because they have no persistent path access.
+
 ### FR-19: Desktop verification
 The repository SHALL provide `npm run test:desktop` (Playwright Electron smoke against the
 packaged app) covering renderer load, preload-only API exposure, CSP, native Save/Open,

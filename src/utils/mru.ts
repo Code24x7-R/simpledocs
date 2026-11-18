@@ -4,6 +4,8 @@ export interface MRUEntry {
   name: string;
   timestamp: number;
   size: number;
+  /** Absolute path to the file (desktop builds). Absent for web entries. */
+  path?: string;
 }
 
 const MRU_STORAGE_KEY = 'SIMPLEDOCS_MRU';
@@ -21,10 +23,16 @@ export function getMRUList(): MRUEntry[] {
   return [];
 }
 
+function entryKey(entry: Pick<MRUEntry, 'name' | 'path'>): string {
+  return entry.path ?? entry.name;
+}
+
 export function addMRUEntry(entry: Omit<MRUEntry, 'timestamp'>): MRUEntry[] {
   let list = getMRUList();
-  // Remove existing entry with same name
-  list = list.filter((e) => e.name !== entry.name);
+  // De-duplicate by path when known (same filename in different folders is a
+  // different document); fall back to the name for web entries.
+  const key = entryKey(entry);
+  list = list.filter((e) => entryKey(e) !== key);
   // Add new entry at the top
   const newEntry: MRUEntry = {
     ...entry,
@@ -38,9 +46,10 @@ export function addMRUEntry(entry: Omit<MRUEntry, 'timestamp'>): MRUEntry[] {
   return list;
 }
 
-export function removeMRUEntry(name: string): MRUEntry[] {
+/** Remove by path when available, otherwise by name. */
+export function removeMRUEntry(key: string): MRUEntry[] {
   let list = getMRUList();
-  list = list.filter((e) => e.name !== name);
+  list = list.filter((e) => e.path !== key && e.name !== key);
   localStorage.setItem(MRU_STORAGE_KEY, JSON.stringify(list));
   return list;
 }

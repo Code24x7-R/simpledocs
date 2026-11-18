@@ -64,6 +64,10 @@ opens the native Windows Save dialog. PDF and Markdown exports use the same dial
 If you choose a different filename in Save As, that name becomes the document title,
 so restored documents are no longer labelled "Untitled Document".
 
+**Recent Files:** **File → Recent Files** lists the last five documents. Click one to
+reopen it; if the file has been moved or deleted, the entry is removed and a message is
+shown.
+
 **Autosave:** your work is stored under `%APPDATA%\SimpleDocs` and restored on the next
 launch. Uninstalling the app does not delete this data.
 

@@ -9,6 +9,13 @@ import { getDesktopBridge, saveBlob } from './desktop';
 import { parseDocumentText, sanitizeFileName, titleFromFileName } from './documentFile';
 
 export type OpenOutcome = 'opened' | 'canceled' | 'invalid' | 'error' | 'unsupported';
+export type RecentOpenOutcome =
+  | 'opened'
+  | 'missing'
+  | 'forbidden'
+  | 'invalid'
+  | 'error'
+  | 'unsupported';
 export type SaveOutcome = 'saved' | 'canceled' | 'error' | 'unsupported';
 
 /** Open a `.sdjson` document. Desktop: native Open dialog. Web: app modal. */
@@ -22,21 +29,46 @@ export async function openDocumentFromDisk(): Promise<OpenOutcome> {
   try {
     const result = await bridge.openDocument();
     if ('canceled' in result) return 'canceled';
-
-    const doc = parseDocumentText(result.text);
-    if (!doc) return 'invalid';
-
-    const store = useDocStore.getState();
-    // Untitled documents adopt the filename so the title bar is meaningful.
-    if (!doc.title || /^untitled( document)?$/i.test(doc.title)) {
-      const title = titleFromFileName(result.name);
-      if (title) doc.title = title;
-    }
-    store.loadDocument(doc);
-    store.addRecentFile(result.name, result.text.length);
-    return 'opened';
+    return loadDesktopDocument(result);
   } catch (err) {
     console.error('[Desktop] Open failed:', err);
+    return 'error';
+  }
+}
+
+/** Adopt a filename for untitled documents so the title is meaningful. */
+function applyFileTitle(doc: ReturnType<typeof parseDocumentText>, name: string): void {
+  if (!doc) return;
+  if (!doc.title || /^untitled( document)?$/i.test(doc.title)) {
+    const title = titleFromFileName(name);
+    if (title) doc.title = title;
+  }
+}
+
+function loadDesktopDocument(
+  result: { name: string; path: string; text: string }
+): 'opened' | 'invalid' {
+  const doc = parseDocumentText(result.text);
+  if (!doc) return 'invalid';
+  applyFileTitle(doc, result.name);
+  const store = useDocStore.getState();
+  store.loadDocument(doc);
+  store.addRecentFile(result.name, result.text.length, result.path);
+  return 'opened';
+}
+
+/** Reopen a Recent Files entry through the main-process allowlist. */
+export async function openRecentDocument(filePath: string): Promise<RecentOpenOutcome> {
+  const bridge = getDesktopBridge();
+  if (!bridge) return 'unsupported';
+
+  try {
+    const result = await bridge.openRecent(filePath);
+    if (result.status === 'missing') return 'missing';
+    if (result.status === 'forbidden') return 'forbidden';
+    return loadDesktopDocument(result.document);
+  } catch (err) {
+    console.error('[Desktop] Recent file open failed:', err);
     return 'error';
   }
 }
@@ -60,7 +92,7 @@ export async function saveDocumentToDisk(): Promise<SaveOutcome> {
 
   if (outcome.saved) {
     const savedName = outcome.name ?? suggestedName;
-    store.addRecentFile(savedName, json.length);
+    store.addRecentFile(savedName, json.length, outcome.path);
 
     // Windows convention: Save As names the document. Adopt the chosen
     // filename for untitled documents and for explicit renames, so a restored

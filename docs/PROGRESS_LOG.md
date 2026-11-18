@@ -822,3 +822,17 @@ generated from `public/favicon.svg` (blue rounded square, white "S").
 ### Results
 - **1074 unit tests**, **24 browser E2E**, **10 Electron smoke** pass
 - Installer rebuilt; install → installed-app smoke → uninstall verified again
+
+
+## 2026-11-18 — Recent Files (MRU) implementation
+
+The File → Recent Files handler was a stub that only displayed an alert. Entries now
+store absolute paths, are re-opened through a new `desktop:open-recent` IPC, and are
+restricted to paths the main process has seen via native Open/Save dialogs or `.sdjson`
+association (persisted in `userData/recent-files.json`). Missing files are pruned.
+Browser builds keep the informational fallback.
+
+### Results
+- **1089 unit tests**, **24 browser E2E**, **13 Electron smoke** pass
+- New tests: MRU path de-duplication/removal, main allowlist, recent-open outcomes,
+  association path propagation, reopen/remove/restart desktop flows

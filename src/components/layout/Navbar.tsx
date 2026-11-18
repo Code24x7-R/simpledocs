@@ -36,11 +36,11 @@ import { useEditorClipboard } from '../../hooks/useEditorClipboard';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { exportToMarkdown } from '../../utils/fileIO';
 import { importWordDocument } from '../../utils/wordImport';
-import { formatMRUTimestamp } from '../../utils/mru';
+import { formatMRUTimestamp, type MRUEntry } from '../../utils/mru';
 import { LINE_HEIGHTS, PARAGRAPH_SPACING } from '../../constants';
 import { useDropdownKeyboard } from '../../hooks/useDropdownKeyboard';
 import { isDesktop } from '../../utils/desktop';
-import { openDocumentFromDisk, saveDocumentToDisk } from '../../utils/desktopFiles';
+import { openDocumentFromDisk, openRecentDocument, saveDocumentToDisk } from '../../utils/desktopFiles';
 
 const ZOOM_LEVELS = [
   { label: '50%', value: 0.5 },
@@ -78,6 +78,7 @@ export default function Navbar() {
     setTtsOpen,
     mruList,
     addRecentFile,
+    removeRecentFile,
   } = useDocStore();
 
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
@@ -220,10 +221,29 @@ export default function Navbar() {
     if (wordFileInputRef.current) wordFileInputRef.current.value = '';
   };
 
-  const handleOpenMRUFile = async (entry: { name: string; timestamp: number; size: number }) => {
-    // For MRU, we just show info since we don't store the actual file content
-    // In a full implementation, we'd store file references via File System Access API
-    alert(`MRU: ${entry.name} (${formatMRUTimestamp(entry.timestamp)}). Use File → Open to reopen saved documents.`);
+  const handleOpenMRUFile = async (entry: MRUEntry) => {
+    if (isDesktop() && entry.path) {
+      const outcome = await openRecentDocument(entry.path);
+      if (outcome === 'missing') {
+        removeRecentFile(entry.path);
+        alert(`File not found:
+${entry.path}
+
+It was removed from Recent Files.`);
+      } else if (outcome === 'forbidden') {
+        alert('This file is no longer available to the app. Open it with File → Open.');
+      } else if (outcome === 'invalid') {
+        alert('The recent file is not a valid SimpleDocs document.');
+      } else if (outcome === 'error') {
+        alert('Failed to open the recent file. See console for details.');
+      }
+      return;
+    }
+    // Browser builds have no persistent file path access.
+    alert(
+      `MRU: ${entry.name} (${formatMRUTimestamp(entry.timestamp)}). ` +
+        'Use File → Open to reopen saved documents in the browser.'
+    );
   };
 
   const handleLoadDemo = async () => {
@@ -350,8 +370,9 @@ export default function Navbar() {
                 </div>
                 {mruList.map((entry) => (
                   <button
-                    key={entry.name + entry.timestamp}
-                    onClick={() => { handleOpenMRUFile(entry); setFileMenuOpen(false); }}
+                    key={(entry.path ?? entry.name) + entry.timestamp}
+                    title={entry.path ?? entry.name}
+                    onClick={() => { void handleOpenMRUFile(entry); setFileMenuOpen(false); }}
                     className="w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 flex items-center justify-between gap-2"
                   >
                     <span className="truncate text-gray-700">{entry.name}</span>

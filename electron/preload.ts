@@ -7,6 +7,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import type {
   DesktopCommand,
+  DesktopOpenRecentResult,
   DesktopOpenedDocument,
   DesktopSaveRequest,
   DesktopSaveResult,
@@ -24,6 +25,8 @@ const api = {
   getVersion: (): Promise<string> => ipcRenderer.invoke('desktop:get-version'),
   openDocument: (): Promise<DesktopOpenedDocument | { canceled: true }> =>
     ipcRenderer.invoke('desktop:open-document'),
+  openRecent: (filePath: string): Promise<DesktopOpenRecentResult> =>
+    ipcRenderer.invoke('desktop:open-recent', filePath),
   saveFile: (request: DesktopSaveRequest): Promise<DesktopSaveResult> =>
     ipcRenderer.invoke('desktop:save-file', request),
   onOpenDocument: (callback: (doc: DesktopOpenedDocument) => void): (() => void) =>

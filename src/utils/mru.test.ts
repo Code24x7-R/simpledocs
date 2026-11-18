@@ -54,6 +54,24 @@ describe('mru', () => {
       expect(list[0].size).toBe(150);
     });
 
+    it('penetrates same-name files in different folders by path', () => {
+      addMRUEntry({ name: 'letter.sdjson', size: 100, path: 'C:/A/letter.sdjson' });
+      addMRUEntry({ name: 'letter.sdjson', size: 200, path: 'C:/B/letter.sdjson' });
+      const list = getMRUList();
+      expect(list).toHaveLength(2);
+      expect(list[0].path).toBe('C:/B/letter.sdjson');
+      expect(list[1].path).toBe('C:/A/letter.sdjson');
+    });
+
+    it('de-duplicates the same path', () => {
+      addMRUEntry({ name: 'letter.sdjson', size: 100, path: 'C:/A/letter.sdjson' });
+      addMRUEntry({ name: 'letter-renamed.sdjson', size: 150, path: 'C:/A/letter.sdjson' });
+      const list = getMRUList();
+      expect(list).toHaveLength(1);
+      expect(list[0].name).toBe('letter-renamed.sdjson');
+      expect(list[0].size).toBe(150);
+    });
+
     it('limits list to 5 entries', () => {
       for (let i = 0; i < 7; i++) {
         addMRUEntry({ name: `doc${i}.json`, size: 100 + i });
@@ -83,6 +101,15 @@ describe('mru', () => {
       const list = getMRUList();
       expect(list).toHaveLength(1);
       expect(list[0].name).toBe('keep.json');
+    });
+
+    it('removes entry by path', () => {
+      addMRUEntry({ name: 'letter.sdjson', size: 100, path: 'C:/A/letter.sdjson' });
+      addMRUEntry({ name: 'letter.sdjson', size: 200, path: 'C:/B/letter.sdjson' });
+      removeMRUEntry('C:/A/letter.sdjson');
+      const list = getMRUList();
+      expect(list).toHaveLength(1);
+      expect(list[0].path).toBe('C:/B/letter.sdjson');
     });
 
     it('does nothing when name not found', () => {

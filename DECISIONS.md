@@ -52,9 +52,9 @@ limits, and decisions that code alone does not explain.
 | `npm run type-check` | pass (renderer + Electron) |
 | `npm run lint` | pass (0 warnings) |
 | `npm run build` | pass (large chunks: `pdfFonts` 21 MB, `index` 1.66 MB) |
-| `npm run test` (`verify`) | **1074/1074 pass, 63 files, exit 0** |
+| `npm run test` (`verify`) | **1089/1089 pass, 65 files, exit 0** |
 | `npm run test:e2e` | **24/24 pass** |
-| `npm run test:desktop` | **10/10 pass** (win-unpacked and installed app) |
+| `npm run test:desktop` | **13/13 pass** (win-unpacked and installed app) |
 | Installer smoke | install → association → smoke → uninstall → registry cleanup verified |
 | `npm run electron:build` | `release/SimpleDocs-1.0.0-x64-setup.exe` (~126 MB) |
 
@@ -112,6 +112,13 @@ invalid-import failure case was added.
   (underscores → spaces). Untitled files opened from disk also adopt a meaningful
   filename. `Untitled_Document.sdjson` never becomes a title. This keeps the title
   meaningful after restart/reinstall instead of showing "Untitled Document".
+- **D-15 — Recent Files are real on desktop.** MRU entries now carry the absolute
+  path. Reopening goes through `desktop:open-recent`, and the main process only reads
+  paths it has seen through a native Open/Save dialog or a `.sdjson` association,
+  persisted in `userData/recent-files.json` (20-entry cap). This avoids giving the
+  renderer arbitrary file-read access. Missing files are removed from MRU with a
+  message; browser builds keep the old "use File → Open" notice because they have no
+  persistent path access.
 - **D-14 — Windows icon comes from the web favicon.** `public/favicon.svg`
   (blue rounded square, white "S") is the source for `public/icon-192/512.png` and
   `build/icon.ico`/`build/sdjson.ico`; the previous cream/dark PWA raster looked blank

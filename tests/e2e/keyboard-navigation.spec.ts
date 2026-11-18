@@ -30,17 +30,21 @@ test.describe('single editor model', () => {
     await setSelection(page, 1);
     await page.keyboard.press('ArrowDown');
 
-    const state = await getEditorState(page);
-    expect(state?.blockIndex).toBe(1);
+    await expect
+      .poll(async () => (await getEditorState(page))?.blockIndex, { timeout: 3000 })
+      .toBe(1);
   });
 
   test('ArrowUp moves the caret to the previous block', async ({ page }) => {
     await loadDocument(page, { paragraphs: ['Line 1', 'Line 2', 'Line 3'] });
-    await setSelection(page, await getBlockStart(page, 1));
+    // Start inside the second block; Chromium consumes the first ArrowUp at the
+    // exact block start when the caret was placed programmatically.
+    await setSelection(page, (await getBlockStart(page, 1)) + 3);
     await page.keyboard.press('ArrowUp');
 
-    const state = await getEditorState(page);
-    expect(state?.blockIndex).toBe(0);
+    await expect
+      .poll(async () => (await getEditorState(page))?.blockIndex, { timeout: 3000 })
+      .toBe(0);
   });
 
   test('PageDown scrolls the viewport and keeps editor focus', async ({ page }) => {

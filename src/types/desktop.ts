@@ -30,6 +30,11 @@ export interface DesktopSaveRequest {
   filters?: DesktopFileFilter[];
 }
 
+export type DesktopOpenRecentResult =
+  | { status: 'ok'; document: DesktopOpenedDocument }
+  | { status: 'missing' }
+  | { status: 'forbidden' };
+
 export interface DesktopSaveResult {
   canceled: boolean;
   path?: string;
@@ -42,6 +47,8 @@ export interface DesktopBridge {
   readonly platform: string;
   getVersion(): Promise<string>;
   openDocument(): Promise<DesktopOpenedDocument | { canceled: true }>;
+  /** Reopen a file from Recent Files (path must be allowlisted by the main process). */
+  openRecent(path: string): Promise<DesktopOpenRecentResult>;
   saveFile(request: DesktopSaveRequest): Promise<DesktopSaveResult>;
   /** Subscribe to documents opened via association/second-instance. */
   onOpenDocument(callback: (doc: DesktopOpenedDocument) => void): () => void;
