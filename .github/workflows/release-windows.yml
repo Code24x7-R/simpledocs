@@ -1,0 +1,65 @@
+name: Windows desktop build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: windows-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check (renderer + Electron)
+        run: npm run type-check
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Web build
+        run: npm run build
+
+      - name: Electron build
+        run: npx vite build --mode electron
+
+      - name: Package (unpacked)
+        run: npx electron-builder --win --x64 --dir
+
+      - name: Desktop smoke tests
+        run: npm run test:desktop
+        env:
+          SIMPLEDOCS_APP_EXE: release/win-unpacked/SimpleDocs.exe
+
+      - name: Build NSIS installer
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleDocs-windows-x64
+          path: |
+            release/*.exe
+            release/*.blockmap
+          if-no-files-found: error
+          retention-days: 30

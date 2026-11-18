@@ -271,3 +271,40 @@ npm run build
 # Deploy to GitHub Pages
 npm run deploy
 ```
+
+
+---
+
+## 11. Desktop Packaging (Windows 11)
+
+### FR-15: Windows installer
+The project SHALL produce a per-user NSIS installer for Windows 11 x64 via
+`npm run electron:build`. Installation SHALL NOT require administrator rights and SHALL
+create Start Menu and optional desktop shortcuts. Uninstallation SHALL remove application
+files, shortcuts, registry entries and the `.sdjson` association while preserving
+`%APPDATA%\SimpleDocs` user data.
+
+### FR-16: Native document CRUD
+The desktop app SHALL use native Windows dialogs for reading and writing documents:
+File → Open, File → Save, File → Save As, Export PDF and Export Markdown. Opening a
+`.sdjson` file through the file association or a second launch SHALL load it into the
+existing window (single-instance application).
+
+### FR-17: Desktop persistence and isolated testing
+Autosaved documents SHALL persist in the Electron `userData` directory across restarts
+and updates. Automated desktop tests SHALL use an isolated `--user-data-dir` and SHALL NOT
+touch the real user profile.
+
+### FR-18: Desktop security baseline
+The renderer SHALL run with `contextIsolation: true`, `sandbox: true`,
+`nodeIntegration: false` and a strict Content-Security-Policy. The production renderer
+SHALL be served from a privileged `app://` scheme, not `file://`. External HTTP(S) links
+SHALL open in the system browser; navigation and window creation SHALL otherwise be denied.
+Cloud OAuth providers SHALL be hidden in the desktop build.
+
+### FR-19: Desktop verification
+The repository SHALL provide `npm run test:desktop` (Playwright Electron smoke against the
+packaged app) covering renderer load, preload-only API exposure, CSP, native Save/Open,
+association/second-instance delivery, PDF export and restart persistence. The browser E2E
+suite (`npm run test:e2e`) SHALL remain green. CI SHALL build and upload the installer
+artifact on demand and on version tags.

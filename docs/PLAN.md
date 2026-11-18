@@ -46,7 +46,7 @@
 | 40 | Zero-Friction Sharing (URL link, native share, file) | COMPLETE ✅ |
 | 41 | PWA File Association (.sdjson double-click launch) | COMPLETE ✅ |
 | 42 | Table Cell Resize & Autofit (border drag + double-click autofit) | COMPLETE ✅ |
-| 43 | Electron Packaging (Windows 11 desktop app, NSIS installer) | PLANNED — see [ELECTRON_PACKAGING_PLAN.md](./ELECTRON_PACKAGING_PLAN.md) |
+| 43 | Electron Packaging (Windows 11 desktop app, NSIS installer) | COMPLETE ✅ |
 
 ### Final Results (2026-08-26)
 - **1037 tests pass** (60 suites)
@@ -1233,3 +1233,30 @@ The `autofitColumn` command mutates Tiptap's shared chain transaction (not its o
 - **1037 tests pass** (60 suites) — up from 1026
 - Lint clean, type-check clean, build succeeds
 - 11 new tests for table autofit
+
+
+## Phase 43: Electron Packaging — COMPLETE ✅
+
+**Goal:** ship SimpleDocs as an installed Windows 11 app without changing the web build.
+
+### Implementation
+| File | Purpose |
+|------|---------|
+| `electron/main.ts` | Hardened window, single instance, file association, native dialogs, menu, CSP, link policy |
+| `electron/preload.ts` | Context-isolated bridge (`window.simpleDocsDesktop`) |
+| `electron/protocol.ts` | Privileged `app://simpledocs` protocol + strict CSP |
+| `electron/paths.ts`, `electron/argv.ts` | Pure path/argv helpers (unit-tested) |
+| `src/utils/desktop.ts`, `desktopFiles.ts`, `documentFile.ts` | Renderer adapters; web fallback preserved |
+| `src/hooks/useFileLaunch.ts`, `useDesktopCommands.ts` | Association + native menu wiring |
+| `electron-builder.yml`, `build/icon.ico`, `build/sdjson.ico`, `build/installer.nsh` | NSIS x64, per-user, file association, clean uninstall |
+| `tests/desktop/smoke.spec.ts`, `playwright.desktop.config.ts` | Packaged Electron smoke suite |
+| `.github/workflows/release-windows.yml` | Windows CI build + artifact |
+
+### Results
+- Installer: `release/SimpleDocs-1.0.0-x64-setup.exe` (~126 MB), per-user, unsigned.
+- Installed, verified and uninstalled locally on Windows 11: registry association,
+  shortcuts, uninstall cleanup all verified.
+- Desktop smoke: **9/9 pass** against both `win-unpacked` and the installed app.
+- Browser E2E: **24/24 pass** (suite refreshed for the single-editor architecture).
+- Unit tests: **1071/1071 pass** (63 files); lint, type-check, web build clean.
+- Desktop app is fully offline; cloud providers gated off; OAuth deferred.

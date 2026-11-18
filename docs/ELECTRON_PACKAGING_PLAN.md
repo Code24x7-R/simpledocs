@@ -1,6 +1,6 @@
 # Phase 43 — Electron Packaging (Windows 11)
 
-**Status:** PLAN — awaiting approval. No Electron code or dependencies are installed yet.
+**Status:** IMPLEMENTED (2026-11-18) on branch `feat/electron-windows`. Awaiting merge review.
 **Created:** 2026-11-18
 **Requirement IDs:** FR-15 … FR-19 (continue `docs/requirements.md`)
 **Related decisions:** D-1 … D-7 in `DECISIONS.md`
@@ -115,7 +115,7 @@ The in-app Navbar remains the primary UI.
 
 ## 5. Slices (each leaves a working app)
 
-### S0 — Refresh the stale E2E suite (prerequisite, recommended)
+### S0 — Refresh the stale E2E suite (completed)
 The current suite asserts the removed multi-editor DOM (`[data-page-editor]`) and old menu
 labels; 30/37 fail. Add stable `data-testid` hooks to the current UI (Navbar menu buttons,
 toolbar controls, editor root) and update specs. No assertions weakened; each spec keeps its
@@ -257,7 +257,35 @@ New tests (append to the suite, do not replace):
 | S5 CI + docs | M | 0.5 day |
 | **v1 total** | | **~3.5 days** |
 
-## 10. Decisions needed before S1
+## 10. Implementation result
+
+Delivered as planned, with these concrete choices and deviations:
+
+- `vite-plugin-electron@0.29.0` (not 1.x, which requires Vite ≥ 6). Main builds to
+  `dist-electron/main.js` (ESM); preload is forced to CommonJS `preload.cjs` because the
+  package is `type: module` and sandboxed preloads cannot be ESM.
+- `app://` protocol handler serves `dist/` with an explicit MIME map, traversal guard and
+  CSP header. `fetch('app://simpledocs/manifest.json')` is verified in the smoke suite.
+- Renderer `node_modules` are excluded from the asar (`!node_modules/**/*`), shrinking
+  `app.asar` from 113 MB to 23 MB; renderer/main/preload are fully bundled.
+- Native dialogs: Open/Save/Save As/Export PDF/Export Markdown. Save payloads are base64
+  over IPC, capped at 256 MB, with sanitized suggested names and extension filters.
+- Installer: `build/installer.nsh` adds `customUnInstall` cleanup for the `.sdjson`
+  extension (electron-builder leaves it behind otherwise).
+- Local verification: installer built, installed to a temp dir, association/keys/shortcuts
+  inspected, full smoke suite run against the installed exe, then uninstalled and verified
+  clean. Data-preservation across uninstall is config-verified only (tests avoid the real
+  profile).
+- SmartScreen/code signing remains out of scope; the installer is unsigned by design.
+
+### Verified results
+- `npm run test` — 1071/1071 (63 files)
+- `npm run test:e2e` — 24/24
+- `npm run test:desktop` — 9/9 against win-unpacked and installed app
+- `npm run electron:build` — NSIS installer produced
+- Local install/uninstall — registry association, shortcuts and cleanup verified
+
+## 11. Decisions needed before S1
 
 1. Approve the three devDependencies and the `app://` approach (D-3/D-4).
 2. Cloud providers hidden in the desktop build for v1 (D-5) — acceptable?

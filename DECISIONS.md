@@ -27,8 +27,9 @@ limits, and decisions that code alone does not explain.
 
 - Browser E2E: Playwright uses its own bundled Chromium profile under
   `%LOCALAPPDATA%\ms-playwright`; no user Chrome data is touched.
-- Desktop builds (planned): always launch with `--user-data-dir=<temp>` or
-  `SIMPLEDOCS_USER_DATA=<temp>`; never test against the real `%APPDATA%\SimpleDocs`.
+- Desktop tests: always launch with `--user-data-dir=<temp>`; never test against the
+  real `%APPDATA%\SimpleDocs`. `SIMPLEDOCS_APP_EXE` lets the same smoke suite run against
+  `release/win-unpacked/SimpleDocs.exe` or an installed copy.
 - Documents: use generated `.sdjson` fixtures (`tests/e2e`, temp dirs); never the user's files.
 
 ## Environment (audited 2026-11-18, Windows 11 25H2, AMD64)
@@ -39,27 +40,29 @@ limits, and decisions that code alone does not explain.
 - `baseline.py` on Windows needs `PYTHONUTF8=1`; otherwise decoding Vitest's ANSI output
   crashes on cp1252.
 - Playwright 1.62.1 + Chromium installed locally (2026-11-18).
-- CI uses Node 20; local Node 23 works. Align any new tooling with Node 20+ (Electron plan).
+- CI uses Node 20; local Node 23 works. Electron 45 bundles its own Node.
+- `tsc -b` used to emit `vite.config.js`, which Vite then preferred over the TypeScript
+  config. `tsconfig.node.json` now emits to `node_modules/.cache/tsconfig-node`; never
+  commit a root `vite.config.js`.
 
-## Verification status (2026-11-18)
+## Verification status (2026-11-18, after Phase 43)
 
 | Gate | Result |
 |---|---|
-| `npm run type-check` | pass |
+| `npm run type-check` | pass (renderer + Electron) |
 | `npm run lint` | pass (0 warnings) |
 | `npm run build` | pass (large chunks: `pdfFonts` 21 MB, `index` 1.66 MB) |
-| `npm run test` (`verify`) | **1040/1040 pass, 60 files, exit 0** |
-| `npm run test:e2e` | **stale: 7/37 pass** — see known issue |
+| `npm run test` (`verify`) | **1071/1071 pass, 63 files, exit 0** |
+| `npm run test:e2e` | **24/24 pass** |
+| `npm run test:desktop` | **9/9 pass** (win-unpacked and installed app) |
+| Installer smoke | install → association → smoke → uninstall → registry cleanup verified |
+| `npm run electron:build` | `release/SimpleDocs-1.0.0-x64-setup.exe` (~126 MB) |
 
-### Known issue: E2E suite predates the single-editor refactor
+### Resolved: E2E suite predated the single-editor refactor
 
-`tests/e2e/*` still assert the removed multi-page-editor DOM
-(`[data-page-editor="N"] .tiptap`) and old toolbar/menu labels (`Style`, `75%`,
-`Export PDF`, `button[title="Insert Table"]`). Serial runs confirm selector staleness,
-not flakiness. The suite is *not* part of `verify`, so the baseline stays green, but it
-must be refreshed before it can gate Electron packaging. Triage: **Fix (M)** — update
-selectors/add `data-testid` hooks; do not delete. Untouched until the packaging plan is
-approved.
+`tests/e2e/*` asserted the removed multi-page-editor DOM and old labels. Rewritten for the
+single-editor architecture with stable `data-testid` hooks (S0). Not deleted, and the
+invalid-import failure case was added.
 
 ## Decisions
 
@@ -69,15 +72,14 @@ approved.
   (patch-level, build/test green). New runtime deps need a decision entry.
 - **D-2 — Web build stays the primary target.** Desktop packaging is additive: no change
   to GitHub Pages output or URLs.
-- **D-3 — Desktop shell: Electron + electron-builder, NSIS x64, per-user install.**
-  Rationale: existing Chromium-only feature use (pdfmake, TTS, File API, PWA file
-  launch) and no need for native modules. Alternative (Tauri) rejected for v1: WebView2
-  differences and Rust toolchain not otherwise used here. See
-  `docs/ELECTRON_PACKAGING_PLAN.md`.
+- **D-3 — Desktop shell: Electron 45 + electron-builder 26, NSIS x64, per-user install.**
+  Implemented with `vite-plugin-electron` (0.29, Vite 5 compatible; 1.x requires Vite 6)
+  and Electron pinned exactly. Rationale: existing Chromium-only feature use and no
+  native modules. See `docs/ELECTRON_PACKAGING_PLAN.md`.
 - **D-4 — Desktop loads the renderer from a privileged `app://` scheme, not `file://`.**
   Needed for a stable secure origin (`localStorage`, IndexedDB, `navigator.clipboard`,
   ES modules) without rewriting Vite's `base`.
-- **D-5 — Cloud OAuth (Google Drive, OneDrive) is out of scope for desktop v1.**
+- **D-5 — Cloud OAuth (Google Drive, OneDrive, S3) is out of scope for desktop v1.**
   Both flows bind to `window.location.origin` (GIS authorized JS origins, MSAL redirect
   URIs), which cannot be the custom `app://` origin. Desktop v1 keeps local files,
   copy-link, PDF/Markdown export, and LM Studio; cloud entries are hidden with a
@@ -85,14 +87,36 @@ approved.
 - **D-6 — No auto-update or code signing in v1.** Unsigned NSIS installers trigger
   SmartScreen ("Unknown publisher"). Signing/auto-update is a later decision with cost
   implications and requires explicit authorization.
-- **D-7 — Version 1.0.0 comes from `package.json`.** `vite.config.ts` currently hardcodes
-  `__APP_VERSION__`; packaging work should derive it from `package.json` so the
-  installer, About dialog, and app version cannot drift.
+- **D-7 — App version comes from `package.json`.** `vite.config.ts` reads it into
+  `__APP_VERSION__`, so installer, About dialog and app version cannot drift.
+- **D-8 — Native document CRUD uses main-process dialogs.** File → Open/Save/Save As,
+  Export PDF and Export Markdown call `dialog.showOpenDialog`/`showSaveDialog` through the
+  preload bridge. The web build keeps its existing modal/download paths; `isDesktop()`
+  selects the branch. Renderer never receives filesystem paths except the chosen file.
+- **D-9 — Single-instance file association.** `.sdjson` launches are parsed from argv in
+  the main process (first launch and `second-instance`), size-capped (64 MB), and delivered
+  over IPC after a renderer-ready handshake. No second window is created.
+- **D-10 — Installer cleanup is explicit.** electron-builder removed the ProgID but left
+  the `.sdjson` extension default behind. `build/installer.nsh` (`customUnInstall`)
+  removes the extension key when it still points at `SimpleDocs.sdjson`; verified by
+  install/uninstall on Windows 11.
+- **D-11 — Native menu is intentionally minimal.** File (New/Open/Save/Save As/Export
+  PDF/Exit), Edit (cut/copy/paste/select all), View (fullscreen; dev-only reload/devtools),
+  Help (About). The menu bar is auto-hidden (Alt reveals). Document commands are forwarded
+  to the renderer so the in-app UI stays the single source of truth. Undo/redo are *not*
+  menu roles; Ctrl+Z stays on ProseMirror's history.
 
 ## Cannot verify here (short list)
 
-- Clean Windows 11 user/machine install, SmartScreen reputation, uninstall/registry
-  cleanup, double-click association after a fresh install.
-- Code signing, auto-update, enterprise/MSI deployment.
+- SmartScreen reputation and code signing (installer is deliberately unsigned).
+- Auto-update, enterprise/MSI deployment.
+- User-data survival across a real uninstall: the config sets
+  `deleteAppDataOnUninstall: false`, but tests avoid writing to the real
+  `%APPDATA%\SimpleDocs` profile.
+- OS-level double-click delivery (registry command is verified; automated tests use argv
+  and the second-instance path).
+- Native keyboard accelerators via synthetic input (CDP key events do not reach Electron's
+  native menu). Accelerator configuration and menu handlers are covered; real key presses
+  are on the manual checklist.
 - Real Google/Microsoft OAuth against a custom desktop origin (deferred by D-5).
 - macOS/Linux packaging (out of scope; builder config keeps it possible).

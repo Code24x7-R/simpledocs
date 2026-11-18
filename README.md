@@ -23,8 +23,10 @@ The editor uses a continuous-scroll architecture where a single Tiptap instance 
 - Search & replace (regex, case-sensitive, whole-word)
 - File I/O (PDF export, Markdown export, Word import) via a unified Open/Save dialog that also handles sharing and cloud storage
 - Sharing — copy link (self-contained URL), native share sheet, save/open as file (no accounts needed)
-- **PWA installable** — install as a desktop app and double-click `.sdjson` files to open them (Windows 10/11)
-- Cloud storage (Google Drive, OneDrive, S3-compatible) — advanced, optional
+- **Windows 11 desktop app** (Electron + NSIS installer) — per-user install, `.sdjson` file association,
+  native Open/Save dialogs, offline use, autosave under `%APPDATA%\SimpleDocs`
+- **PWA installable** — install from the browser and double-click `.sdjson` files to open them (Windows 10/11)
+- Cloud storage (Google Drive, OneDrive, S3-compatible) — browser build only; cloud OAuth is deferred for desktop
 - AI chat panel (multi-provider: LM Studio, Google Gemini)
 - Named ranges (Excel-like named cell references)
 - Text-to-Speech reader (planned)
@@ -48,6 +50,40 @@ For detailed usage instructions, see **[MANUAL.md](./MANUAL.md)**.
 | Word import | mammoth.js |
 | URL sharing | lz-string (compresses a whole document into a `#doc=` URL fragment) |
 | Testing | Vitest + React Testing Library + Playwright |
+| Desktop | Electron 45 + electron-builder (NSIS x64) |
+
+---
+
+## Desktop App (Windows 11)
+
+The repo builds a native Windows application that runs the exact same renderer
+bundle as the web app inside a hardened Electron shell.
+
+- **Installer:** `SimpleDocs-<version>-x64-setup.exe` — per-user, no admin required,
+  Start Menu + desktop shortcuts, standard uninstaller.
+- **File association:** double-clicking a `.sdjson` file opens it in the app. A second
+  double-click reuses the running instance instead of opening a duplicate window.
+- **Native dialogs:** File → Open, File → Save, Save As, Export PDF and Export Markdown
+  use the Windows Open/Save dialogs. `Ctrl+N`, `Ctrl+O`, `Ctrl+S`, `Ctrl+Shift+S` work
+  through the native menu.
+- **Persistence:** autosave lives under `%APPDATA%\SimpleDocs` and survives app updates
+  and uninstall (uninstall removes the app and file association, not your documents).
+- **Cloud providers** (Drive/OneDrive/S3) are hidden in the desktop build; OAuth is
+  browser-only for now.
+- **Security:** context isolation, sandboxed preload, no Node in the renderer, strict CSP,
+  external links open in the system browser.
+
+### Desktop development
+
+```bash
+npm run electron:dev      # Vite dev server + Electron shell
+npm run electron:dir      # type-check + production build + unpacked app in release/win-unpacked
+npm run test:desktop      # Playwright Electron smoke (needs electron:dir first)
+npm run electron:build    # type-check + production build + NSIS installer in release/
+```
+
+Packaged smoke tests always use a throwaway `--user-data-dir`; they never touch the
+real `%APPDATA%\SimpleDocs` profile.
 
 ---
 
@@ -191,9 +227,14 @@ App runs at `http://localhost:5173` with hot reload.
 | `npm run preview` | Preview the production build locally |
 | `npm test` | Run all unit tests with coverage (Vitest) |
 | `npm run test:watch` | Run unit tests in watch mode |
-| `npm run test:e2e` | Run E2E tests (Playwright) |
-| `npm run type-check` | TypeScript type-check without emit |
+| `npm run test:e2e` | Run browser E2E tests (Playwright) |
+| `npm run test:desktop` | Run packaged Electron smoke tests |
+| `npm run type-check` | TypeScript type-check (renderer + Electron) |
 | `npm run lint` | ESLint (zero warnings enforced) |
+| `npm run electron:dev` | Electron shell against the Vite dev server |
+| `npm run electron:dir` | Unpacked Windows build (`release/win-unpacked`) |
+| `npm run electron:build` | NSIS installer (`release/`) |
+| `npm run verify` | Lint + type-check + unit tests + web build |
 
 ### Full Verification
 

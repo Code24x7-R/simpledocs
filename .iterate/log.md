@@ -3,3 +3,10 @@ date | id | type | tier | area | cause | req-ids | rung | evidence | notes
 2026-11-18 | ENV-2 | bug | S | test-setup | platform-env | - | 1 | automated-pass | jsdom lacks Text/Range getClientRects and Element.scrollIntoView; ProseMirror threw 6 unhandled errors and vitest exited 1; shims added in src/test/setup.ts; 1040/1040 pass exit 0
 2026-11-18 | ENV-3 | bug | M | tests/e2e | test-flaw | - | 3e | failed | Playwright Chromium installed; suite asserts removed multi-editor DOM ([data-page-editor]) and old labels; 7/37 pass; triaged Fix (M), not deleted, quarantined in DECISIONS.md
 2026-11-18 | PLAN-43 | feature | L | packaging | - | FR-15,FR-16,FR-17,FR-18,FR-19 | - | unverified-environment | plan-only: docs/ELECTRON_PACKAGING_PLAN.md; awaiting approval for deps, app:// origin, desktop cloud gating, S0 scope
+2026-11-18 | S0 | feature | M | tests/e2e | test-flaw | - | 3e | automated-pass | refreshed 6 stale specs for single-editor architecture + data-testid hooks; added invalid-import and PDF-download assertions; 24/24 pass
+2026-11-18 | FR-15 | feature | L | packaging | - | FR-15 | 4 | manual-pass | NSIS x64 per-user installer built (126MB); installed to temp dir, registry association + shortcuts verified, uninstalled cleanly incl. .sdjson key
+2026-11-18 | FR-16 | feature | L | electron | - | FR-16 | 4 | automated-pass | app:// shell, preload bridge, native Open/Save/PDF dialogs, argv + second-instance association; 9/9 Electron smoke
+2026-11-18 | FR-17 | feature | M | electron | - | FR-17 | 4 | automated-pass | userData autosave survives restart; all desktop tests use isolated --user-data-dir
+2026-11-18 | FR-18 | feature | L | electron | - | FR-18 | 4 | automated-pass | sandbox/contextIsolation/no-node, CSP, external links, cloud gating; verified in packaged smoke
+2026-11-18 | FR-19 | feature | M | ci | - | FR-19 | 3e | automated-pass | release-windows.yml builds artifact; E2E+desktop smoke wired; 1071 unit / 24 e2e / 9 desktop green
+2026-11-18 | ENV-4 | bug | S | packaging | platform-env | - | 1 | automated-pass | tsc -b emitted root vite.config.js which Vite preferred over .ts; moved tsc output to node_modules cache

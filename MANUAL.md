@@ -5,6 +5,7 @@
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Windows Desktop App](#windows-desktop-app)
 - [UI Layout](#ui-layout)
 - [Editing Text](#editing-text)
 - [Page Layout & Setup](#page-layout--setup)
@@ -43,6 +44,31 @@ SimpleDocs is a browser-based WYSIWYG document editor — no installation requir
 **New document:** Click **File → New** to start fresh. Your previous work remains in localStorage.
 
 **Load demo:** Click **File → Load Demo** to explore a sample document with pre-filled content.
+
+---
+
+## Windows Desktop App
+
+SimpleDocs is also available as an installed Windows 11 application. It uses the same
+editor and document format as the browser version.
+
+**Install:** run `SimpleDocs-<version>-x64-setup.exe`. The installer is per-user (no
+administrator prompt) and adds Start Menu and desktop shortcuts.
+
+**Open documents:** double-click any `.sdjson` file. Windows opens it in SimpleDocs; if
+the app is already running, the document opens in the existing window. You can also use
+**File → Open** (`Ctrl+O`).
+
+**Save documents:** **File → Save** (`Ctrl+S`) or **File → Save As** (`Ctrl+Shift+S`)
+opens the native Windows Save dialog. PDF and Markdown exports use the same dialog.
+
+**Autosave:** your work is stored under `%APPDATA%\SimpleDocs` and restored on the next
+launch. Uninstalling the app does not delete this data.
+
+**Differences from the browser version:**
+- Google Drive, OneDrive and S3 connections are not available in the desktop app.
+- Sharing is done through the saved `.sdjson` file (copy link still works).
+- The native menu bar is hidden by default; press **Alt** to show it.
 
 ---
 

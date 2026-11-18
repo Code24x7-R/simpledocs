@@ -773,3 +773,28 @@ Replaced `CustomHighlight` with `BackgroundColor` from `@tiptap/extension-text-s
 **Files**: `src/utils/providers/geminiProvider.ts`, `src/components/layout/ChatPanel.tsx`, `src/components/layout/ChatPanel.test.tsx`, `src/utils/providers/geminiProvider.test.ts`
 
 
+
+
+## 2026-11-18 — Electron Packaging (Phase 43)
+
+### [FEATURE] Windows 11 desktop app
+Added an Electron 45 shell with a privileged `app://simpledocs` origin, strict CSP,
+sandboxed preload bridge, native Windows Open/Save dialogs, `.sdjson` file association,
+single-instance second-launch delivery, and an NSIS x64 per-user installer.
+Cloud OAuth providers are hidden in the desktop build (deferred).
+
+### [FIX] E2E suite refresh
+The Playwright suite still asserted the removed multi-editor DOM. Rewrote editor, import,
+tables, PDF, keyboard-navigation and merge-focus specs for the single-editor model and
+added stable `data-testid` hooks. 24/24 pass.
+
+### [FIX] Test environment + dependency hygiene
+Added jsdom layout shims (Text/Range getClientRects, Element.scrollIntoView) so Vitest
+exits 0; removed accidentally added `present`, `scripts` and a direct `esbuild`.
+
+### Results
+- **1071 unit tests pass** (63 files)
+- **24 browser E2E pass**, **9 Electron smoke pass**
+- Installer built; local install → association → app smoke → uninstall → registry cleanup verified
+- Lint, type-check (renderer + Electron), web build clean
+- SmartScreen/signing and auto-update remain out of scope (unsigned installer)

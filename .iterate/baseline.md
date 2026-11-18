@@ -1,10 +1,11 @@
 # Baseline
 
-Verify command: `npm run test` (Vitest, 60 files / 1040 tests).
+Verify command: `npm run test` (Vitest, 63 files / 1071 tests).
 Last clean run: 2026-11-18, `baseline.py` exit 0.
 
-E2E (`npm run test:e2e`) is a separate, non-gating suite and is currently stale after the
-single-editor refactor. See `DECISIONS.md` → "Known issue: E2E suite predates the
-single-editor refactor" and `docs/ELECTRON_PACKAGING_PLAN.md` (slice S0).
+Supplementary gates (not part of `verify`):
+- `npm run test:e2e` — 24/24 (browser, refreshed for the single-editor architecture)
+- `npm run test:desktop` — 9/9 (Electron smoke against the packaged/unpacked app)
+- `npm run electron:build` — NSIS installer build
 
 ## Known failures
