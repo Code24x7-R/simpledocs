@@ -2,8 +2,10 @@
 // Copyright (c) 2026 Richard Robertson
 import { useEffect } from 'react';
 import { useDocStore } from '../store/useDocStore';
-import { getDesktopBridge } from '../utils/desktop';
+import type { DesktopLaunchDocument } from '../types/desktop';
+import { base64ToArrayBuffer, getDesktopBridge } from '../utils/desktop';
 import { parseDocumentText } from '../utils/documentFile';
+import { importWordIntoStore } from '../utils/wordImportStore';
 
 /**
  * Load documents opened from outside the app.
@@ -33,10 +35,26 @@ export function useFileLaunch(): void {
       return true;
     };
 
+    const ingestLaunch = async (doc: DesktopLaunchDocument): Promise<void> => {
+      if (doc.kind === 'docx') {
+        try {
+          await importWordIntoStore({
+            name: doc.name,
+            arrayBuffer: base64ToArrayBuffer(doc.base64),
+            path: doc.path,
+          });
+        } catch (err) {
+          console.warn('[FileLaunch] Failed to import Word document:', err);
+        }
+        return;
+      }
+      ingest(doc.name, doc.text, doc.path);
+    };
+
     const desktop = getDesktopBridge();
     if (desktop) {
       const unsubscribe = desktop.onOpenDocument((doc) => {
-        ingest(doc.name, doc.text, doc.path);
+        void ingestLaunch(doc);
       });
       // Queued association documents are flushed once the renderer is ready.
       desktop.rendererReady();

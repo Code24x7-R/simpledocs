@@ -39,7 +39,7 @@ export function sanitizeFileName(input: string): string {
  * title (e.g. `Untitled_Document.sdjson` must not become "Untitled_Document").
  */
 export function titleFromFileName(fileName: string): string | null {
-  const stem = fileName.replace(/\.(sdjson|json)$/i, '').replace(/_/g, ' ').trim();
+  const stem = fileName.replace(/\.(sdjson|json|docx)$/i, '').replace(/_/g, ' ').trim();
   if (!stem) return null;
   if (/^untitled( document)?$/i.test(stem)) return null;
   return stem;

@@ -35,7 +35,7 @@ import { useDocStore } from '../../store/useDocStore';
 import { useEditorClipboard } from '../../hooks/useEditorClipboard';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { exportToMarkdown } from '../../utils/fileIO';
-import { importWordDocument } from '../../utils/wordImport';
+import { importWordFileIntoStore } from '../../utils/wordImportStore';
 import { formatMRUTimestamp, type MRUEntry } from '../../utils/mru';
 import { LINE_HEIGHTS, PARAGRAPH_SPACING } from '../../constants';
 import { useDropdownKeyboard } from '../../hooks/useDropdownKeyboard';
@@ -77,7 +77,6 @@ export default function Navbar() {
     setTocOpen,
     setTtsOpen,
     mruList,
-    addRecentFile,
     removeRecentFile,
   } = useDocStore();
 
@@ -196,25 +195,7 @@ export default function Navbar() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const { html, messages } = await importWordDocument(file);
-      const { Editor } = await import('@tiptap/core');
-      const { createExtensions } = await import('../../extensions');
-      const tempEditor = new Editor({
-        extensions: createExtensions(),
-        content: html,
-      });
-      const content = tempEditor.getJSON();
-      tempEditor.destroy();
-      const updated = {
-        ...useDocStore.getState().docState,
-        content,
-        updatedAt: new Date().toISOString(),
-      };
-      loadDocument(updated);
-      addRecentFile(file.name, file.size);
-      if (messages.length > 0) {
-        console.warn('Word import warnings:', messages);
-      }
+      await importWordFileIntoStore(file);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to import Word document');
     }

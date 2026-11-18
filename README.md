@@ -63,6 +63,9 @@ bundle as the web app inside a hardened Electron shell.
   Start Menu + desktop shortcuts, standard uninstaller.
 - **File association:** double-clicking a `.sdjson` file opens it in the app. A second
   double-click reuses the running instance instead of opening a duplicate window.
+- **Word documents:** `.docx` files can be opened with SimpleDocs (Open with); they are
+  imported on cold launch and in the running app. The installer adds an Open With entry
+  without taking over Word's default `.docx` handler.
 - **Native dialogs:** File → Open, File → Save, Save As, Export PDF and Export Markdown
   use the Windows Open/Save dialogs. `Ctrl+N`, `Ctrl+O`, `Ctrl+S`, `Ctrl+Shift+S` work
   through the native menu. Save As adopts the chosen filename as the document title.

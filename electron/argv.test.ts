@@ -15,6 +15,17 @@ describe('extractDocumentPaths', () => {
     expect(extractDocumentPaths(argv)).toEqual([path.resolve('docs/letter.SDJSON')]);
   });
 
+  it('accepts .docx association launches', () => {
+    const file = 'C:/Docs/Letter.docx';
+    const argv = ['SimpleDocs.exe', `"${file}"`];
+    expect(extractDocumentPaths(argv)).toEqual([path.resolve(file)]);
+  });
+
+  it('keeps mixed .sdjson and .docx launches in order', () => {
+    const argv = ['SimpleDocs.exe', 'a.sdjson', 'b.docx'];
+    expect(extractDocumentPaths(argv)).toEqual([path.resolve('a.sdjson'), path.resolve('b.docx')]);
+  });
+
   it('ignores flags, the executable and non-document arguments', () => {
     const argv = ['SimpleDocs.exe', '--no-sandbox', '.', 'readme.txt', 'photo.png'];
     expect(extractDocumentPaths(argv)).toEqual([]);

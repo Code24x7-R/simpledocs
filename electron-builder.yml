@@ -18,6 +18,9 @@ win:
         - x64
   icon: build/icon.ico
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
+extraResources:
+  - from: build/docx.ico
+    to: docx.ico
 nsis:
   oneClick: false
   perMachine: false

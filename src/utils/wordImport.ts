@@ -7,8 +7,7 @@ export interface WordImportResult {
   messages: { type: string; message: string }[];
 }
 
-export async function importWordDocument(file: File): Promise<WordImportResult> {
-  const arrayBuffer = await file.arrayBuffer();
+export async function importWordBuffer(arrayBuffer: ArrayBuffer): Promise<WordImportResult> {
   const result = await mammoth.convertToHtml(
     { arrayBuffer },
     {
@@ -27,4 +26,8 @@ export async function importWordDocument(file: File): Promise<WordImportResult> 
     html: result.value,
     messages: result.messages,
   };
+}
+
+export async function importWordDocument(file: File): Promise<WordImportResult> {
+  return importWordBuffer(await file.arrayBuffer());
 }

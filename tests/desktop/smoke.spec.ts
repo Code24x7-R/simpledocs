@@ -227,6 +227,48 @@ test('a second instance opens .sdjson in the existing window', async () => {
   await expect(page.locator('.tiptap')).toContainText('Delivered by argv.');
 });
 
+test('cold launch with an associated .docx imports it', async () => {
+  const fixture = path.resolve('tests/fixtures/word-launch.docx');
+  const coldProfile = mkdtempSync(path.join(os.tmpdir(), 'simpledocs-e2e-cold-'));
+
+  const coldApp = await electron.launch({
+    executablePath: APP_EXE,
+    args: [`--user-data-dir=${coldProfile}`, fixture],
+    cwd: PROJECT_ROOT,
+  });
+  try {
+    const coldPage = await coldApp.firstWindow();
+    await coldPage.waitForSelector('.tiptap', { timeout: 30_000 });
+    await expect(coldPage.getByTestId('document-title')).toHaveValue('word-launch');
+    await expect(coldPage.locator('.tiptap')).toContainText('Word launch fixture');
+  } finally {
+    await coldApp.close();
+    rmSync(coldProfile, { recursive: true, force: true });
+  }
+});
+
+test('a second instance opens .docx in the existing window', async () => {
+  const fixture = path.resolve('tests/fixtures/word-launch.docx');
+  const child = spawn(APP_EXE, [fixture, `--user-data-dir=${userDataDir}`], {
+    cwd: PROJECT_ROOT,
+    stdio: 'ignore',
+  });
+  const exitCode = await new Promise<number | null>((resolve) => child.once('exit', resolve));
+
+  expect(exitCode).toBe(0);
+  await expect(page.getByTestId('document-title')).toHaveValue('word-launch');
+  await expect(page.locator('.tiptap')).toContainText('Word launch fixture');
+});
+
+test('native Open imports a .docx through the file dialog', async () => {
+  const fixture = path.resolve('tests/fixtures/word-launch.docx');
+  await stubOpenDialog(fixture);
+  await clickMenuItem('File', 'Open…');
+
+  await expect(page.getByTestId('document-title')).toHaveValue('word-launch');
+  await expect(page.locator('.tiptap')).toContainText('Word launch fixture');
+});
+
 test('native Export PDF writes a PDF through the save dialog', async () => {
   const target = path.join(workDir, 'Exported.pdf');
   await stubSaveDialog(target);

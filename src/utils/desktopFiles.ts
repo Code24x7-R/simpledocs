@@ -5,8 +5,10 @@
  * Falls back to the existing in-app Open/Save modal on the web.
  */
 import { useDocStore } from '../store/useDocStore';
-import { getDesktopBridge, saveBlob } from './desktop';
+import type { DesktopLaunchDocument } from '../types/desktop';
+import { base64ToArrayBuffer, getDesktopBridge, saveBlob } from './desktop';
 import { parseDocumentText, sanitizeFileName, titleFromFileName } from './documentFile';
+import { importWordIntoStore } from './wordImportStore';
 
 export type OpenOutcome = 'opened' | 'canceled' | 'invalid' | 'error' | 'unsupported';
 export type RecentOpenOutcome =
@@ -29,7 +31,7 @@ export async function openDocumentFromDisk(): Promise<OpenOutcome> {
   try {
     const result = await bridge.openDocument();
     if ('canceled' in result) return 'canceled';
-    return loadDesktopDocument(result);
+    return await loadDesktopDocument(result);
   } catch (err) {
     console.error('[Desktop] Open failed:', err);
     return 'error';
@@ -45,9 +47,23 @@ function applyFileTitle(doc: ReturnType<typeof parseDocumentText>, name: string)
   }
 }
 
-function loadDesktopDocument(
-  result: { name: string; path: string; text: string }
-): 'opened' | 'invalid' {
+async function loadDesktopDocument(
+  result: DesktopLaunchDocument
+): Promise<'opened' | 'invalid'> {
+  if (result.kind === 'docx') {
+    try {
+      await importWordIntoStore({
+        name: result.name,
+        arrayBuffer: base64ToArrayBuffer(result.base64),
+        path: result.path,
+      });
+      return 'opened';
+    } catch (err) {
+      console.error('[Desktop] Word import failed:', err);
+      return 'invalid';
+    }
+  }
+
   const doc = parseDocumentText(result.text);
   if (!doc) return 'invalid';
   applyFileTitle(doc, result.name);
@@ -66,7 +82,7 @@ export async function openRecentDocument(filePath: string): Promise<RecentOpenOu
     const result = await bridge.openRecent(filePath);
     if (result.status === 'missing') return 'missing';
     if (result.status === 'forbidden') return 'forbidden';
-    return loadDesktopDocument(result.document);
+    return await loadDesktopDocument(result.document);
   } catch (err) {
     console.error('[Desktop] Recent file open failed:', err);
     return 'error';

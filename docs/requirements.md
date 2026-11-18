@@ -302,6 +302,14 @@ SHALL be served from a privileged `app://` scheme, not `file://`. External HTTP(
 SHALL open in the system browser; navigation and window creation SHALL otherwise be denied.
 Cloud OAuth providers SHALL be hidden in the desktop build.
 
+### FR-21: Word document launch
+The desktop app SHALL accept `.docx` paths from file association, cold launch and
+`second-instance`, import them with the same mammoth + Tiptap pipeline as File → Import
+Word, and set the document title from the filename. Native Open and Recent Files SHALL
+also open `.docx`. The installer SHALL add SimpleDocs to the Windows "Open with" list
+without changing the user's default `.docx` handler; uninstall SHALL remove only its own
+entry.
+
 ### FR-20: Recent Files (desktop)
 The desktop app SHALL store absolute paths for Recent Files and reopen them from the
 File menu. Reads SHALL be restricted to paths previously supplied by a native Open/Save

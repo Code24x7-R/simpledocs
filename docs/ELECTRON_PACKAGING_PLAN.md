@@ -279,7 +279,7 @@ Delivered as planned, with these concrete choices and deviations:
 - SmartScreen/code signing remains out of scope; the installer is unsigned by design.
 
 ### Verified results
-- `npm run test` — 1089/1089 (63 files)
+- `npm run test` — 1093/1093 (63 files)
 - `npm run test:e2e` — 24/24
 - `npm run test:desktop` — 9/9 against win-unpacked and installed app
 - `npm run electron:build` — NSIS installer produced

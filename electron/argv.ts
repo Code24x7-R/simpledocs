@@ -7,7 +7,7 @@
  * The same parser serves first launch and the `second-instance` event.
  */
 import path from 'node:path';
-import { DOC_EXTENSION } from './paths';
+import { DOC_EXTENSION, WORD_EXTENSION } from './paths';
 
 /** Remove surrounding quotes and trim whitespace. */
 function normalizeArgument(value: string): string {
@@ -30,7 +30,8 @@ export function extractDocumentPaths(argv: readonly string[]): string[] {
     if (!raw || raw.startsWith('-')) continue;
     const candidate = normalizeArgument(raw);
     if (!candidate) continue;
-    if (path.extname(candidate).toLowerCase() !== DOC_EXTENSION) continue;
+    const extension = path.extname(candidate).toLowerCase();
+    if (extension !== DOC_EXTENSION && extension !== WORD_EXTENSION) continue;
 
     const absolute = path.resolve(candidate);
     const key = process.platform === 'win32' ? absolute.toLowerCase() : absolute;

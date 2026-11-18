@@ -52,9 +52,9 @@ limits, and decisions that code alone does not explain.
 | `npm run type-check` | pass (renderer + Electron) |
 | `npm run lint` | pass (0 warnings) |
 | `npm run build` | pass (large chunks: `pdfFonts` 21 MB, `index` 1.66 MB) |
-| `npm run test` (`verify`) | **1089/1089 pass, 65 files, exit 0** |
+| `npm run test` (`verify`) | **1093/1093 pass, 65 files, exit 0** |
 | `npm run test:e2e` | **24/24 pass** |
-| `npm run test:desktop` | **13/13 pass** (win-unpacked and installed app) |
+| `npm run test:desktop` | **16/16 pass** (win-unpacked and installed app) |
 | Installer smoke | install → association → smoke → uninstall → registry cleanup verified |
 | `npm run electron:build` | `release/SimpleDocs-1.0.0-x64-setup.exe` (~126 MB) |
 
@@ -112,6 +112,16 @@ invalid-import failure case was added.
   (underscores → spaces). Untitled files opened from disk also adopt a meaningful
   filename. `Untitled_Document.sdjson` never becomes a title. This keeps the title
   meaningful after restart/reinstall instead of showing "Untitled Document".
+- **D-16 — Word files launch like documents.** The argv parser only accepted
+  `.sdjson`, so a `.docx` association launch was silently ignored and the previous
+  autosave stayed open. Launches now accept `.docx`; the main process reads bytes and
+  delivers base64, and the renderer converts with the same mammoth + Tiptap pipeline as
+  File → Import Word (shared `importWordIntoStore`). Cold start, second-instance, native
+  Open and Recent Files all support Word files; the title comes from the filename.
+- **D-17 — Never hijack Word's default .docx handler.** The installer registers
+  `SimpleDocs.docx` under `.docx\OpenWithProgids` (an "Open with" entry) instead of
+  setting the default association. Uninstall removes only that entry/ProgID and clears
+  the default only if the user explicitly chose SimpleDocs.
 - **D-15 — Recent Files are real on desktop.** MRU entries now carry the absolute
   path. Reopening goes through `desktop:open-recent`, and the main process only reads
   paths it has seen through a native Open/Save dialog or a `.sdjson` association,

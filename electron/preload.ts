@@ -7,8 +7,8 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import type {
   DesktopCommand,
+  DesktopLaunchDocument,
   DesktopOpenRecentResult,
-  DesktopOpenedDocument,
   DesktopSaveRequest,
   DesktopSaveResult,
 } from '../src/types/desktop';
@@ -23,13 +23,13 @@ const api = {
   isDesktop: true as const,
   platform: process.platform,
   getVersion: (): Promise<string> => ipcRenderer.invoke('desktop:get-version'),
-  openDocument: (): Promise<DesktopOpenedDocument | { canceled: true }> =>
+  openDocument: (): Promise<DesktopLaunchDocument | { canceled: true }> =>
     ipcRenderer.invoke('desktop:open-document'),
   openRecent: (filePath: string): Promise<DesktopOpenRecentResult> =>
     ipcRenderer.invoke('desktop:open-recent', filePath),
   saveFile: (request: DesktopSaveRequest): Promise<DesktopSaveResult> =>
     ipcRenderer.invoke('desktop:save-file', request),
-  onOpenDocument: (callback: (doc: DesktopOpenedDocument) => void): (() => void) =>
+  onOpenDocument: (callback: (doc: DesktopLaunchDocument) => void): (() => void) =>
     subscribe('desktop:open-document', callback),
   onCommand: (callback: (command: DesktopCommand) => void): (() => void) =>
     subscribe('desktop:command', callback),

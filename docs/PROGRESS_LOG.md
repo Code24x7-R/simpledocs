@@ -836,3 +836,18 @@ Browser builds keep the informational fallback.
 - **1089 unit tests**, **24 browser E2E**, **13 Electron smoke** pass
 - New tests: MRU path de-duplication/removal, main allowlist, recent-open outcomes,
   association path propagation, reopen/remove/restart desktop flows
+
+
+## 2026-11-18 — Word (.docx) launch fix
+
+A `.docx` association launch opened the app with the previous autosave because the argv
+parser only recognised `.sdjson`. Launches now accept `.docx`: the main process reads the
+bytes and sends base64, and the renderer uses the shared mammoth + Tiptap import pipeline
+(also used by File → Import Word). Cold launch, second-instance, native Open and Recent
+Files support Word files; the filename becomes the title. The installer adds an Open With
+entry under `.docx\OpenWithProgids` instead of changing Word's default association.
+
+### Results
+- **1093 unit tests**, **24 browser E2E**, **16 Electron smoke** pass
+- New smoke coverage: cold `.docx` launch, second-instance `.docx`, native Open `.docx`
+- Installer verified: Open With entry present, `.docx` default untouched, clean uninstall

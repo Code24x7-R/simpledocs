@@ -10,6 +10,7 @@ import path from 'node:path';
 export const APP_SCHEME = 'app';
 export const APP_HOST = 'simpledocs';
 export const DOC_EXTENSION = '.sdjson';
+export const WORD_EXTENSION = '.docx';
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',

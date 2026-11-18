@@ -59,6 +59,11 @@ administrator prompt) and adds Start Menu and desktop shortcuts.
 the app is already running, the document opens in the existing window. You can also use
 **File → Open** (`Ctrl+O`).
 
+**Open Word documents:** choose SimpleDocs from the **Open with** menu for a `.docx`
+file (the installer adds this entry). Word files are imported into the editor whether the
+app is already running or not. **File → Open** also accepts `.docx`. SimpleDocs does not
+change your default Word association.
+
 **Save documents:** **File → Save** (`Ctrl+S`) or **File → Save As** (`Ctrl+Shift+S`)
 opens the native Windows Save dialog. PDF and Markdown exports use the same dialog.
 If you choose a different filename in Save As, that name becomes the document title,

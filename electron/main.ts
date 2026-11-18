@@ -27,13 +27,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractDocumentPaths } from './argv';
 import { addRecentPath, isRecentPath, normalizeRecentPaths } from './recent';
-import { APP_HOST, DOC_EXTENSION } from './paths';
+import { APP_HOST, DOC_EXTENSION, WORD_EXTENSION } from './paths';
 import { installAppProtocol, registerAppScheme } from './protocol';
 import type {
   DesktopCommand,
   DesktopFileFilter,
+  DesktopLaunchDocument,
   DesktopOpenRecentResult,
-  DesktopOpenedDocument,
   DesktopSaveRequest,
   DesktopSaveResult,
 } from '../src/types/desktop';
@@ -54,7 +54,7 @@ let mainWindow: BrowserWindow | null = null;
 let rendererReady = false;
 /** Paths the renderer may reopen from Recent Files (see electron/recent.ts). */
 let recentPaths: string[] = [];
-const pendingDocuments: DesktopOpenedDocument[] = [];
+const pendingDocuments: DesktopLaunchDocument[] = [];
 
 registerAppScheme();
 app.setAppUserModelId(APP_ID);
@@ -63,17 +63,27 @@ app.setAppUserModelId(APP_ID);
 // Document I/O
 // ---------------------------------------------------------------------------
 
-async function readDocument(filePath: string): Promise<DesktopOpenedDocument> {
+async function readLaunchFile(filePath: string): Promise<DesktopLaunchDocument> {
   const info = await stat(filePath);
   if (!info.isFile()) throw new Error(`Not a file: ${filePath}`);
   if (info.size > MAX_DOCUMENT_BYTES) {
     throw new Error(`Document is larger than ${MAX_DOCUMENT_BYTES / (1024 * 1024)} MB`);
   }
-  const text = await readFile(filePath, 'utf8');
-  return { name: path.basename(filePath), path: filePath, text };
+
+  const name = path.basename(filePath);
+  const extension = path.extname(filePath).toLowerCase();
+
+  if (extension === WORD_EXTENSION) {
+    const bytes = await readFile(filePath);
+    return { kind: 'docx', name, path: filePath, base64: bytes.toString('base64') };
+  }
+  if (extension === DOC_EXTENSION || extension === '.json') {
+    return { kind: 'sdjson', name, path: filePath, text: await readFile(filePath, 'utf8') };
+  }
+  throw new Error(`Unsupported file type: ${extension || '(none)'}`);
 }
 
-function deliverDocument(doc: DesktopOpenedDocument): void {
+function deliverDocument(doc: DesktopLaunchDocument): void {
   if (rendererReady && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('desktop:open-document', doc);
   } else {
@@ -109,7 +119,7 @@ function rememberRecentPath(filePath: string): void {
 async function queueDocuments(filePaths: readonly string[]): Promise<void> {
   for (const filePath of filePaths) {
     try {
-      const doc = await readDocument(filePath);
+      const doc = await readLaunchFile(filePath);
       rememberRecentPath(filePath);
       deliverDocument(doc);
     } catch (err) {
@@ -241,25 +251,29 @@ function createWindow(): void {
 function registerIpc(): void {
   ipcMain.handle('desktop:get-version', () => app.getVersion());
 
-  ipcMain.handle('desktop:open-document', async (event): Promise<DesktopOpenedDocument | { canceled: true }> => {
-    const owner = BrowserWindow.fromWebContents(event.sender) ?? mainWindow;
-    const options: OpenDialogOptions = {
-      title: 'Open Document',
-      properties: ['openFile'],
-      filters: [
-        { name: 'SimpleDocs Document', extensions: ['sdjson'] },
-        { name: 'JSON', extensions: ['json'] },
-      ],
-    };
-    const result = owner
-      ? await dialog.showOpenDialog(owner, options)
-      : await dialog.showOpenDialog(options);
-    if (result.canceled || result.filePaths.length === 0) return { canceled: true };
-    const filePath = result.filePaths[0];
-    const doc = await readDocument(filePath);
-    rememberRecentPath(filePath);
-    return doc;
-  });
+  ipcMain.handle(
+    'desktop:open-document',
+    async (event): Promise<DesktopLaunchDocument | { canceled: true }> => {
+      const owner = BrowserWindow.fromWebContents(event.sender) ?? mainWindow;
+      const options: OpenDialogOptions = {
+        title: 'Open Document',
+        properties: ['openFile'],
+        filters: [
+          { name: 'SimpleDocs Document', extensions: ['sdjson'] },
+          { name: 'Word Document', extensions: ['docx'] },
+          { name: 'JSON', extensions: ['json'] },
+        ],
+      };
+      const result = owner
+        ? await dialog.showOpenDialog(owner, options)
+        : await dialog.showOpenDialog(options);
+      if (result.canceled || result.filePaths.length === 0) return { canceled: true };
+      const filePath = result.filePaths[0];
+      const doc = await readLaunchFile(filePath);
+      rememberRecentPath(filePath);
+      return doc;
+    }
+  );
 
   ipcMain.handle(
     'desktop:open-recent',
@@ -268,10 +282,16 @@ function registerIpc(): void {
       const filePath = path.resolve(rawPath);
       if (!isRecentPath(recentPaths, filePath)) return { status: 'forbidden' };
       const extension = path.extname(filePath).toLowerCase();
-      if (extension !== DOC_EXTENSION && extension !== '.json') return { status: 'forbidden' };
+      if (
+        extension !== DOC_EXTENSION &&
+        extension !== '.json' &&
+        extension !== WORD_EXTENSION
+      ) {
+        return { status: 'forbidden' };
+      }
 
       try {
-        return { status: 'ok', document: await readDocument(filePath) };
+        return { status: 'ok', document: await readLaunchFile(filePath) };
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { status: 'missing' };
         throw err;

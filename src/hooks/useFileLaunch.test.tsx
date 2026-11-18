@@ -2,6 +2,13 @@
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+
+vi.mock('../utils/wordImportStore', () => ({
+  importWordIntoStore: vi.fn().mockResolvedValue(undefined),
+  importWordFileIntoStore: vi.fn(),
+}));
+
+import { importWordIntoStore } from '../utils/wordImportStore';
 import { useFileLaunch } from './useFileLaunch';
 import { useDocStore } from '../store/useDocStore';
 import type { DocState } from '../store/useDocStore';
@@ -210,7 +217,7 @@ describe('useFileLaunch', () => {
   });
 
   it('forwards the path when the desktop bridge delivers a document', async () => {
-    let deliver: ((doc: { name: string; path: string; text: string }) => void) | undefined;
+    let deliver: ((doc: { kind: 'sdjson'; name: string; path: string; text: string }) => void) | undefined;
     const rendererReady = vi.fn();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).simpleDocsDesktop = {
@@ -235,7 +242,7 @@ describe('useFileLaunch', () => {
     expect(rendererReady).toHaveBeenCalledOnce();
     const docText = JSON.stringify(validDoc);
     act(() => {
-      deliver?.({ name: 'Recent.sdjson', path: 'C:/Docs/Recent.sdjson', text: docText });
+      deliver?.({ kind: 'sdjson', name: 'Recent.sdjson', path: 'C:/Docs/Recent.sdjson', text: docText });
     });
 
     expect(loadSpy).toHaveBeenCalledTimes(1);
@@ -244,6 +251,35 @@ describe('useFileLaunch', () => {
     delete (window as unknown as { simpleDocsDesktop?: unknown }).simpleDocsDesktop;
     mruSpy.mockRestore();
     loadSpy.mockRestore();
+  });
+
+  it('imports a .docx delivered by the desktop association', async () => {
+    let deliver: ((doc: unknown) => void) | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).simpleDocsDesktop = {
+      isDesktop: true,
+      platform: 'win32',
+      getVersion: vi.fn(),
+      openDocument: vi.fn(),
+      openRecent: vi.fn(),
+      saveFile: vi.fn(),
+      onOpenDocument: vi.fn((cb) => { deliver = cb; return () => {}; }),
+      onCommand: vi.fn(() => () => {}),
+      rendererReady: vi.fn(),
+    };
+
+    renderHook(() => useFileLaunch());
+    await act(async () => {
+      deliver?.({ kind: 'docx', name: 'Letter.docx', path: 'C:/Docs/Letter.docx', base64: 'AAEC' });
+      await Promise.resolve();
+    });
+
+    expect(importWordIntoStore).toHaveBeenCalledWith({
+      name: 'Letter.docx',
+      path: 'C:/Docs/Letter.docx',
+      arrayBuffer: expect.any(ArrayBuffer),
+    });
+    delete (window as unknown as { simpleDocsDesktop?: unknown }).simpleDocsDesktop;
   });
 
   it('handles multiple files from a single launch', async () => {

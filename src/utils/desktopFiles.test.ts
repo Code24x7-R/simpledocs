@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Richard Robertson
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+vi.mock('./wordImportStore', () => ({
+  importWordIntoStore: vi.fn().mockResolvedValue(undefined),
+  importWordFileIntoStore: vi.fn(),
+}));
+
 import { useDocStore, type DocState } from '../store/useDocStore';
 import { openRecentDocument } from './desktopFiles';
+import { importWordIntoStore } from './wordImportStore';
 import type { DesktopBridge } from '../types/desktop';
 
 function makeDoc(title = 'Recent Doc'): DocState {
@@ -56,7 +63,7 @@ describe('openRecentDocument', () => {
     const doc = makeDoc('Recent Doc');
     installBridge(vi.fn().mockResolvedValue({
       status: 'ok',
-      document: { name: 'Recent Doc.sdjson', path: 'C:/Docs/Recent Doc.sdjson', text: JSON.stringify(doc) },
+      document: { kind: 'sdjson', name: 'Recent Doc.sdjson', path: 'C:/Docs/Recent Doc.sdjson', text: JSON.stringify(doc) },
     }));
 
     const outcome = await openRecentDocument('C:/Docs/Recent Doc.sdjson');
@@ -73,7 +80,7 @@ describe('openRecentDocument', () => {
     const doc = makeDoc('Untitled Document');
     installBridge(vi.fn().mockResolvedValue({
       status: 'ok',
-      document: { name: 'Adopted Name.sdjson', path: 'C:/Docs/Adopted Name.sdjson', text: JSON.stringify(doc) },
+      document: { kind: 'sdjson', name: 'Adopted Name.sdjson', path: 'C:/Docs/Adopted Name.sdjson', text: JSON.stringify(doc) },
     }));
 
     await openRecentDocument('C:/Docs/Adopted Name.sdjson');
@@ -93,9 +100,23 @@ describe('openRecentDocument', () => {
   it('reports invalid document JSON', async () => {
     installBridge(vi.fn().mockResolvedValue({
       status: 'ok',
-      document: { name: 'bad.sdjson', path: 'C:/Docs/bad.sdjson', text: '{"hello":1}' },
+      document: { kind: 'sdjson', name: 'bad.sdjson', path: 'C:/Docs/bad.sdjson', text: '{"hello":1}' },
     }));
     await expect(openRecentDocument('C:/Docs/bad.sdjson')).resolves.toBe('invalid');
+  });
+
+  it('imports a .docx recent file', async () => {
+    installBridge(vi.fn().mockResolvedValue({
+      status: 'ok',
+      document: { kind: 'docx', name: 'Letter.docx', path: 'C:/Docs/Letter.docx', base64: 'AAEC' },
+    }));
+
+    await expect(openRecentDocument('C:/Docs/Letter.docx')).resolves.toBe('opened');
+    expect(importWordIntoStore).toHaveBeenCalledWith({
+      name: 'Letter.docx',
+      path: 'C:/Docs/Letter.docx',
+      arrayBuffer: expect.any(ArrayBuffer),
+    });
   });
 
   it('does nothing on the web build', async () => {
