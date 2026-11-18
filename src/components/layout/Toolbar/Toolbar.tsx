@@ -195,6 +195,7 @@ export default function Toolbar() {
       <div className="relative">
         <button
           {...registerButton(idx++)}
+          data-testid="style-dropdown"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
           className="flex items-center gap-1 px-2 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"

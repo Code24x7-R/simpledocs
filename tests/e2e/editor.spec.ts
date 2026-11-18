@@ -1,14 +1,16 @@
 import { test, expect } from '@playwright/test';
+import { openApp } from './helpers';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  // Wait for the editor to be ready
-  await page.waitForSelector('.tiptap', { timeout: 10000 });
+  await openApp(page);
 });
 
-test('loads the editor with default content', async ({ page }) => {
-  await expect(page.locator('text=simpledocs')).toBeVisible();
+test('loads the single-editor workspace', async ({ page }) => {
+  await expect(page.getByText('SimpleDocs', { exact: true })).toBeVisible();
   await expect(page.locator('.tiptap')).toBeVisible();
+  // The multi-editor architecture is gone: exactly one contenteditable.
+  await expect(page.locator('[contenteditable="true"]')).toHaveCount(1);
+  await expect(page.locator('[data-page-editor]')).toHaveCount(0);
 });
 
 test('formatting flow: bold text', async ({ page }) => {
@@ -16,11 +18,9 @@ test('formatting flow: bold text', async ({ page }) => {
   await editor.click();
   await page.keyboard.type('Hello World');
 
-  // Select all text and make it bold
   await page.keyboard.press('Control+a');
-  await page.locator('button[title="Bold"]').click();
+  await page.locator('button[title^="Bold"]').click();
 
-  // Check that a <strong> element exists
   await expect(page.locator('.tiptap strong')).toContainText('Hello World');
 });
 
@@ -30,18 +30,18 @@ test('formatting flow: italic text', async ({ page }) => {
   await page.keyboard.type('Italic Text');
 
   await page.keyboard.press('Control+a');
-  await page.locator('button[title="Italic"]').click();
+  await page.locator('button[title^="Italic"]').click();
 
   await expect(page.locator('.tiptap em')).toContainText('Italic Text');
 });
 
-test('creates a heading', async ({ page }) => {
+test('creates a heading from the style dropdown', async ({ page }) => {
   const editor = page.locator('.tiptap');
   await editor.click();
   await page.keyboard.type('My Heading');
 
-  await page.locator('button:has-text("Style")').click();
-  await page.locator('button:has-text("Heading 1")').click();
+  await page.getByTestId('style-dropdown').click();
+  await page.getByRole('button', { name: 'Heading 1', exact: true }).click();
 
   await expect(page.locator('.tiptap h1')).toContainText('My Heading');
 });
@@ -64,34 +64,33 @@ test('undo and redo work', async ({ page }) => {
   await editor.click();
   await page.keyboard.type('Test undo');
 
-  await page.locator('button[title="Undo"]').click();
+  await page.locator('button[title^="Undo"]').click();
   await expect(page.locator('.tiptap')).not.toContainText('Test undo');
 
-  await page.locator('button[title="Redo"]').click();
+  await page.locator('button[title^="Redo"]').click();
   await expect(page.locator('.tiptap')).toContainText('Test undo');
 });
 
 test('zoom controls change zoom level', async ({ page }) => {
-  await page.locator('button:has-text("75%")').click();
-  // The zoom is applied via CSS transform on the viewport container
+  await page.getByTestId('menu-view').click();
+  await page.getByRole('button', { name: '75%', exact: true }).click();
+
   const viewport = page.locator('#paginated-viewport > div');
   await expect(viewport).toHaveCSS('transform', /matrix\(0\.75/);
 });
 
 test('page setup modal opens and closes', async ({ page }) => {
-  // Open via File menu
-  await page.locator('button:has-text("File")').click();
-  await page.locator('button:has-text("Page Setup")').click();
+  await page.getByTestId('menu-file').click();
+  await page.getByTestId('file-page-setup').click();
 
-  await expect(page.locator('text=Page Setup')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Page Setup' })).toBeVisible();
 
-  // Close
-  await page.locator('button:has-text("Cancel")').click();
-  await expect(page.locator('text=Page Setup')).not.toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Page Setup' })).not.toBeVisible();
 });
 
 test('document title can be edited', async ({ page }) => {
-  const titleInput = page.locator('input[placeholder="Document Title"]');
+  const titleInput = page.getByTestId('document-title');
   await titleInput.fill('My New Document Title');
   await expect(titleInput).toHaveValue('My New Document Title');
 });

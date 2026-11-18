@@ -133,6 +133,14 @@ export default function Navbar() {
     window.dispatchEvent(new CustomEvent('simpledocs:export-pdf'));
   };
 
+  const handleSave = () => {
+    setDriveOpen(true, 'save');
+  };
+
+  const handleOpen = () => {
+    setDriveOpen(true, 'open');
+  };
+
   const handleExportMarkdown = () => {
     if (!editor) {
       alert('Editor not available');
@@ -223,6 +231,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
         <button
           ref={fileMenuKb.registerTrigger}
+          data-testid="menu-file"
           onClick={() => setFileMenuOpen(!fileMenuOpen)}
           className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
         >
@@ -231,6 +240,7 @@ export default function Navbar() {
         {fileMenuOpen && (
           <div ref={fileMenuKb.ref} onKeyDown={fileMenuKb.onKeyDown} className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded shadow-lg z-50">
             <button
+              data-testid="file-new"
               onClick={() => { newDocument(); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
@@ -243,13 +253,15 @@ export default function Navbar() {
               <Sparkles className="w-4 h-4" /> Load Demo
             </button>
             <button
-              onClick={() => { setDriveOpen(true, 'save'); setFileMenuOpen(false); }}
+              data-testid="file-save"
+              onClick={() => { handleSave(); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <Save className="w-4 h-4" /> Save
             </button>
             <button
-              onClick={() => { setDriveOpen(true, 'open'); setFileMenuOpen(false); }}
+              data-testid="file-open"
+              onClick={() => { handleOpen(); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <FolderOpen className="w-4 h-4" /> Open
@@ -267,6 +279,7 @@ export default function Navbar() {
               onMouseLeave={() => setExportMenuOpen(false)}
             >
               <button
+                data-testid="file-export"
                 onClick={() => setExportMenuOpen((v) => !v)}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
@@ -276,12 +289,14 @@ export default function Navbar() {
               {exportMenuOpen && (
                 <div className="absolute top-0 left-full ml-0.5 w-48 bg-white border border-gray-200 rounded shadow-lg z-50">
                   <button
+                    data-testid="file-export-pdf"
                     onClick={() => { handleExportPdf(); setFileMenuOpen(false); }}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" /> Export PDF
                   </button>
                   <button
+                    data-testid="file-export-markdown"
                     onClick={() => { handleExportMarkdown(); setFileMenuOpen(false); }}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
                   >
@@ -298,6 +313,7 @@ export default function Navbar() {
             </button>
             <div className="border-t border-gray-100 my-1" />
             <button
+              data-testid="file-page-setup"
               onClick={() => { setPageSetupOpen(true); setFileMenuOpen(false); }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
             >
@@ -329,6 +345,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             ref={editMenuKb.registerTrigger}
+            data-testid="menu-edit"
             onClick={() => setEditMenuOpen(!editMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
@@ -362,6 +379,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             ref={insertMenuKb.registerTrigger}
+            data-testid="menu-insert"
             onClick={() => setInsertMenuOpen(!insertMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
@@ -430,6 +448,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             ref={layoutMenuKb.registerTrigger}
+            data-testid="menu-layout"
             onClick={() => setLayoutMenuOpen(!layoutMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
@@ -571,6 +590,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             ref={viewMenuKb.registerTrigger}
+            data-testid="menu-view"
             onClick={() => setViewMenuOpen(!viewMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
@@ -666,6 +686,7 @@ export default function Navbar() {
         <div className="relative shrink-0">
           <button
             ref={helpMenuKb.registerTrigger}
+            data-testid="menu-help"
             onClick={() => setHelpMenuOpen(!helpMenuOpen)}
             className="px-2 py-1 text-sm leading-5 text-gray-700 bg-transparent rounded border-none hover:bg-gray-100 flex items-center gap-1 transition-colors duration-150"
           >
@@ -724,6 +745,7 @@ export default function Navbar() {
       {/* Title / Filename */}
       <input
         type="text"
+        data-testid="document-title"
         value={docState.title}
         onChange={(e) => updateTitle(e.target.value)}
         className="w-56 text-sm border border-gray-200 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"

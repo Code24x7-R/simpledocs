@@ -1,366 +1,109 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Richard Robertson
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { openApp, loadDocument, getEditorState, setSelection, getBlockStart } from './helpers';
 
 /**
- * Keyboard Navigation E2E Tests
+ * Single-editor keyboard navigation and block merge.
  *
- * Tests cursor navigation across a multi-page document.
- * Verifies page/line/column after each key press.
+ * These replace the old multi-page-editor specs. The app now uses one Tiptap
+ * instance for the whole document, so cross-page caret transitions are ordinary
+ * ProseMirror block navigation; pages are computed scroll guides only.
  */
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
-
-/** Minimal Tiptap editor shape for E2E helpers */
-interface TiptapEditor {
-  state: {
-    selection: { from: number; to: number };
-    doc: { resolve(pos: number): { index(depth: number): number; parentOffset: number } };
-  };
-  commands: {
-    focus(): void;
-    setTextSelection(pos: number): void;
-    selectTextblockEnd(): void;
-  };
-  view: { dom: HTMLElement };
-}
-
-interface EditorElement extends HTMLElement {
-  editor?: TiptapEditor;
-}
-
-interface WindowWithStore extends Window {
-  __docStore?: {
-    getState(): {
-      loadDocument(doc: unknown): void;
-    };
-  };
-}
-
-async function getCurrentPage(page: Page): Promise<number> {
-  return await page.evaluate(() => {
-    const focused = document.activeElement;
-    const wrapper = focused?.closest('[data-page-editor]');
-    return wrapper ? parseInt(wrapper.getAttribute('data-page-editor') || '0', 10) : 0;
-  });
-}
-
-async function getCursorPos(page: Page): Promise<{ line: number; col: number }> {
-  return await page.evaluate(() => {
-    const focused = document.activeElement;
-    const editor = (focused as EditorElement | null)?.editor;
-    if (!editor) return { line: 0, col: 0 };
-    const { selection } = editor.state;
-    const resolved = editor.state.doc.resolve(selection.from);
-    return { line: resolved.index(0) + 1, col: resolved.parentOffset + 1 };
-  });
-}
-
-async function createMultiPageDoc(page: Page, linesPerPage: number[]) {
-  await page.evaluate(({ linesPerPage }) => {
-    // Define helpers inside browser context
-    const para = (text: string) => ({ type: 'paragraph', content: text ? [{ type: 'text', text }] : [] });
-    const makeDoc = (paras: string[]) => ({ type: 'doc', content: paras.map(para) });
-
-    const pages = linesPerPage.map((count, pageIdx) => ({
-      id: `page-${pageIdx}`,
-      content: makeDoc(Array.from({ length: count }, (_, i) => `Line ${i + 1} page ${pageIdx + 1}`)),
-    }));
-    const store = (window as WindowWithStore).__docStore;
-    if (store) {
-      store.getState().loadDocument({
-        id: 'test-doc',
-        title: 'Nav Test',
-        createdAt: '2026-08-04T00:00:00Z',
-        updatedAt: '2026-08-04T00:00:00Z',
-        settings: {
-          pageFormat: 'A4',
-          orientation: 'portrait',
-          margins: { top: '20mm', bottom: '20mm', left: '25mm', right: '25mm' },
-          header: { enabled: false, content: '' },
-          footer: { enabled: false, showPageNumbers: false },
-          pageGap: 24,
-          showPageBackgrounds: true,
-        },
-        pages,
-      });
-    }
-  }, { linesPerPage });
-}
-
-async function focusPage(page: Page, pageIndex: number, pos: number = 1) {
-  await page.locator(`[data-page-editor="${pageIndex}"] .tiptap`).waitFor({ state: 'attached', timeout: 10000 });
-  await page.evaluate(({ pageIndex, pos }) => {
-    const el = document.querySelector<HTMLElement>(`[data-page-editor="${pageIndex}"] .tiptap`);
-    const editor = (el as EditorElement | null)?.editor;
-    if (editor) {
-      editor.commands.focus();
-      editor.commands.setTextSelection(pos);
-    }
-  }, { pageIndex, pos });
-  await page.waitForTimeout(100);
-}
-
-async function setCursorToEnd(page: Page, pageIndex: number) {
-  await page.evaluate(({ pageIndex }) => {
-    const el = document.querySelector<HTMLElement>(`[data-page-editor="${pageIndex}"] .tiptap`);
-    const editor = (el as EditorElement | null)?.editor;
-    if (editor) {
-      editor.commands.focus();
-      // Use selectTextblockEnd to go to the very end of the last block
-      editor.commands.selectTextblockEnd();
-    }
-  }, { pageIndex });
-  await page.waitForTimeout(100);
-}
-
-async function getPageCount(page: Page): Promise<number> {
-  return await page.locator('[data-page-editor]').count();
-}
-
-// ─── Tests ────────────────────────────────────────────────────────────────
-
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  await page.waitForSelector('.tiptap', { timeout: 10000 });
+  await openApp(page);
 });
 
-test.describe('Arrow Down', () => {
-  test('P1:L1 → P1:L2 (within page)', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0, 1);
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(1);
-    await page.keyboard.press('ArrowDown');
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(2);
+test.describe('single editor model', () => {
+  test('renders one contenteditable for a long multi-page document', async ({ page }) => {
+    await loadDocument(page, {
+      paragraphs: Array.from({ length: 80 }, (_, i) => `Line ${i + 1}`),
+    });
+
+    await expect(page.locator('.tiptap')).toHaveCount(1);
+    await expect(page.locator('[data-page-editor]')).toHaveCount(0);
+    const scrollHeight = await page.locator('#paginated-viewport').evaluate((el) => el.scrollHeight);
+    expect(scrollHeight).toBeGreaterThan(1200);
   });
 
-  test('P1:L28 → P2:L1 (cross-page, NEEDS FIX)', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0);
-    await setCursorToEnd(page, 0);
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(28);
+  test('ArrowDown moves the caret to the next block', async ({ page }) => {
+    await loadDocument(page, { paragraphs: ['Line 1', 'Line 2', 'Line 3'] });
+    await setSelection(page, 1);
     await page.keyboard.press('ArrowDown');
-    // GAP: This should navigate to page 2, but currently stays on page 1
-    // expect(await getCurrentPage(page)).toBe(1);
-    // expect((await getCursorPos(page)).line).toBe(1);
-    expect(await getCurrentPage(page)).toBe(0); // Current behavior (broken)
+
+    const state = await getEditorState(page);
+    expect(state?.blockIndex).toBe(1);
   });
 
-  test('P2:L10 → P3:L1 (cross-page, NEEDS FIX)', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 1);
-    await setCursorToEnd(page, 1);
-    expect(await getCurrentPage(page)).toBe(1);
-    expect((await getCursorPos(page)).line).toBe(10);
-    await page.keyboard.press('ArrowDown');
-    // GAP: Should navigate to page 3
-    expect(await getCurrentPage(page)).toBe(1); // Current behavior (broken)
-  });
-
-  test('P3:L5 → stays P3:L5 (last page)', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 2);
-    await setCursorToEnd(page, 2);
-    expect(await getCurrentPage(page)).toBe(2);
-    expect((await getCursorPos(page)).line).toBe(5);
-    await page.keyboard.press('ArrowDown');
-    expect(await getCurrentPage(page)).toBe(2);
-    expect((await getCursorPos(page)).line).toBe(5);
-  });
-});
-
-test.describe('Arrow Up', () => {
-  test('P2:L1 → P1:L28', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 1, 1);
-    expect(await getCurrentPage(page)).toBe(1);
-    expect((await getCursorPos(page)).line).toBe(1);
+  test('ArrowUp moves the caret to the previous block', async ({ page }) => {
+    await loadDocument(page, { paragraphs: ['Line 1', 'Line 2', 'Line 3'] });
+    await setSelection(page, await getBlockStart(page, 1));
     await page.keyboard.press('ArrowUp');
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(28);
+
+    const state = await getEditorState(page);
+    expect(state?.blockIndex).toBe(0);
   });
 
-  test('P3:L1 → P2:L10', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 2, 1);
-    expect(await getCurrentPage(page)).toBe(2);
-    expect((await getCursorPos(page)).line).toBe(1);
-    await page.keyboard.press('ArrowUp');
-    expect(await getCurrentPage(page)).toBe(1);
-    expect((await getCursorPos(page)).line).toBe(10);
-  });
+  test('PageDown scrolls the viewport and keeps editor focus', async ({ page }) => {
+    await loadDocument(page, {
+      paragraphs: Array.from({ length: 100 }, (_, i) => `Scroll line ${i + 1}`),
+    });
+    await page.locator('.tiptap').click();
 
-  test('P1:L1 → stays P1:L1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0, 1);
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(1);
-    await page.keyboard.press('ArrowUp');
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(1);
-  });
-});
-
-test.describe('Arrow Right', () => {
-  test('P1:L1:Col5 → P1:L1:Col6', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0, 5);
-    expect((await getCursorPos(page)).line).toBe(1);
-    expect((await getCursorPos(page)).col).toBe(6);
-    await page.keyboard.press('ArrowRight');
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).col).toBe(7);
-  });
-
-  test('P1:L28:end → P2:L1:Col1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0);
-    await setCursorToEnd(page, 0);
-    expect((await getCursorPos(page)).line).toBe(28);
-    await page.keyboard.press('ArrowRight');
-    expect(await getCurrentPage(page)).toBe(1);
-    expect((await getCursorPos(page)).line).toBe(1);
-    expect((await getCursorPos(page)).col).toBe(1);
-  });
-});
-
-test.describe('Arrow Left', () => {
-  test('P2:L1:Col1 → P1:L28:end', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 1, 1);
-    expect(await getCurrentPage(page)).toBe(1);
-    expect((await getCursorPos(page)).line).toBe(1);
-    expect((await getCursorPos(page)).col).toBe(1);
-    await page.keyboard.press('ArrowLeft');
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(28);
-  });
-
-  test('P1:L1:Col1 → stays P1:L1:Col1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0, 1);
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(1);
-    expect((await getCursorPos(page)).col).toBe(1);
-    await page.keyboard.press('ArrowLeft');
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).col).toBe(1);
-  });
-});
-
-test.describe('Page Down', () => {
-  test('P1 → P2:L1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0);
+    const viewport = page.locator('#paginated-viewport');
+    const before = await viewport.evaluate((el) => el.scrollTop);
     await page.keyboard.press('PageDown');
-    expect(await getCurrentPage(page)).toBe(1);
-    expect((await getCursorPos(page)).line).toBe(1);
-  });
+    await page.waitForTimeout(300);
+    const after = await viewport.evaluate((el) => el.scrollTop);
 
-  test('P2 → P3:L1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 1);
-    await page.keyboard.press('PageDown');
-    expect(await getCurrentPage(page)).toBe(2);
-    expect((await getCursorPos(page)).line).toBe(1);
-  });
-
-  test('P3 → stays P3', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 2);
-    await page.keyboard.press('PageDown');
-    expect(await getCurrentPage(page)).toBe(2);
+    expect(after).toBeGreaterThan(before);
+    await expect(page.locator('.tiptap')).toBeFocused();
   });
 });
 
-test.describe('Page Up', () => {
-  test('P3 → P2:L10', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 2);
-    await page.keyboard.press('PageUp');
-    expect(await getCurrentPage(page)).toBe(1);
-    expect((await getCursorPos(page)).line).toBe(10);
-  });
-
-  test('P2 → P1:L28', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 1);
-    await page.keyboard.press('PageUp');
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(28);
-  });
-
-  test('P1 → stays P1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0);
-    await page.keyboard.press('PageUp');
-    expect(await getCurrentPage(page)).toBe(0);
-  });
-});
-
-test.describe('Backspace Merge', () => {
-  test('P2:L1:Col1 → merges into P1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 1, 1);
-    expect(await getPageCount(page)).toBe(3);
+test.describe('block merge', () => {
+  test('Backspace at the start of a block merges it into the previous block', async ({ page }) => {
+    await loadDocument(page, { paragraphs: ['Hello World', 'Second paragraph'] });
+    const before = await getEditorState(page);
+    await setSelection(page, await getBlockStart(page, 1));
     await page.keyboard.press('Backspace');
-    expect(await getPageCount(page)).toBe(2);
+    await page.waitForTimeout(150);
+
+    const after = await getEditorState(page);
+    expect(after?.blocks).toBe((before?.blocks ?? 0) - 1);
+    expect(after?.focused).toBe(true);
+    expect(after?.empty).toBe(true);
+    expect(after?.text).toContain('Hello WorldSecond paragraph');
   });
 
-  test('P1:L1:Col1 → stays P1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0, 1);
-    expect(await getPageCount(page)).toBe(3);
+  test('Backspace at the document start leaves the document valid and focused', async ({ page }) => {
+    await loadDocument(page, { paragraphs: ['First paragraph', 'Second paragraph'] });
+    const before = await getEditorState(page);
+    await setSelection(page, 1);
     await page.keyboard.press('Backspace');
-    expect(await getPageCount(page)).toBe(3);
-  });
-});
+    await page.waitForTimeout(100);
 
-test.describe('Enter Overflow', () => {
-  test('P1:L28:end + Enter → P2:L1', async ({ page }) => {
-    await createMultiPageDoc(page, [28, 10, 5]);
-    await focusPage(page, 0);
-    await setCursorToEnd(page, 0);
-    expect(await getCurrentPage(page)).toBe(0);
-    expect((await getCursorPos(page)).line).toBe(28);
+    const after = await getEditorState(page);
+    expect(after?.blocks).toBe(before?.blocks);
+    expect(after?.focused).toBe(true);
+    expect(after?.text).toBe(before?.text);
+  });
+
+  test('Enter at the end of the document adds a block and keeps the caret visible', async ({ page }) => {
+    await loadDocument(page, { paragraphs: ['Only paragraph'] });
+    await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const editor = (window as any).__docStore.getState().editor;
+      editor.commands.focus();
+      editor.commands.selectTextblockEnd();
+    });
+    const before = await getEditorState(page);
+
     await page.keyboard.press('Enter');
-    expect(await getCurrentPage(page)).toBe(1);
-  });
-});
+    await page.keyboard.type('New line');
 
-test.describe('Navigation Gap Summary', () => {
-  test('documents all navigation scenarios and identifies gaps', async () => {
-    // Status: ✅ Works | ⚠️ Partial | ❌ Broken
-    // Based on actual browser observations:
-    // - Arrow keys scroll viewport when no caret is active
-    // - Arrow keys move caret when editor is focused (after click)
-    // - PgUp/PgDn only scroll viewport, don't move caret between pages
-    // - Cross-page caret navigation only works after explicit click to focus
-    const scenarios: [string, string, string][] = [
-      ['ArrowDown P1:L28', 'P2:L1', '⚠️ Works only after click to focus'],
-      ['ArrowDown P2:L10', 'P3:L1', '⚠️ Works only after click to focus'],
-      ['ArrowDown P3:L5', 'P3:L5', '✅ Stays (last page)'],
-      ['ArrowUp P2:L1', 'P1:L28', '⚠️ Works only after click to focus'],
-      ['ArrowUp P3:L1', 'P2:L10', '⚠️ Works only after click to focus'],
-      ['ArrowUp P1:L1', 'P1:L1', '✅ Stays (first page)'],
-      ['PageDown P1', 'P2:L1', '❌ Only scrolls view, no caret move'],
-      ['PageDown P2', 'P3:L1', '❌ Only scrolls view, no caret move'],
-      ['PageDown P3', 'P3', '✅ Stays (last page)'],
-      ['PageUp P3', 'P2:L10', '❌ Only scrolls view, no caret move'],
-      ['PageUp P2', 'P1:L28', '❌ Only scrolls view, no caret move'],
-      ['PageUp P1', 'P1', '✅ Stays (first page)'],
-      ['Backspace P2:L1', 'Merge into P1', '⚠️ Works only after click to focus'],
-      ['Backspace P1:L1', 'Stay P1', '✅ Stays (first page)'],
-      ['Enter P1:L28', 'P2:L1', '⚠️ Works only after click to focus'],
-    ];
-    console.log('\n=== Navigation Gap Analysis ===');
-    console.table(scenarios);
-    const gaps = scenarios.filter((row) => row[2].startsWith('❌') || row[2].startsWith('⚠️'));
-    console.log(`\n=== ${gaps.length} Gaps Found ===`);
-    console.table(gaps);
-    expect(scenarios.length).toBeGreaterThan(0);
+    const after = await getEditorState(page);
+    expect(after?.blocks).toBe((before?.blocks ?? 0) + 1);
+    expect(after?.focused).toBe(true);
+    expect(after?.text).toContain('New line');
   });
 });

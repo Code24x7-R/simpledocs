@@ -1,27 +1,34 @@
 import { test, expect } from '@playwright/test';
 
+// PDF generation lazy-loads ~21 MB of embedded fonts on first export.
+test.setTimeout(180_000);
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('.tiptap', { timeout: 10000 });
+  await page.waitForSelector('.tiptap', { timeout: 15000 });
 });
 
-test('PDF export flow: triggers without errors', async ({ page }) => {
-  // Listen for console errors
+test('PDF export produces a downloadable searchable PDF', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (msg) => {
-    if (msg.type() === 'error') {
-      errors.push(msg.text());
-    }
+    if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  // Open File menu and click Export PDF
-  await page.locator('button:has-text("File")').click();
-  await page.locator('button:has-text("Export PDF")').click();
+  await page.getByTestId('menu-file').click();
+  await page.getByTestId('file-export').hover();
+  await expect(page.getByTestId('file-export-pdf')).toBeVisible();
 
-  // Wait a moment for any async operations
-  await page.waitForTimeout(1000);
+  const downloadPromise = page.waitForEvent('download', { timeout: 120000 });
+  // DOM click avoids the mouse leaving the hover-only flyout mid-click.
+  await page.getByTestId('file-export-pdf').evaluate((el) => (el as HTMLElement).click());
+  const download = await downloadPromise;
 
-  // Should not have any console errors related to PDF export
-  const pdfErrors = errors.filter((e) => e.toLowerCase().includes('pdf') || e.toLowerCase().includes('html2pdf'));
+  expect(download.suggestedFilename()).toMatch(/^Untitled_Document.*\.pdf$/);
+  const path = await download.path();
+  expect(path).toBeTruthy();
+  const { statSync } = await import('node:fs');
+  expect(statSync(path!).size).toBeGreaterThan(1000);
+
+  const pdfErrors = errors.filter((e) => /pdf|html2pdf/i.test(e));
   expect(pdfErrors).toHaveLength(0);
 });
