@@ -46,6 +46,7 @@
 | 40 | Zero-Friction Sharing (URL link, native share, file) | COMPLETE ✅ |
 | 41 | PWA File Association (.sdjson double-click launch) | COMPLETE ✅ |
 | 42 | Table Cell Resize & Autofit (border drag + double-click autofit) | COMPLETE ✅ |
+| 43 | Electron Packaging (Windows 11 desktop app, NSIS installer) | PLANNED — see [ELECTRON_PACKAGING_PLAN.md](./ELECTRON_PACKAGING_PLAN.md) |
 
 ### Final Results (2026-08-26)
 - **1037 tests pass** (60 suites)

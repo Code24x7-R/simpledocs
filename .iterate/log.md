@@ -1,0 +1,5 @@
+date | id | type | tier | area | cause | req-ids | rung | evidence | notes
+2026-11-18 | ENV-1 | bug | S | dependencies | dependency | - | 1 | automated-pass | removed unused present@1.0.0, scripts@0.1.0, esbuild@0.21.5 accidentally added to dependencies; kept vite 5.4.21 bump; build/lint/typecheck green
+2026-11-18 | ENV-2 | bug | S | test-setup | platform-env | - | 1 | automated-pass | jsdom lacks Text/Range getClientRects and Element.scrollIntoView; ProseMirror threw 6 unhandled errors and vitest exited 1; shims added in src/test/setup.ts; 1040/1040 pass exit 0
+2026-11-18 | ENV-3 | bug | M | tests/e2e | test-flaw | - | 3e | failed | Playwright Chromium installed; suite asserts removed multi-editor DOM ([data-page-editor]) and old labels; 7/37 pass; triaged Fix (M), not deleted, quarantined in DECISIONS.md
+2026-11-18 | PLAN-43 | feature | L | packaging | - | FR-15,FR-16,FR-17,FR-18,FR-19 | - | unverified-environment | plan-only: docs/ELECTRON_PACKAGING_PLAN.md; awaiting approval for deps, app:// origin, desktop cloud gating, S0 scope
